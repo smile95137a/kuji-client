@@ -1,0 +1,163 @@
+// src/assets/styles/components/ichiban/_ichiban-notice.scss
+
+$root-block-name: '.ichibanNotice';
+
+#{$root-block-name} {
+  $p: &;
+
+  background: #000000;
+  color: #ffffff;
+  border-radius: 0 0 18px 18px;
+  padding: 32px 32px 36px;
+
+  /* 內容置中 */
+  &__inner {
+    max-width: 1200px;
+    margin: 0 auto;
+
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-start;
+    flex-direction: row;
+
+    gap: 56px;
+  }
+
+  &__col {
+    &--left,
+    &--mid {
+      flex: 1 1 0;
+    }
+
+    &--right {
+      flex: 0 0 260px;
+
+      display: flex;
+      justify-content: flex-start;
+      align-items: center;
+      flex-direction: column;
+
+      gap: 24px;
+    }
+  }
+
+  /* 標題區 */
+  &__sectionTitle {
+    font-weight: 900;
+    margin: 0 0 8px;
+
+    &--main {
+      font-size: 20px;
+    }
+
+    &--sub {
+      font-size: 16px;
+      margin-top: 16px;
+    }
+  }
+
+  &__sectionSubtitle {
+    margin: 0 0 8px;
+    font-size: 14px;
+  }
+
+  /* 左邊列表 */
+  &__list {
+    margin: 0 0 8px;
+    padding: 0;
+    list-style: none;
+  }
+
+  &__listItem {
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* 一般段落文字（左右共用） */
+  &__paragraph {
+    font-size: 14px;
+    line-height: 1.7;
+    margin: 0 0 8px;
+  }
+
+  /* 右側 LOGO 區：用 img 排版 */
+  &__logo {
+    width: 220px;
+    height: auto;
+
+    img {
+      display: block;
+      width: 100%;
+      height: auto;
+      object-fit: contain;
+    }
+  }
+
+  /* LINE 按鈕 */
+  &__lineBtn {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-direction: row;
+    width: 274px;
+    height: 58px;
+
+    border-radius: 90px;
+
+    gap: 12px;
+    border-radius: 999px;
+    border: none;
+    padding: 8px 24px;
+    background: #4cc764;
+    color: #ffffff;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: filter 0.15s ease;
+
+    &:hover {
+      filter: brightness(0.95);
+    }
+  }
+
+  /* SVG icon 容器 */
+  &__lineBtn-icon {
+    display: inline-flex;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+
+    width: 41px;
+    line-height: 0;
+  }
+
+  &__lineBtn-text {
+    white-space: nowrap;
+    flex: 1;
+    font-weight: 900;
+  }
+
+  /* RWD */
+  @media (max-width: 1024px) {
+    &__inner {
+      flex-direction: column;
+      gap: 32px;
+    }
+
+    &__col--right {
+      align-items: flex-start;
+    }
+  }
+
+  @media (max-width: 640px) {
+    padding: 24px 20px 28px;
+
+    &__logo {
+      width: 180px;
+    }
+
+    &__lineBtn-text {
+      white-space: normal;
+    }
+  }
+}

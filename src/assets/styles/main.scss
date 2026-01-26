@@ -1,0 +1,35 @@
+/* --- 必須最上方：所有 @use 先宣告 --- */
+
+/* 全站 Tokens（橘色主題） */
+@use 'base/tokens' as tokens;
+
+/* 基底樣式 */
+@use 'base/base' as *;
+@use 'shared/mixins' as *;
+@use 'shared/utilities' as *;
+@use 'shared/flex' as *;
+
+/* 頁面級樣式 */
+@use 'pages/login' as *;
+@use 'pages/register' as *;
+@use 'pages/policy' as *;
+@use 'pages/privacy' as *;
+@use 'components/m-card' as *;
+@use 'components/section-header' as *;
+@use 'components/ichiban/ichiban-prize-card.scss';
+@use 'components/ichiban/ichiban-notice';
+
+/* --- @use 區塊結束 --- */
+
+/* 全局 rem 設定 */
+html {
+  font-size: 62.5%;
+}
+
+body {
+  font-size: 1.2rem;
+}
+
+* {
+  font-size: inherit;
+}

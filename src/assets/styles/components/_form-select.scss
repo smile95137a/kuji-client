@@ -1,0 +1,148 @@
+@use 'sass:color';
+@use '@/assets/styles/base/tokens' as *;
+
+// ===== 容器 =====
+.form-select {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+
+  &--sm {
+    .form-select__field {
+      height: $form-h-sm;
+      font-size: $font-sm;
+    }
+    .form-select__label {
+      font-size: $font-sm;
+    }
+    .form-select__addon {
+      height: $form-h-sm;
+      min-width: $form-h-sm;
+      font-size: $font-sm;
+    }
+  }
+
+  &--lg {
+    .form-select__field {
+      height: $form-h-lg;
+      font-size: $font-lg;
+    }
+    .form-select__label {
+      font-size: $font-lg;
+    }
+    .form-select__addon {
+      height: $form-h-lg;
+      min-width: $form-h-lg;
+      font-size: $font-lg;
+    }
+  }
+}
+
+// ===== 標籤 =====
+.form-select__label {
+  color: $form-text;
+  font-size: $font-md;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+.form-select__label--required {
+  color: $danger;
+
+  .form-select__asterisk {
+    color: $danger;
+    margin-left: 2px;
+    font-size: $font-sm;
+  }
+}
+
+// ===== 控制區 =====
+.form-select__control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+// ===== select 欄位 =====
+.form-select__field {
+  flex: 1;
+  height: $form-h-md;
+  border-radius: $form-radius;
+  border: 1px solid $form-border;
+  background: $form-bg;
+  font-size: $font-md;
+  padding: 0 6px;
+  color: $form-text;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+  width: 100%;
+
+  &:hover {
+    border-color: color.mix($brand, $form-border, 30%);
+  }
+
+  &:focus {
+    outline: none;
+    border-color: $brand;
+    box-shadow: 0 0 0 2px #{color.change($brand, $alpha: 0.2)};
+  }
+
+  &.is-error {
+    border-color: $danger;
+    background: $danger-light;
+
+    &:focus {
+      box-shadow: 0 0 0 2px #{color.change($danger, $alpha: 0.2)};
+    }
+  }
+
+  &:disabled {
+    background: #f3f4f6;
+    color: $form-muted;
+    cursor: not-allowed;
+  }
+}
+
+// ===== addon (右側按鈕/圖示) =====
+.form-select__addon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: $form-h-md;
+  min-width: $form-h-md;
+  padding: 0 8px;
+  border: 1px solid $form-border;
+  border-radius: $form-radius;
+  background: #f9fafb;
+  color: $brand;
+  font-size: $font-md;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &:hover {
+    background: $brand-light;
+    border-color: $brand;
+    color: $brand-dark;
+  }
+
+  &:active {
+    transform: scale(0.95);
+  }
+
+  i {
+    font-size: $font-md;
+    line-height: 1;
+    pointer-events: none;
+  }
+
+  &.clickable {
+    cursor: pointer;
+  }
+}
+
+// ===== 錯誤訊息 =====
+.form-select__error {
+  font-size: $font-xs;
+  color: $danger;
+  margin-top: 2px;
+}

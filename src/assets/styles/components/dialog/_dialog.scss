@@ -1,0 +1,50 @@
+@use '../../shared/mixins' as *;
+$root-block-name: '.dialog';
+$root-block-style: '.downDialog';
+
+#{$root-block-name} {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  $p: &;
+  $p__main: #{$p}__main;
+
+  &--confirmDialog {
+    #{$p__main} {
+      height: 200px;
+      max-width: 320px;
+      min-height: auto;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+  }
+
+  &--infoDialog {
+    #{$p__main} {
+      height: 200px;
+      max-width: 320px;
+      min-height: auto;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+  }
+
+  &__overlay {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.3);
+    z-index: 10;
+  }
+
+  &__main {
+    @include abs-center;
+    @include flex;
+    width: calc(100% - 36px);
+    max-width: 80%;
+    max-height: 80%;
+    min-height: 280px;
+    overflow: auto;
+    box-shadow: 1px 2px 4px 0 rgba(0, 0, 0, 0.12);
+    z-index: 11;
+  }
+}

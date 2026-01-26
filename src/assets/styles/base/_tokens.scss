@@ -1,0 +1,53 @@
+// src/assets/styles/base/_tokens.scss
+/* ===========================
+   Brand Theme – iPhone Orange
+   =========================== */
+
+@use 'sass:color';
+
+/* Brand Colors */
+$brand: #ff9500;
+$brand-hover: #ff7a00;
+$brand-dark: #e56f00;
+
+/* Light variations */
+$brand-light: #ffe8cc;
+$brand-light-hover: #ffd8a6;
+
+/* Neutral Colors */
+$ink-900: #1f2937;
+$ink-800: #374151;
+$ink-700: #4b5563;
+$muted: #6b7280;
+
+$border-light: #d1d5db;
+$bg-light: #fff;
+
+/* State Colors */
+$danger: #ef4444;
+$danger-light: color.mix($danger, #fff, 85%);
+
+/* Shadows */
+$shadow-brand: rgba(255, 149, 0, 0.12);
+
+/* Form Defaults */
+$form-text: $ink-900;
+$form-muted: $muted;
+$form-border: $border-light;
+$form-bg: $bg-light;
+
+/* Sizes */
+$form-radius: 6px;
+$form-h-sm: 24px;
+$form-h-md: 32px;
+$form-h-lg: 34px;
+
+/* Font Sizes */
+$font-xs: 10px;
+$font-sm: 10px;
+$font-md: 10px;
+$font-lg: 14px;
+
+/* Textarea */
+$form-textarea-min-h: 140px;
+$form-textarea-padding: 10px 12px;

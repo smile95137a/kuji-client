@@ -1,0 +1,193 @@
+/* ===========================
+   Global Brand Tokens
+   =========================== */
+
+/* Brand: iPhone Orange */
+$brand: #ff9500;
+$brand-hover: #ff7a00;
+$brand-dark: #e56f00;
+
+/* Light variations */
+$brand-light: #ffe8cc; // 最淡橘（表格 striping）
+$brand-light-hover: #ffd8a6;
+
+/* Neutral */
+$ink-900: #1f2937;
+$ink-800: #374151;
+$ink-700: #4b5563;
+$muted: #6b7280;
+$border-light: #e5e7eb;
+$bg-light: #f9fafb;
+
+/* State */
+$danger: #ef4444;
+
+/* Shadows */
+$shadow-orange: rgba(255, 149, 0, 0.08);
+
+.report-table {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px $shadow-orange;
+
+  &__head {
+    flex-shrink: 0;
+    overflow-y: auto;
+    border-bottom: 1px solid $border-light;
+  }
+
+  &__body {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+  }
+
+  table {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    table-layout: fixed;
+    background: #fff;
+  }
+
+  &__cell {
+    padding: 10px 12px;
+    text-align: left;
+    border-bottom: 1px solid #ececec;
+    border-right: 1px solid #f3f3f3;
+    overflow: hidden;
+    word-break: break-word;
+    color: $ink-900;
+
+    &:last-child {
+      border-right: none;
+    }
+
+    &--right {
+      text-align: right;
+    }
+  }
+
+  &__cell-inner {
+    min-height: 20px;
+    display: flex;
+    align-items: center;
+  }
+
+  @for $i from 1 through 500 {
+    .report-table__cell--w-#{$i} {
+      width: #{$i}px;
+      min-width: #{$i}px;
+      max-width: #{$i}px;
+    }
+  }
+
+  /* ===============================
+   * 橘色表頭
+   * =============================== */
+  thead {
+    background: linear-gradient(180deg, $brand, $brand-dark);
+    color: #fff;
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      font-weight: 600;
+      padding: 10px 12px;
+      border-bottom: 1px solid $brand-dark;
+
+      &:first-child {
+        border-top-left-radius: 8px;
+      }
+      &:last-child {
+        border-top-right-radius: 8px;
+        border-right: none;
+      }
+    }
+  }
+
+  /* ===============================
+   * bordered
+   * =============================== */
+  &--bordered {
+    border: 1px solid $border-light;
+    box-shadow: 0 2px 6px $shadow-orange;
+
+    td,
+    th {
+      border-bottom: 1px solid #ececec;
+      border-right: 1px solid #f0f0f0;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+  }
+
+  /* ===============================
+   * striped
+   * =============================== */
+  &--striped {
+    tbody tr:nth-child(odd) td {
+      background-color: $brand-light; // very light orange
+    }
+
+    tbody tr:nth-child(even) td {
+      background-color: #ffffff;
+    }
+
+    tbody tr:hover td {
+      background-color: $brand-light-hover; // hover 橘
+      transition: background-color 0.2s ease;
+    }
+  }
+
+  &--bordered.report-table--striped {
+    tbody tr:hover td {
+      border-color: $brand-light-hover;
+    }
+  }
+
+  /* ===============================
+   * scrollbar
+   * =============================== */
+  &__body::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &__body::-webkit-scrollbar-thumb {
+    background-color: rgba($brand, 0.4);
+    border-radius: 4px;
+  }
+
+  &__body::-webkit-scrollbar-thumb:hover {
+    background-color: rgba($brand, 0.65);
+  }
+
+  &__body::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
+
+  /* ===============================
+   * 排序箭頭
+   * =============================== */
+  &__sort-indicator {
+    margin-left: 6px;
+    font-size: 12px;
+    cursor: pointer;
+
+    &.is-inactive {
+      color: $brand-light-hover;
+    }
+
+    &.is-active {
+      color: #fff;
+      font-weight: 600;
+    }
+  }
+}

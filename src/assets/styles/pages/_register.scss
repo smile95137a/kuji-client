@@ -1,0 +1,282 @@
+// src/assets/styles/pages/_register.scss
+
+/* 建議 template 最外層包一層 <div class="register"> ... </div> */
+.register {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 20px;
+}
+
+/* ===== MCard: register 外觀覆蓋 ===== */
+.mcard.mcard--register {
+  border-radius: 30px;
+  overflow: hidden;
+  max-width: 1015px;
+}
+
+.mcard.mcard--register .mcard__header {
+  height: 110px;
+  padding: 0;
+  background: #a03828;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.mcard.mcard--register .mcard__header * {
+  color: #fff;
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: 3px;
+}
+
+/* 內容紅底滿版 */
+.mcard.mcard--register .mcard__content {
+  background: #a03828;
+  padding: 0;
+}
+
+/* ===== 內容容器（控制左右留白，對齊設計圖） ===== */
+.register__container {
+  width: 100%;
+  padding: 52px 120px 64px;
+}
+
+/* ===== 兩欄 ===== */
+.register__main {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 140px;
+  align-items: start;
+  padding-bottom: 34px;
+}
+
+/* 中間直線（設計圖偏棕紅，不是白） */
+.register__divider {
+  position: absolute;
+  left: 50%;
+  top: 10px;
+  transform: translateX(-50%);
+  width: 1px;
+  height: calc(100% - 20px);
+  background: #886058;
+  opacity: 0.9;
+}
+
+.register__divider-line {
+  width: 100%;
+  height: 100%;
+}
+
+/* ===== 欄位區塊 ===== */
+.register__form {
+  width: 100%;
+  max-width: 460px;
+  display: flex;
+  flex-direction: column;
+}
+
+.register__selectWrap {
+  position: relative;
+  width: 100%;
+}
+
+/* 原生 select 做成跟 input 一樣 */
+.register__select {
+  width: 100%;
+  height: 58px;
+  padding: 0 44px 0 14px; /* 右側留空給箭頭 */
+  border-radius: 10px;
+  border: 1px solid #d4d4d4;
+  background: #fff;
+  outline: none;
+  font-size: 14px;
+  appearance: none; /* 隱藏原生箭頭 */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+
+  /* ✅ 改這裡：避免 select 文字置中怪 */
+  line-height: normal;
+}
+
+/* 右側下拉箭頭 */
+.register__selectWrap::after {
+  content: '';
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-top: 7px solid #777;
+  pointer-events: none;
+}
+
+/* error 狀態 */
+.register__select--error {
+  border: 2px solid #ff5a3f;
+}
+
+/* ✅ 這裡是你位置不對的主因：label 要靠左 */
+.register__text {
+  margin: 0 0 10px;
+  min-height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start; /* ✅ 改成靠左 */
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+/* ✅ 行政區右側 label 佔位：不顯示但保留高度，兩欄完美對齊 */
+.register__text--placeholder {
+  visibility: hidden;
+}
+
+.register__text--required::after {
+  content: '*';
+  color: #ff7a3a;
+  font-weight: 900;
+  margin-left: 6px;
+}
+
+.register__text--error {
+  margin-top: 8px;
+  min-height: 18px;
+  color: #ffd0c5 !important;
+  font-weight: 600;
+}
+
+/* input（設計圖的白框） */
+.register__form-input {
+  width: 100%;
+  height: 58px;
+  padding: 0 18px;
+  border-radius: 10px;
+  border: 1px solid #d4d4d4;
+  background: #fff;
+  outline: none;
+  font-size: 14px;
+}
+
+.register__form-input--error {
+  border: 2px solid #ff5a3f;
+}
+
+/* 地址兩格（縣市/行政區） */
+.register__form-inputs--addr {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+
+/* 你的 MSelect：做成跟 input 一樣高、白底 */
+.mselect--registerForm {
+  width: 100%;
+}
+
+.mselect--registerForm .mselect__control,
+.mselect--registerForm select {
+  width: 100%;
+  height: 58px;
+  border-radius: 10px;
+  background: #fff;
+  border: 1px solid #d4d4d4;
+  padding: 0 14px;
+}
+
+/* ===== 底部條款 + 按鈕 ===== */
+.register__other {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.register__checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 14px;
+  font-weight: 600;
+  text-align: center;
+  line-height: 1.7;
+}
+
+.register__checkbox input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  accent-color: #d8a860;
+}
+
+.register__checkbox a {
+  color: rgba(255, 255, 255, 0.95);
+  text-decoration: underline;
+}
+
+.register__other-btn {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+/* 金色大按鈕（設計圖色） */
+.register__btn {
+  width: min(520px, 100%);
+  height: 64px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  background: #d8a860;
+  color: #fff;
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ===== RWD ===== */
+@media (max-width: 1024px) {
+  .register__container {
+    padding: 32px 28px 40px;
+  }
+  .register__main {
+    column-gap: 48px;
+  }
+}
+
+@media (max-width: 900px) {
+  .register__main {
+    grid-template-columns: 1fr;
+    row-gap: 18px;
+  }
+
+  .register__divider {
+    display: none;
+  }
+
+  .register__form {
+    max-width: 520px;
+  }
+
+  /* ✅ 手機版：地址改一欄時，右側 placeholder 不需要 */
+  .register__form-inputs--addr {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .register__text--placeholder {
+    display: none;
+  }
+}

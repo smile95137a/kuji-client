@@ -1,0 +1,65 @@
+// ===== Tabs 色彩設定 =====
+$tab-border: #d1d5db; // 邊框色
+$tab-text: #374151; // 預設文字
+$tab-hover-bg: #e6f4ef; // hover 背景 (ctbc-green-50)
+$tab-hover-text: #017162; // hover 文字 (ctbc-green)
+$tab-active-bg: #e6f4ef; // active 背景
+$tab-active-text: #017162; // active 文字
+$tab-disabled-bg: #f5f5f5; // disabled 背景
+$tab-disabled-text: #9ca3af; // disabled 文字
+
+.tabs {
+  width: 100%;
+  border: 1px solid $tab-border;
+  border-radius: 6px;
+  background: #fff;
+
+  .tab-headers {
+    display: flex;
+    border-bottom: 1px solid $tab-border;
+    background: #fafafa;
+  }
+
+  .tab-content {
+    padding: 12px;
+    background: #fff;
+  }
+
+  .tab-button {
+    flex: 1;
+    min-width: 120px;
+    max-width: 200px;
+    padding: 12px 16px;
+    font-size: 16px;
+    text-align: center;
+    border: none;
+    border-right: 1px solid $tab-border;
+    background: transparent;
+    color: $tab-text;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease;
+
+    &:last-child {
+      border-right: none;
+    }
+
+    &:hover:not(:disabled) {
+      background: $tab-hover-bg;
+      color: $tab-hover-text;
+    }
+
+    &.active {
+      background: $tab-active-bg;
+      color: $tab-active-text;
+      font-weight: bold;
+      border-bottom: 3px solid $tab-active-text;
+    }
+
+    &:disabled {
+      background: $tab-disabled-bg;
+      color: $tab-disabled-text;
+      cursor: not-allowed;
+    }
+  }
+}

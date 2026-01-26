@@ -1,0 +1,310 @@
+@use 'sass:color';
+
+/* ===========================
+   🎨 iPhone Orange Tokens
+   =========================== */
+$primary-color: #ff9500; // iOS Orange
+$primary-hover: #ff7a00;
+$primary-dark: #e56f00;
+
+$text-color: #333333;
+$gray-text: #6b6b6b;
+
+$header-height: 60px;
+$sidebar-width: 200px;
+
+/* 禁止滾動（手機展開側欄用） */
+body.no-scroll {
+  overflow: hidden;
+}
+
+/* ===========================
+   🔥 Sidebar Layout
+   =========================== */
+.sidebar-layout {
+  width: 100%;
+  height: 100vh;
+  font-family: 'Poppins', sans-serif;
+
+  /* --------- Overlay（Mobile 打開遮罩） --------- */
+  &__overlay {
+    position: fixed;
+    top: $header-height;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.45);
+    backdrop-filter: blur(1px);
+    z-index: 998;
+    animation: fadeIn 0.2s ease-out;
+  }
+
+  /* --------- Sidebar --------- */
+  &__sidebar {
+    position: fixed;
+    top: $header-height;
+    left: 0;
+    bottom: 0;
+    width: $sidebar-width;
+    background-color: #fff;
+    border-right: 1px solid #ddd;
+    color: $text-color;
+    z-index: 999;
+    transform: translateX(-100%);
+    transition: transform 0.28s ease;
+  }
+
+  /* 展開 */
+  &.sidebar-open {
+    .sidebar-layout__sidebar {
+      transform: translateX(0);
+    }
+    .sidebar-layout__content {
+      margin-left: $sidebar-width;
+    }
+  }
+
+  /* --------- Menu --------- */
+  &__menu {
+    padding: 1rem 0;
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+
+    .sidebar-layout__item {
+      &--active > .sidebar-layout__link {
+        background-color: $primary-color;
+        color: #fff;
+        font-weight: bold;
+      }
+    }
+
+    .sidebar-layout__link {
+      display: block;
+      padding: 12px 20px;
+      border-radius: 6px;
+      font-size: 1.05rem;
+      color: $text-color;
+      transition: background 0.25s ease, color 0.25s ease;
+      cursor: pointer;
+
+      &:hover {
+        background-color: #f9f9f9;
+      }
+    }
+
+    /* ------- Submenu ------- */
+    .sidebar-layout__submenu {
+      padding-left: 1rem;
+      margin-top: 4px;
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+
+      .sidebar-layout__sublink {
+        position: relative;
+        display: block;
+        padding: 8px 28px;
+        border-radius: 4px;
+        background: #fff;
+        color: $text-color;
+        font-size: 0.95rem;
+        transition: background 0.25s ease;
+
+        &:hover {
+          background: #fafafa;
+        }
+
+        &.active {
+          background: #fff;
+          color: $primary-color;
+          font-weight: bold;
+
+          &::before {
+            content: '';
+            position: absolute;
+            left: 8px;
+            top: 8px;
+            bottom: 8px;
+            width: 4px;
+            background: $primary-color;
+            border-radius: 4px;
+          }
+        }
+      }
+    }
+  }
+
+  /* --------- Content --------- */
+  &__content {
+    position: relative;
+    background: #fafafa;
+    min-height: 100vh;
+    padding-top: $header-height;
+    transition: margin-left 0.28s ease;
+  }
+
+  /* --------- Header --------- */
+  &__header {
+    position: fixed;
+    inset: 0 0 auto 0;
+    height: $header-height;
+    background-color: $primary-color;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0 1rem;
+    z-index: 1000;
+    box-shadow: 0 2px 6px rgba(255, 149, 0, 0.2); /* 更有 iOS 味道 */
+  }
+
+  &__left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  /* --------- Toggle（Hamburger） --------- */
+  &__toggle {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background-color: $primary-hover;
+    color: #fff;
+    display: grid;
+    place-items: center;
+    border: none;
+    cursor: pointer;
+    font-size: 1.1rem;
+    transition: background 0.25s ease, transform 0.15s ease;
+
+    &:hover {
+      background-color: $primary-dark;
+    }
+    &:active {
+      transform: scale(0.93);
+    }
+  }
+
+  /* --------- Logo --------- */
+  &__logo-img {
+    height: 36px;
+  }
+
+  /* --------- User Info --------- */
+  &__user-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  &__username {
+    font-size: 14px;
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  &__language-select {
+    padding: 4px 6px;
+    border-radius: 4px;
+    border: 1px solid #ddd;
+  }
+
+  /* --------- Logout Button --------- */
+  &__logout {
+    background-color: #ff4633;
+    color: white;
+    padding: 4px 10px;
+    border-radius: 6px;
+    border: none;
+    cursor: pointer;
+    font-weight: 600;
+
+    &:hover {
+      background-color: #e63a29;
+    }
+  }
+
+  /* --------- Main Body --------- */
+  &__body {
+    padding: 1.5rem;
+    min-height: calc(100vh - $header-height);
+  }
+}
+
+/* ===========================
+   📱 Mobile (<= 768px)
+   =========================== */
+@media (max-width: 768px) {
+  .sidebar-layout__sidebar {
+    width: 75vw;
+  }
+
+  .sidebar-layout__sidebar:not(.sidebar-layout__sidebar--hidden) {
+    transform: translateX(0);
+  }
+}
+
+/* ===========================
+   Active sublink override
+   =========================== */
+.sidebar-layout__sublink.active {
+  background-color: rgba(255, 149, 0, 0.1);
+  color: $primary-color !important;
+}
+
+/* ===========================
+   Animation
+   =========================== */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* ===========================
+   Notice Section（保留原始結構）
+   =========================== */
+.notice-section {
+  margin-bottom: 1.5rem;
+
+  &__title {
+    font-weight: bold;
+    color: $primary-color;
+    margin-bottom: 0.5rem;
+  }
+
+  &__list {
+    list-style: none;
+    padding: 0;
+    margin: 0 0 1rem 0;
+  }
+
+  &__item {
+    cursor: pointer;
+    padding: 6px 8px;
+    border-radius: 4px;
+    transition: background 0.2s;
+
+    &:hover {
+      background: rgba(255, 149, 0, 0.12);
+    }
+  }
+
+  &__detail {
+    background: #fff;
+    padding: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+  }
+}

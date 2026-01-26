@@ -1,0 +1,27 @@
+/* src/assets/styles/shared/_variables.scss */
+$breakpoint-xsmall: 576px;
+$breakpoint-small: 767px;
+$breakpoint-medium: 991px;
+$breakpoint-large: 1199px;
+$breakpoint-extra-large: 1400px;
+
+$breakpoints: (
+  xs: (
+    max-width: $breakpoint-xsmall,
+  ),
+  sm: (
+    max-width: $breakpoint-small,
+  ),
+  md: (
+    max-width: $breakpoint-medium,
+  ),
+  lg: (
+    max-width: $breakpoint-large,
+  ),
+  xl: (
+    min-width: $breakpoint-extra-large,
+  ),
+) !default;
+
+$error-color: #ff0033;
+$primary: #017162;

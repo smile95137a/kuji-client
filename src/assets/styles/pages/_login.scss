@@ -1,0 +1,286 @@
+/* Login.vue */
+.login {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 20px;
+}
+
+/* 針對 MCard：mcard--login 的 header / content 做設計圖樣式覆蓋 */
+.mcard.mcard--login {
+  border-radius: 30px;
+  overflow: hidden;
+  max-width: 1015px;
+}
+
+/* header: 深紅底 + 白字 + 底線 */
+.mcard.mcard--login .mcard__header {
+  height: 96px;
+  padding: 0;
+  background: #b43325; /* 深紅 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-bottom: 2px solid rgba(255, 255, 255, 0.35);
+}
+
+/* header 文字 */
+.mcard.mcard--login .mcard__header span,
+.mcard.mcard--login .mcard__header .mcard__text {
+  color: #fff;
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 2px;
+}
+
+/* content 取消原本背景與 padding，讓兩欄滿版 */
+.mcard.mcard--login .mcard__content {
+  background: transparent;
+  padding: 0;
+}
+
+/* 內層容器 */
+.login__container {
+  width: 100%;
+}
+
+/* 兩欄：左表單紅底 / 右側黑底 */
+.login__main {
+  width: 100%;
+  min-height: 636px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+/* 左半：表單區 */
+.login__form {
+  background: #b43325;
+  padding: 56px 64px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* 右半：引導註冊區 */
+.login__other {
+  background: #000;
+  padding: 56px 64px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+}
+
+/* 中間分隔線（像設計圖） */
+.login__other::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 2px;
+  height: 100%;
+  background: rgba(255, 255, 255, 0.18);
+}
+
+/* ========== 左側：社群登入 ========== */
+.login__auth {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.login__auth-btn {
+  width: 100%;
+  height: 56px;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  display: flex;
+  align-items: center;
+  padding: 0 22px;
+  gap: 14px;
+  cursor: pointer;
+}
+
+.login__auth-btn-icon {
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login__auth-btn-icon img {
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+.login__auth-btn-text {
+  flex: 1;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  color: #1b1b1b;
+}
+
+/* ========== 左側：分隔線 ========== */
+.login__divider {
+  width: 100%;
+  height: 34px;
+  margin: 16px 0 18px;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.login__divider-line {
+  width: 100%;
+  max-width: 340px;
+  height: 1px;
+  background: rgba(255, 255, 255, 0.35);
+}
+
+.login__divider-text {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  padding: 0 18px;
+  background: #b43325; /* 要跟左邊底色一樣 */
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* ========== 左側：欄位 ========== */
+.login__form-inputs {
+  margin-bottom: 14px;
+}
+
+.login__text {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.4px;
+}
+
+.login__text--error {
+  margin-top: 8px;
+  color: #ffd0c5;
+  font-weight: 600;
+  min-height: 18px;
+}
+
+.login__form-input {
+  width: 100%;
+  height: 56px;
+  padding: 0 18px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  outline: none;
+  background: #fff;
+  font-size: 14px;
+}
+
+.login__form-input--error {
+  border: 1px solid #ff5a3f;
+}
+
+/* 忘記密碼：右對齊 + 金色字 */
+.login__forgot {
+  display: flex;
+  justify-content: flex-end;
+  padding: 6px 2px 18px;
+}
+
+.login__text--forgot {
+  color: #f0c27a;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+/* ========== 按鈕（登入/註冊同一顆） ========== */
+.login__btns {
+  margin-top: 14px;
+}
+
+.login__btn {
+  width: 100%;
+  height: 56px;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+
+  background: #d7a862; /* 金色 */
+  color: #fff;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 2px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ========== 右側內容 ========== */
+.login__other-img {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+}
+
+.login__other-img img {
+  width: 100%;
+  max-width: 420px;
+  height: auto;
+  display: block;
+}
+
+.login__other-info {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto 22px;
+  color: #fff;
+}
+
+.login__other-info .login__text {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.login__other-btn {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+/* 右側註冊按鈕更寬一點像設計圖 */
+.login__other-btn .login__btn {
+  max-width: 420px;
+}
+
+/* ========== RWD：小螢幕改上下 ========== */
+@media (max-width: 768px) {
+  .login__main {
+    grid-template-columns: 1fr;
+  }
+
+  .login__other::before {
+    display: none;
+  }
+
+  .login__form,
+  .login__other {
+    padding: 28px 18px;
+  }
+}

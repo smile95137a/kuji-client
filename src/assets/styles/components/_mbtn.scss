@@ -1,0 +1,71 @@
+/* components/_mbtn.scss */
+/* ===========================
+   Global Color Tokens
+   =========================== */
+
+/* Brand: iPhone Orange */
+$brand: #ff9500;
+$brand-dark: #e56f00;
+$brand-hover: #ff7a00;
+
+/* Neutral */
+$ink-900: #1f2937;
+$ink-800: #374151;
+$ink-700: #4b5563;
+$muted: #6b7280;
+
+/* State Colors */
+$danger: #ef4444;
+
+/* Background */
+$bg-light: #f9fafb;
+$border-light: #e5e7eb;
+
+.mbtn {
+  min-width: 40px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 10px;
+  letter-spacing: 3px;
+  transition: background-color 0.3s ease, opacity 0.3s ease;
+
+  /* ===== iPhone Orange 主色 ===== */
+  background: $brand; // #ff9500
+
+  &:hover {
+    background: $brand-hover; // #ff7a00
+  }
+
+  &:active {
+    background: $brand-dark; // #e56f00
+  }
+
+  /* ===== Disabled ===== */
+  &:disabled {
+    background-color: #f4b97a; // 淡橘＋灰感
+    color: #fff;
+    cursor: not-allowed;
+    opacity: 0.6;
+    pointer-events: none;
+  }
+
+  /* ===== Red button ===== */
+  &--red {
+    background: #ff0033;
+
+    &:hover {
+      background: #e6002f;
+    }
+
+    &:active {
+      background: #cc002a;
+    }
+
+    &:disabled {
+      background-color: #ffcccc;
+      color: #aaa;
+      opacity: 1;
+    }
+  }
+}

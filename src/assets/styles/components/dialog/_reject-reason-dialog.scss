@@ -1,0 +1,109 @@
+@use '../../shared/mixins' as *;
+$root-block-name: '.rejectReasonDialog';
+
+#{$root-block-name} {
+  $p: &;
+  $p__text: #{$p}__text;
+
+  width: 100%;
+  @include flex(null, null, column);
+
+  &__main {
+    flex: 1;
+    background: #fff;
+    padding: 24px;
+    @include flex(null, null, column);
+
+    &-content {
+      flex: 1;
+      @include flex(null, null, column);
+
+      #{$p__text} {
+        text-align: center;
+        font-size: 22px;
+        letter-spacing: 1px;
+
+        &--title {
+          font-size: 28px;
+          font-weight: 900;
+          margin-bottom: 16px;
+        }
+      }
+    }
+
+    &-field {
+      margin: 16px 0;
+      width: 100%;
+      @include flex(null, null, column);
+
+      textarea {
+        width: 100%;
+        min-height: 120px;
+        padding: 12px;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+        font-size: 18px;
+        line-height: 1.5;
+        resize: vertical;
+        outline: none;
+
+        &:focus {
+          border-color: #017162;
+          box-shadow: 0 0 0 2px rgba(1, 113, 98, 0.2);
+        }
+      }
+    }
+
+    &-btns {
+      @include flex(center, center);
+      gap: 24px;
+      margin-top: 24px;
+    }
+
+    &-btn {
+      width: 168px;
+      height: 54px;
+      border-radius: 50px;
+      border: 2px solid #000;
+      @include flex(center, center);
+
+      font-size: 20px;
+      font-weight: 500;
+      cursor: pointer;
+
+      &--cancel {
+        background: #fff;
+        color: #000;
+      }
+
+      &--confirm {
+        color: #fff;
+        background: #ff0033;
+      }
+
+      &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+    }
+  }
+
+  &__text {
+    font-size: 20px;
+    font-weight: 400;
+
+    &--title {
+      color: #017162;
+    }
+
+    &--red {
+      font-size: 22px;
+      font-weight: 600;
+      color: #fe4206;
+    }
+
+    &--bold {
+      font-weight: 800;
+    }
+  }
+}

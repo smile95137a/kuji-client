@@ -1,0 +1,174 @@
+@use 'sass:color';
+@use '@/assets/styles/base/tokens' as *;
+/* sr-only（此檔自帶，不需共用） */
+.sr-only {
+  position: absolute !important;
+  white-space: nowrap !important;
+  width: 1px !important;
+  height: 1px !important;
+  overflow: hidden !important;
+  border: 0 !important;
+  padding: 0 !important;
+  clip: rect(0 0 0 0) !important;
+  clip-path: inset(50%) !important;
+  margin: -1px !important;
+}
+
+.mradio {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  position: relative;
+  color: $form-text;
+  line-height: 1.5;
+
+  /* ===== 尺寸 ===== */
+  &--sm {
+    .mradio__label {
+      font-size: 0.875rem;
+    }
+    .mradio__dot {
+      width: 16px;
+      height: 16px;
+    }
+  }
+  &--md {
+    .mradio__label {
+      font-size: 1rem;
+    }
+    .mradio__dot {
+      width: 18px;
+      height: 18px;
+    }
+  }
+  &--lg {
+    .mradio__label {
+      font-size: 1.125rem;
+    }
+    .mradio__dot {
+      width: 20px;
+      height: 20px;
+    }
+  }
+
+  &--disabled {
+    opacity: 0.55;
+    pointer-events: none;
+  }
+
+  /* ===== 標籤 ===== */
+  &__label {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    gap: 0.5rem;
+    font-weight: 500;
+    user-select: none;
+  }
+
+  &__text {
+    line-height: 1.2;
+  }
+
+  /* ===== 外圈（白底圓框） ===== */
+  &__dot {
+    display: inline-block;
+    box-sizing: border-box;
+    border: 1px solid $form-border;
+    border-radius: 9999px;
+    width: 18px;
+    height: 18px;
+    position: relative;
+    background-color: #fff;
+    outline: 3px solid transparent;
+    outline-offset: -2px;
+    transition: all 120ms ease-in-out;
+    transform: scale3d(1, 1, 1) translate3d(0, 0, 0);
+  }
+
+  /* ===== 內圈（實心點） ===== */
+  &__dot::after {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border-radius: 9999px;
+    background: transparent;
+    transform: scale(0);
+    transition: transform 120ms ease-in-out, background-color 120ms ease-in-out;
+  }
+
+  /* ===== Hover（未禁用） ===== */
+  .mradio__input:not(:disabled) + .mradio__label:hover .mradio__dot {
+    background-color: #fff;
+    border-color: color.mix($form-border, #000, 8%); // 增加一點深度
+  }
+
+  /* ===== Active ===== */
+  .mradio__input:not(:disabled):active + .mradio__label .mradio__dot {
+    background-color: #fff;
+    border-color: color.mix($form-border, #000, 20%);
+    transform: scale3d(0.95, 0.95, 1);
+  }
+
+  /* ===== Focus（未選取） ===== */
+  .mradio__input:focus + .mradio__label .mradio__dot {
+    border-color: $brand;
+    outline-color: $brand-light !important;
+    outline-offset: 0 !important;
+  }
+
+  /* ===== Checked ===== */
+  .mradio__input:checked + .mradio__label .mradio__dot {
+    background-color: #fff;
+    border-color: $brand;
+  }
+  .mradio__input:checked + .mradio__label .mradio__dot::after {
+    background-color: $brand;
+    transform: scale(1.3);
+  }
+
+  /* ===== Checked + hover ===== */
+  .mradio__input:checked + .mradio__label:hover .mradio__dot {
+    border-color: $brand-dark;
+  }
+  .mradio__input:checked + .mradio__label:hover .mradio__dot::after {
+    background-color: $brand-dark;
+  }
+
+  /* ===== Checked + active ===== */
+  .mradio__input:checked:active + .mradio__label .mradio__dot {
+    border-color: color.mix($brand, #000, 20%);
+  }
+  .mradio__input:checked:active + .mradio__label .mradio__dot::after {
+    background-color: color.mix($brand, #000, 20%);
+  }
+
+  /* ===== Checked + focus ===== */
+  .mradio__input:checked:focus + .mradio__label .mradio__dot {
+    border-color: $brand;
+    outline-color: $brand-light !important;
+    outline-offset: 0 !important;
+  }
+
+  /* ===== Error 狀態 ===== */
+  &--error .mradio__label .mradio__dot {
+    border-color: $danger;
+  }
+
+  &__error-text {
+    margin-left: 2rem;
+    color: $danger;
+    font-size: 0.875rem;
+    line-height: 1.2;
+  }
+
+  /* 可用 :has()（加強選取效果） */
+  &:has(.mradio__input:checked) .mradio__dot {
+    background-color: #fff;
+    border-color: $brand;
+  }
+  &:has(.mradio__input:checked) .mradio__dot::after {
+    background-color: $brand;
+    transform: scale(1);
+  }
+}

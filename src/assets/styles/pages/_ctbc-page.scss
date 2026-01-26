@@ -1,0 +1,72 @@
+/* --- ctbc-page.scss --- */
+
+.ctbc-page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #fff;
+
+  &__main {
+    display: flex;
+    flex: 1;
+  }
+
+  &__left {
+    flex: 2;
+    background: linear-gradient(135deg, #eef4f3 0%, #ffffff 100%);
+    padding: 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  &__banner {
+    width: 100%;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+
+    &-img {
+      width: 100%;
+      height: auto;
+      display: block;
+      object-fit: cover;
+    }
+  }
+
+  &__right {
+    flex: 1;
+    padding: 32px;
+    background: #fff;
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+  }
+
+  &__login-form-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+    max-width: 1024px;
+    width: 100%;
+  }
+}
+
+@media (max-width: 768px) {
+  .ctbc-page {
+    &__main {
+      flex-direction: column;
+    }
+
+    &__left {
+      display: none;
+    }
+
+    &__right {
+      flex: unset;
+      width: 100%;
+      padding: 24px 16px;
+    }
+  }
+}

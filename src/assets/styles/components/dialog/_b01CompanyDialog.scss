@@ -1,0 +1,130 @@
+@use '../../shared/mixins' as *;
+
+$root-block-name: '.b01CompanyDialog';
+
+#{$root-block-name} {
+  width: 100%;
+  padding: 16px;
+  background-color: #fff;
+  @include flex(null, null, column);
+
+  // ===== 主體區 =====
+  &__main {
+    flex: 1;
+    background: #fff;
+    padding: 24px;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+    @include flex(null, null, column);
+
+    &-content {
+      flex: 1;
+      width: 100%;
+      @include flex(null, null, column);
+    }
+  }
+
+  // ===== 文字樣式 =====
+  &__text {
+    color: #1f2937;
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1.4;
+
+    &--title {
+      color: #017162;
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 12px;
+    }
+
+    &--muted {
+      color: #6b7280;
+      font-size: 14px;
+    }
+
+    &--red {
+      color: #e60012;
+      font-weight: 600;
+    }
+  }
+
+  // ===== 可點擊公司名稱 =====
+  &__link {
+    cursor: pointer;
+    color: #017162;
+    text-decoration: underline;
+    transition: color 0.2s ease;
+
+    &:hover {
+      color: #005c4e;
+    }
+
+    &:active {
+      color: #003f36;
+    }
+  }
+
+  // ===== 分頁與表格區 =====
+  &__table {
+    margin-top: 12px;
+  }
+
+  &__pagination {
+    margin-top: 16px;
+    @include flex(center, center);
+  }
+
+  // ===== 按鈕區 =====
+  &__btns {
+    margin-top: 24px;
+    @include flex(center, center);
+    gap: 24px;
+  }
+
+  &__btn {
+    width: 160px;
+    height: 48px;
+    border-radius: 50px;
+    border: 2px solid #017162;
+    font-size: 18px;
+    font-weight: 500;
+    cursor: pointer;
+    background: #fff;
+    color: #017162;
+    transition: all 0.25s ease;
+
+    &:hover {
+      background: #017162;
+      color: #fff;
+    }
+
+    &--confirm {
+      background: #017162;
+      color: #fff;
+    }
+
+    &--cancel {
+      border-color: #ccc;
+      color: #666;
+      &:hover {
+        background: #f9f9f9;
+      }
+    }
+  }
+
+  // ===== RWD =====
+  @include screen(md) {
+    padding: 12px;
+
+    &__text {
+      font-size: 14px;
+    }
+
+    &__btn {
+      width: 120px;
+      height: 40px;
+      font-size: 16px;
+    }
+  }
+}

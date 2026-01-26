@@ -1,0 +1,238 @@
+@use 'sass:color';
+@use '@/assets/styles/base/tokens' as *;
+
+/* ===========================
+   Form Input Component
+   =========================== */
+
+.form-input {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100%;
+}
+
+/* ===== 標籤 ===== */
+.form-input__label {
+  color: $form-text;
+  font-size: $font-md;
+  font-weight: 500;
+
+  &--required {
+    color: $danger;
+
+    .form-input__asterisk {
+      margin-left: 2px;
+      font-size: $font-xs;
+    }
+  }
+}
+
+/* ===== 控制列 ===== */
+.form-input__control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ===== 欄位外框 ===== */
+.form-input__field-wrap {
+  flex: 1;
+  height: $form-h-md;
+  display: flex;
+  align-items: stretch;
+  border: 1px solid $form-border;
+  border-radius: $form-radius;
+  background: $form-bg;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
+  position: relative;
+
+  &:hover {
+    border-color: color.mix($brand, $form-border, 30%);
+  }
+
+  &.is-focus {
+    border-color: $brand;
+    box-shadow: 0 0 0 2px #{color.change($brand, $alpha: 0.2)};
+  }
+
+  &.is-error {
+    border-color: $danger;
+    background: $danger-light;
+  }
+
+  &.is-disabled {
+    background: #f9fafb;
+    border-color: #e5e7eb;
+    opacity: 0.7;
+
+    .form-input__field {
+      color: #9ca3af;
+      cursor: not-allowed;
+    }
+  }
+
+  &.is-readonly {
+    background: #f9fafb;
+    border-color: #d1d5db;
+
+    .form-input__field {
+      color: #6b7280;
+      cursor: default;
+    }
+  }
+
+  &.is-disabled:hover,
+  &.is-readonly:hover {
+    border-color: $form-border;
+    box-shadow: none;
+  }
+
+  // 密碼切換 icon
+  .form-input__toggle {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
+
+  .form-input__field {
+    padding-right: 36px;
+  }
+}
+
+/* ===== input ===== */
+.form-input__field {
+  width: 100%;
+  flex: 1;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  color: $form-text;
+  font-size: $font-md;
+
+  &::placeholder {
+    color: $form-muted;
+  }
+}
+
+/* ===== 清除按鈕 ===== */
+.form-input__clear {
+  background: transparent;
+  cursor: pointer;
+  color: $form-muted;
+  font-size: 16px;
+  padding: 0 8px;
+  transition: color 0.2s;
+
+  &:hover {
+    color: $brand;
+  }
+
+  &:active {
+    transform: scale(0.92);
+  }
+}
+
+/* ===== 密碼切換 ===== */
+.form-input__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  color: $form-muted;
+  background: transparent;
+  cursor: pointer;
+
+  .form-input__toggle-icon {
+    font-size: 15px;
+  }
+
+  &:hover {
+    color: $brand;
+  }
+}
+
+/* ===== Addon ===== */
+.form-input__addon {
+  display: flex;
+  align-items: center;
+  padding: 0 8px;
+  color: $form-muted;
+
+  &--left {
+    border-right: 1px solid $form-border;
+  }
+
+  &--right {
+    border-left: 1px solid $form-border;
+  }
+}
+
+/* ===== 錯誤 ===== */
+.form-input__error {
+  color: $danger;
+  font-size: $font-xs;
+}
+
+/* ===== 輔助文字 ===== */
+.form-input__help {
+  color: $form-muted;
+  font-size: $font-xs;
+}
+
+/* ===== 檔案名稱 ===== */
+.form-input__file-name {
+  font-size: 0.875rem;
+  color: #555;
+  margin-top: 4px;
+}
+
+/* ===== Captcha ===== */
+.form-input__captcha-group {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  width: 100%;
+
+  .form-input {
+    flex: 1;
+  }
+}
+
+.captcha-addon {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &__img {
+    width: 100px;
+    height: 38px;
+    border-radius: 6px;
+    border: 1px solid $form-border;
+    background: #fff;
+    object-fit: contain;
+    box-shadow: 0 1px 3px $shadow-brand; // ← 使用 token
+  }
+
+  &__refresh {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    border: 1px solid $form-border;
+    background: #f9fafb;
+    color: $form-muted;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: $brand-light;
+      border-color: $brand;
+      color: $brand-dark;
+    }
+
+    &:active {
+      transform: scale(0.92);
+    }
+  }
+}
