@@ -1,7 +1,7 @@
 <template>
-  <!-- ✅ overlay：點背景直接確認關閉 -->
+  <!--  overlay：點背景直接確認關閉 -->
   <div class="ichiban-info-dialog" v-bind="data" @click="emitConfirm">
-    <!-- ✅ panel：點內容不關閉 -->
+    <!--  panel：點內容不關閉 -->
     <div class="ichiban-info-dialog__panel" @click.stop>
       <!-- LOGO -->
       <div class="ichiban-info-dialog__logo" v-if="showLogo">
@@ -22,7 +22,7 @@
             <span>{{ title }}</span>
           </div>
 
-          <!-- ✅ v-html -->
+          <!--  v-html -->
           <div
             class="ichiban-info-dialog__message"
             v-if="content"
@@ -54,10 +54,10 @@ type DataMap = Record<string, string | number | boolean | null | undefined>;
 const props = withDefaults(
   defineProps<{
     title?: string;
-    content?: string; // ✅ v-html
+    content?: string; //  v-html
     confirmText?: string;
 
-    /** ✅ 直接 v-bind 用 */
+    /**  直接 v-bind 用 */
     data?: DataMap;
 
     showLogo?: boolean;
@@ -70,7 +70,7 @@ const props = withDefaults(
     data: () => ({}),
     showLogo: true,
     showHeader: true,
-  }
+  },
 );
 
 const emit = defineEmits<{
@@ -79,7 +79,7 @@ const emit = defineEmits<{
 
 const emitConfirm = () => emit('confirm');
 
-/** ✅ onMounted 印出 data */
+/**  onMounted 印出 data */
 onMounted(() => {
   console.log('[IchibanInfoDialog] data =', props.data);
 });
@@ -90,7 +90,7 @@ onMounted(() => {
    IchibanInfoDialog (獨立樣式)
 ================================================= */
 .ichiban-info-dialog {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 10000;
 

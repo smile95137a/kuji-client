@@ -1,7 +1,7 @@
 <template>
-  <!-- ✅ overlay：點背景取消 -->
+  <!--  overlay：點背景取消 -->
   <div class="ichiban-forgot-dialog" v-bind="data" @click="emitCancel">
-    <!-- ✅ panel：點內容不關閉 -->
+    <!--  panel：點內容不關閉 -->
     <div class="ichiban-forgot-dialog__panel" @click.stop>
       <!-- LOGO -->
       <div class="ichiban-forgot-dialog__logo" v-if="showLogo">
@@ -22,14 +22,14 @@
             <span>{{ title }}</span>
           </div>
 
-          <!-- ✅ v-html：支援說明內容 -->
+          <!--  v-html：支援說明內容 -->
           <div
             class="ichiban-forgot-dialog__message"
             v-if="content"
             v-html="content"
           />
 
-          <!-- ✅ Email 輸入 -->
+          <!--  Email 輸入 -->
           <div class="ichiban-forgot-dialog__field">
             <label class="field__label">Email</label>
 
@@ -80,15 +80,15 @@ type DataMap = Record<string, string | number | boolean | null | undefined>;
 const props = withDefaults(
   defineProps<{
     title?: string;
-    content?: string; // ✅ v-html
+    content?: string; //  v-html
 
-    confirmText?: string; // ✅ default 送出
-    cancelText?: string; // ✅ default 取消
+    confirmText?: string; //  default 送出
+    cancelText?: string; //  default 取消
 
     placeholder?: string;
     defaultEmail?: string;
 
-    /** ✅ 直接 v-bind 用（不限制 data-*） */
+    /**  直接 v-bind 用（不限制 data-*） */
     data?: DataMap;
 
     showLogo?: boolean;
@@ -109,7 +109,7 @@ const props = withDefaults(
     showLogo: true,
     showHeader: true,
     hint: '送出後請至信箱收信，連結可能會在幾分鐘內抵達。',
-  }
+  },
 );
 
 const emit = defineEmits<{
@@ -120,7 +120,7 @@ const emit = defineEmits<{
 const email = ref(props.defaultEmail || '');
 const errorText = ref('');
 
-/** ✅ Email 基本檢核（你也可以換成 yup/vee-validate） */
+/**  Email 基本檢核（你也可以換成 yup/vee-validate） */
 const isValidEmail = (v: string) => {
   const s = String(v || '').trim();
   if (!s) return false;
@@ -151,7 +151,7 @@ const handleConfirm = () => {
 
 const emitCancel = () => emit('cancel');
 
-/** ✅ onMounted 印出 data */
+/**  onMounted 印出 data */
 onMounted(() => {
   console.log('[IchibanForgotPasswordDialog] data =', props.data);
 });
@@ -162,7 +162,7 @@ onMounted(() => {
    IchibanForgotPasswordDialog (獨立樣式)
 ================================================= */
 .ichiban-forgot-dialog {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 10000;
 
@@ -269,7 +269,7 @@ onMounted(() => {
   }
 }
 
-/* ✅ v-html 的內容區 */
+/*  v-html 的內容區 */
 .ichiban-forgot-dialog__message {
   color: #6b3c1f;
   font-size: 14px;

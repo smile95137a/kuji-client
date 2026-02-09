@@ -16,7 +16,7 @@
       <div class="kujiRevealDialog__revealWrap">
         <KujiRevealStrip
           :key="currentIndex"
-          :grade="currentPull?.grade"
+          :grade="currentPull?.prizeLevel"
           @reveal="handleReveal"
         />
       </div>
@@ -48,7 +48,6 @@ import polerDialogBg from '@/assets/image/poler-dialog-bg.png';
 type Pull = any;
 
 const props = defineProps<{
-  title?: string;
   pulls: Pull[];
 }>();
 
@@ -79,13 +78,11 @@ const handleReveal = async () => {
 
   results.value.push(currentPull.value);
 
-  // 給動畫一點時間
   await delay(800);
 
   next();
 };
 
-/** 前往下一抽 or finish */
 const next = () => {
   if (currentIndex.value < props.pulls.length - 1) {
     currentIndex.value++;

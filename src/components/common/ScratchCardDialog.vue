@@ -72,7 +72,7 @@ const props = withDefaults(
     /** 可選：標題 */
     title?: string;
 
-    /** ✅ 多張模式：十連抽等（有傳就用這個） */
+    /**  多張模式：十連抽等（有傳就用這個） */
     cards?: ScratchItem[];
 
     /** 單張模式（舊用法保留） */
@@ -85,7 +85,7 @@ const props = withDefaults(
   }>(),
   {
     threshold: 45,
-  }
+  },
 );
 
 const emit = defineEmits<{
@@ -94,10 +94,10 @@ const emit = defineEmits<{
   /** 單張（或每張）刮開 / 被跳過時都會觸發 */
   (
     e: 'revealed',
-    payload?: { item: ScratchItem; results: ScratchItem[] }
+    payload?: { item: ScratchItem; results: ScratchItem[] },
   ): void;
 
-  /** ✅ 全部流程完成（包含跳過） */
+  /**  全部流程完成（包含跳過） */
   (e: 'finish', results: ScratchItem[]): void;
 
   /** 取消關閉（回傳目前累積結果，單張用法也不會壞） */
@@ -121,7 +121,7 @@ const cards = computed<ScratchItem[]>(() => {
 });
 
 const resolvedTitle = computed(
-  () => props.title || (cards.value.length > 1 ? '刮刮樂' : '')
+  () => props.title || (cards.value.length > 1 ? '刮刮樂' : ''),
 );
 
 /** 目前第幾張 */
@@ -140,7 +140,7 @@ watch(
       currentIndex.value = 0;
       results.value = [];
     }
-  }
+  },
 );
 
 /* =====================
@@ -227,7 +227,7 @@ const handleCancel = () => {
   justify-content: center;
 }
 
-/* ✅ 透明遮罩，只負責擋點擊 */
+/*  透明遮罩，只負責擋點擊 */
 .scDialog__backdrop {
   position: absolute;
   inset: 0;
@@ -291,7 +291,9 @@ const handleCancel = () => {
   font-size: 0.9rem;
   cursor: pointer;
   color: #6b7280;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition:
+    background-color 0.15s ease,
+    color 0.15s ease;
 
   &:hover {
     background-color: rgba(148, 163, 184, 0.18);

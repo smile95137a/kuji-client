@@ -28,12 +28,12 @@ export function openInfoDialog(options: DialogOptions): DialogController {
         // Info 類：背景點擊就單純關掉
         close();
       },
-    })
+    }),
   );
 }
 
 /**
- * ✅ await 版本：infoDialog
+ *  await 版本：infoDialog
  * 使用方式：await infoDialog({ title, message })
  */
 export function infoDialog(options: DialogOptions): Promise<void> {

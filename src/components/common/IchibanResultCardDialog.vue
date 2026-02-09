@@ -7,11 +7,11 @@
         v-for="(_, i) in particleCount"
         :key="i"
         class="bg-particles__item"
-        :ref="el => (particleRefs[i] = el as HTMLElement)"
+        :ref="(el) => (particleRefs[i] = el as HTMLElement)"
       />
     </div>
 
-    <!-- ✅ 置中舞台 -->
+    <!--  置中舞台 -->
     <div class="draw-stage">
       <!-- 中央爆光 -->
       <div class="flash" ref="flashRef"></div>
@@ -23,11 +23,11 @@
           :key="c.id"
           class="card"
           :class="[`card--${c.type}`]"
-          :ref="el => (cardRefs[i] = el as HTMLElement)"
+          :ref="(el) => (cardRefs[i] = el as HTMLElement)"
         >
           <div
             class="card-inner"
-            :ref="el => (innerRefs[i] = el as HTMLElement)"
+            :ref="(el) => (innerRefs[i] = el as HTMLElement)"
           >
             <div class="card-back">
               <img :src="weblogo" alt="logo" class="card-back__logo" />
@@ -110,7 +110,7 @@ const cards = computed<PrizeCard[]>(() =>
     tag: `${item.grade}賞`,
     name: item.name,
     image: item.image,
-  }))
+  })),
 );
 
 /* ===== refs ===== */
@@ -121,14 +121,14 @@ const flashRef = ref<HTMLElement | null>(null);
 
 const particleCount = 35;
 
-/* ✅ scroll container / grid ref */
+/*  scroll container / grid ref */
 const containerRef = ref<HTMLElement | null>(null);
 const gridRef = ref<HTMLElement | null>(null);
 
-/* ✅ actions ref：算 bottomPad 用（固定底部按鈕高度） */
+/*  actions ref：算 bottomPad 用（固定底部按鈕高度） */
 const actionsRef = ref<HTMLElement | null>(null);
 
-/* ✅ 可選：排數 / 每排張數 */
+/*  可選：排數 / 每排張數 */
 const rowCount = ref(0);
 const perRow = ref(0);
 
@@ -145,7 +145,7 @@ async function calcRows() {
 
   const gridTop = grid.getBoundingClientRect().top;
   const tops = els.map((el) =>
-    Math.round(el.getBoundingClientRect().top - gridTop)
+    Math.round(el.getBoundingClientRect().top - gridTop),
   );
 
   const uniq = Array.from(new Set(tops)).sort((a, b) => a - b);
@@ -156,7 +156,7 @@ async function calcRows() {
 }
 
 /* =========================
-   ✅ Row mapping（關鍵修正）
+    Row mapping（關鍵修正）
    - 用 offsetTop 建 row，不受 scrollTop 影響
 ========================= */
 const rowTops = ref<number[]>([]);
@@ -194,7 +194,7 @@ function buildRowIndexMap() {
   });
 }
 
-/* ✅ 取得視窗上/下安全 padding（避免被 actions 蓋住） */
+/*  取得視窗上/下安全 padding（避免被 actions 蓋住） */
 function getViewportPads() {
   const topPad = 16;
   const actionsH = actionsRef.value?.getBoundingClientRect().height ?? 92;
@@ -206,7 +206,7 @@ function isFullyVisible(
   elRect: DOMRect,
   scRect: DOMRect,
   topPad: number,
-  bottomPad: number
+  bottomPad: number,
 ) {
   const epsilon = 2; // 避免 1px 抖動
   return (
@@ -215,7 +215,7 @@ function isFullyVisible(
   );
 }
 
-/* ✅ 讓某張卡在可視範圍內（看得到就不要捲） */
+/*  讓某張卡在可視範圍內（看得到就不要捲） */
 function ensureVisible(el: HTMLElement) {
   const scroller = containerRef.value;
   if (!scroller) return;
@@ -224,7 +224,7 @@ function ensureVisible(el: HTMLElement) {
   const elRect = el.getBoundingClientRect();
   const { topPad, bottomPad } = getViewportPads();
 
-  // ✅ 已經看得到：不捲
+  //  已經看得到：不捲
   if (isFullyVisible(elRect, scRect, topPad, bottomPad)) return;
 
   const visibleTop = scRect.top + topPad;
@@ -250,7 +250,7 @@ function ensureVisible(el: HTMLElement) {
   });
 }
 
-/* ✅ 只在「那一列不完整可見」時才捲動 */
+/*  只在「那一列不完整可見」時才捲動 */
 function scrollToRow(rowIndex: number) {
   const scroller = containerRef.value;
   const grid = gridRef.value;
@@ -276,7 +276,7 @@ function scrollToRow(rowIndex: number) {
   const visibleBottom = viewportH - bottomPad;
 
   const epsilon = 2;
-  // ✅ 這列完整可見：不捲
+  //  這列完整可見：不捲
   if (rowTopV >= visibleTop - epsilon && rowBottomV <= visibleBottom + epsilon)
     return;
 
@@ -313,7 +313,7 @@ function scrollBackToTop(duration = 1.6, delay = 0.35) {
   });
 }
 
-/* ✅ resize / observer（修正 removeEventListener bug） */
+/*  resize / observer（修正 removeEventListener bug） */
 let ro: ResizeObserver | null = null;
 let onResize: (() => void) | null = null;
 
@@ -329,7 +329,7 @@ watch(
     cardRefs.value = cardRefs.value.filter(Boolean);
     innerRefs.value = innerRefs.value.filter(Boolean);
     syncLayoutMetrics();
-  }
+  },
 );
 
 /* =========================
@@ -411,7 +411,7 @@ onMounted(async () => {
     // onComplete: () => scrollBackToTop(1.8, 0.4),
   });
 
-  // 飛進來（✅ 看得到才捲）
+  // 飛進來（ 看得到才捲）
   cardRefs.value.forEach((el, index) => {
     tl.to(
       el,
@@ -425,15 +425,15 @@ onMounted(async () => {
         ease: 'back.out(1.7)',
         onStart: () => ensureVisible(el),
       },
-      index * 0.15
+      index * 0.15,
     );
   });
   const scroller = containerRef.value;
 
-  // ✅ 只有「真的有往下捲」才需要捲回頂部
+  //  只有「真的有往下捲」才需要捲回頂部
   const needScrollTop = !!scroller && scroller.scrollTop > 2;
 
-  // ✅ 捲動時間改成短 + 依距離縮放（避免固定等 2 秒）
+  //  捲動時間改成短 + 依距離縮放（避免固定等 2 秒）
   // 你也可以把 0.55 / 0.75 調成你想要的節奏
   const scrollTime = needScrollTop
     ? Math.min(0.75, Math.max(0.25, scroller!.scrollTop / 1400))
@@ -447,14 +447,14 @@ onMounted(async () => {
         duration: scrollTime,
         ease: 'power2.out',
       },
-      totalFlightTime
+      totalFlightTime,
     );
   }
 
-  // ✅ 翻牌前再建一次 row map（確保 offsetTop 穩）
+  //  翻牌前再建一次 row map（確保 offsetTop 穩）
   tl.add(() => buildRowIndexMap(), totalFlightTime + scrollTime + 0.01);
 
-  // 翻牌（✅ 修正：stagger.onStart 參數是 (index, target)）
+  // 翻牌（ 修正：stagger.onStart 參數是 (index, target)）
   const flipTargets = innerRefs.value.filter((el): el is HTMLElement => !!el);
 
   // 再保險建一次
@@ -483,14 +483,14 @@ onMounted(async () => {
 
           if (row !== lastRow) {
             lastRow = row;
-            // ✅ 這列看得到就不捲
+            //  這列看得到就不捲
             scrollToRow(row);
             // console.log('[flip] index:', index, 'row:', row + 1);
           }
         },
       },
     },
-    totalFlightTime + scrollTime
+    totalFlightTime + scrollTime,
   );
 });
 
@@ -590,7 +590,8 @@ $back-glow: rgba($brand, 0.55);
     left: 50%;
     border-radius: 999px;
     background: radial-gradient(circle, #ffffff 0%, rgba(255, 255, 255, 0) 70%);
-    box-shadow: 0 0 12px rgba(255, 255, 255, 0.9),
+    box-shadow:
+      0 0 12px rgba(255, 255, 255, 0.9),
       0 0 20px rgba(255, 220, 150, 0.8);
     opacity: 0;
   }
@@ -683,7 +684,8 @@ $back-glow: rgba($brand, 0.55);
   .card-back {
     transform: rotateY(180deg);
 
-    background: radial-gradient(
+    background:
+      radial-gradient(
         circle at 18% 10%,
         rgba($back-4, 0.55),
         rgba($back-4, 0) 55%
@@ -707,9 +709,12 @@ $back-glow: rgba($brand, 0.55);
     border: clamp(2px, 0.5vw, 4px) solid $back-border;
     border-radius: 14px;
 
-    box-shadow: inset 0 0 10px rgba(255, 255, 255, 0.22),
-      inset 0 0 26px rgba($brand, 0.55), inset 0 -10px 22px rgba(0, 0, 0, 0.28),
-      0 0 14px $back-glow, 0 10px 22px rgba(0, 0, 0, 0.35);
+    box-shadow:
+      inset 0 0 10px rgba(255, 255, 255, 0.22),
+      inset 0 0 26px rgba($brand, 0.55),
+      inset 0 -10px 22px rgba(0, 0, 0, 0.28),
+      0 0 14px $back-glow,
+      0 10px 22px rgba(0, 0, 0, 0.35);
 
     color: rgba(255, 245, 235, 0.92);
     letter-spacing: 2px;
@@ -742,7 +747,9 @@ $back-glow: rgba($brand, 0.55);
     background: #ffffff;
     color: #333;
     border: 2px solid #ddd;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2), 0 0 14px rgba(255, 230, 150, 0.5);
+    box-shadow:
+      0 6px 18px rgba(0, 0, 0, 0.2),
+      0 0 14px rgba(255, 230, 150, 0.5);
     z-index: 2;
 
     flex-direction: column;
@@ -764,7 +771,8 @@ $back-glow: rgba($brand, 0.55);
       z-index: 1;
       pointer-events: none;
 
-      background: linear-gradient(
+      background:
+        linear-gradient(
           120deg,
           rgba(255, 255, 255, 0) 0%,
           rgba(255, 255, 255, 0.08) 38%,
@@ -830,7 +838,8 @@ $back-glow: rgba($brand, 0.55);
         #f9c543 100%
       );
       border-color: #f2c94c;
-      box-shadow: 0 0 18px rgba(255, 215, 0, 0.8),
+      box-shadow:
+        0 0 18px rgba(255, 215, 0, 0.8),
         0 12px 26px rgba(0, 0, 0, 0.35);
 
       &__shine {
@@ -910,8 +919,12 @@ $back-glow: rgba($brand, 0.55);
   letter-spacing: 1px;
   cursor: pointer;
   user-select: none;
-  transition: transform 0.12s ease, background-color 0.2s ease,
-    box-shadow 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+  transition:
+    transform 0.12s ease,
+    background-color 0.2s ease,
+    box-shadow 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease;
 
   &:active {
     transform: translateY(1px);
@@ -925,7 +938,9 @@ $back-glow: rgba($brand, 0.55);
   &--primary {
     background: $brand;
     color: #fff;
-    box-shadow: 0 10px 18px rgba(0, 0, 0, 0.18), 0 0 14px $brand-glow;
+    box-shadow:
+      0 10px 18px rgba(0, 0, 0, 0.18),
+      0 0 14px $brand-glow;
 
     &:hover {
       background: $brand-hover;
@@ -943,7 +958,9 @@ $back-glow: rgba($brand, 0.55);
 
     &:hover {
       background: rgba($brand-soft, 0.92);
-      box-shadow: 0 10px 18px rgba(0, 0, 0, 0.16), 0 0 0 3px $brand-ring;
+      box-shadow:
+        0 10px 18px rgba(0, 0, 0, 0.16),
+        0 0 0 3px $brand-ring;
     }
     &:active {
       background: rgba($brand-soft, 0.86);

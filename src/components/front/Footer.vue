@@ -76,11 +76,12 @@ type FooterNavItem = {
 
 const nav: FooterNavItem[] = [
   { label: '關於我們', to: '/about' },
+  { label: '最新消息', to: '/news' },
   { label: '常見問題', to: '/faq' },
   { label: '優惠說明', to: '/promotion' },
   { label: '交易說明', to: '/transaction' },
   { label: '合作諮詢', to: '/cooperation' },
-  { label: '服務條款', to: '/terms' },
+  { label: '服務條款', to: '/policy' },
   { label: '隱私權政策', to: '/privacy' },
 ];
 

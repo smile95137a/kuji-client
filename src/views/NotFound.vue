@@ -35,6 +35,8 @@ import weblogo from '@/assets/image/weblogo.png';
 
 <style scoped lang="scss">
 .notfound {
+  position: relative;
+  z-index: 9;
   min-height: 100vh;
   padding: 64px 16px;
   display: flex;
@@ -104,8 +106,11 @@ import weblogo from '@/assets/image/weblogo.png';
     font-size: 14px;
     letter-spacing: 0.08em;
     font-weight: 700;
-    transition: background-color 0.2s ease, color 0.2s ease,
-      box-shadow 0.2s ease, transform 0.1s ease;
+    transition:
+      background-color 0.2s ease,
+      color 0.2s ease,
+      box-shadow 0.2s ease,
+      transform 0.1s ease;
     cursor: pointer;
 
     &--primary {

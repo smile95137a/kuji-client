@@ -2,6 +2,8 @@
 
 /* 建議 template 最外層包一層 <div class="register"> ... </div> */
 .register {
+  position: relative;
+  z-index: 9;
   min-height: 100vh;
   display: flex;
   align-items: center;
@@ -19,7 +21,7 @@
 .mcard.mcard--register .mcard__header {
   height: 110px;
   padding: 0;
-  background: #a03828;
+  background: #b43325;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -34,7 +36,7 @@
 
 /* 內容紅底滿版 */
 .mcard.mcard--register .mcard__content {
-  background: #a03828;
+  background: #b43325;
   padding: 0;
 }
 
@@ -98,7 +100,7 @@
   -webkit-appearance: none;
   -moz-appearance: none;
 
-  /* ✅ 改這裡：避免 select 文字置中怪 */
+  /*  改這裡：避免 select 文字置中怪 */
   line-height: normal;
 }
 
@@ -122,20 +124,18 @@
   border: 2px solid #ff5a3f;
 }
 
-/* ✅ 這裡是你位置不對的主因：label 要靠左 */
 .register__text {
   margin: 0 0 10px;
   min-height: 22px;
   display: inline-flex;
   align-items: center;
-  justify-content: flex-start; /* ✅ 改成靠左 */
+  justify-content: flex-start;
   color: rgba(255, 255, 255, 0.92);
   font-size: 14px;
   font-weight: 700;
   letter-spacing: 0.4px;
 }
 
-/* ✅ 行政區右側 label 佔位：不顯示但保留高度，兩欄完美對齊 */
 .register__text--placeholder {
   visibility: hidden;
 }
@@ -167,6 +167,48 @@
 }
 
 .register__form-input--error {
+  border: 2px solid #ff5a3f;
+}
+
+.register__passwordWrap {
+  position: relative;
+  width: 100%;
+}
+
+.register__form-input--withIcon {
+  padding-right: 52px;
+}
+
+/* 眼睛按鈕 */
+.register__eyeBtn {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  background: rgba(255, 255, 255, 0.85);
+
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  cursor: pointer;
+  color: rgba(0, 0, 0, 0.6);
+}
+
+.register__eyeBtn:hover {
+  color: rgba(0, 0, 0, 0.82);
+}
+
+.register__eyeBtn:active {
+  transform: translateY(-50%) scale(0.98);
+}
+
+.register__passwordWrap .register__form-input--error ~ .register__eyeBtn {
   border: 2px solid #ff5a3f;
 }
 
@@ -236,7 +278,7 @@
   border-radius: 999px;
   border: none;
   cursor: pointer;
-  background: #d8a860;
+  background: #e5a657;
   color: #fff;
   font-size: 20px;
   font-weight: 900;
@@ -270,7 +312,6 @@
     max-width: 520px;
   }
 
-  /* ✅ 手機版：地址改一欄時，右側 placeholder 不需要 */
   .register__form-inputs--addr {
     grid-template-columns: 1fr;
     gap: 12px;

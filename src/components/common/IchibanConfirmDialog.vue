@@ -1,7 +1,7 @@
 <template>
-  <!-- ✅ overlay：點背景取消 -->
+  <!--  overlay：點背景取消 -->
   <div class="ichiban-confirm-dialog" v-bind="data" @click="emitCancel">
-    <!-- ✅ panel：點內容不關閉 -->
+    <!--  panel：點內容不關閉 -->
     <div class="ichiban-confirm-dialog__panel" @click.stop>
       <!-- LOGO -->
       <div class="ichiban-confirm-dialog__logo" v-if="showLogo">
@@ -22,7 +22,7 @@
             <span>{{ title }}</span>
           </div>
 
-          <!-- ✅ v-html：支援 HTML -->
+          <!--  v-html：支援 HTML -->
           <div
             class="ichiban-confirm-dialog__message"
             v-if="content"
@@ -60,12 +60,12 @@ type DataMap = Record<string, string | number | boolean | null | undefined>;
 const props = withDefaults(
   defineProps<{
     title?: string;
-    content?: string; // ✅ v-html
+    content?: string; //  v-html
 
     confirmText?: string;
     cancelText?: string;
 
-    /** ✅ 直接 v-bind 用（不限制 data-*） */
+    /**  直接 v-bind 用（不限制 data-*） */
     data?: DataMap;
 
     showLogo?: boolean;
@@ -79,7 +79,7 @@ const props = withDefaults(
     data: () => ({}),
     showLogo: true,
     showHeader: true,
-  }
+  },
 );
 
 const emit = defineEmits<{
@@ -90,7 +90,7 @@ const emit = defineEmits<{
 const emitConfirm = () => emit('confirm');
 const emitCancel = () => emit('cancel');
 
-/** ✅ onMounted 印出 data */
+/**  onMounted 印出 data */
 onMounted(() => {
   console.log('[IchibanConfirmDialog] data =', props.data);
 });
@@ -101,7 +101,7 @@ onMounted(() => {
    IchibanConfirmDialog (獨立樣式)
 ================================================= */
 .ichiban-confirm-dialog {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 10000;
 
@@ -208,7 +208,7 @@ onMounted(() => {
   }
 }
 
-/* ✅ v-html 的內容區 */
+/*  v-html 的內容區 */
 .ichiban-confirm-dialog__message {
   color: #6b3c1f;
   font-size: 14px;

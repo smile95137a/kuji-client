@@ -9,7 +9,7 @@ interface RequestData {
 
 /** 前台 - 新增收件地址 POST /user/addresses */
 export const createUserAddress = async (
-  payload: RequestData
+  payload: RequestData,
 ): Promise<ApiResponse<any>> => {
   try {
     const res = await api.post(`${basePath}`, payload);
@@ -23,7 +23,7 @@ export const createUserAddress = async (
 /** 前台 - 更新收件地址 PUT /user/addresses/{id} */
 export const updateUserAddress = async (
   id: string,
-  payload: RequestData
+  payload: RequestData,
 ): Promise<ApiResponse<any>> => {
   try {
     const res = await api.put(`${basePath}/${id}`, payload);
@@ -36,7 +36,7 @@ export const updateUserAddress = async (
 
 /** 前台 - 刪除收件地址 DELETE /user/addresses/{id} */
 export const deleteUserAddress = async (
-  id: string
+  id: string,
 ): Promise<ApiResponse<any>> => {
   try {
     const res = await api.delete(`${basePath}/${id}`);
@@ -50,7 +50,7 @@ export const deleteUserAddress = async (
 /** 前台 - 取得收件地址詳情 GET /user/addresses/{id} */
 export const getUserAddressDetail = async (
   id: string,
-  req?: RequestData
+  req?: RequestData,
 ): Promise<ApiResponse<any>> => {
   try {
     const res = await api.get(`${basePath}/${id}`, {
@@ -65,7 +65,7 @@ export const getUserAddressDetail = async (
 
 /** 前台 - 取得所有收件地址 GET /user/addresses */
 export const getUserAddresses = async (
-  req?: RequestData
+  req?: RequestData,
 ): Promise<ApiResponse<any>> => {
   try {
     const res = await api.get(`${basePath}`, {
@@ -80,7 +80,7 @@ export const getUserAddresses = async (
 
 /** 前台 - 取得預設收件地址 GET /user/addresses/default */
 export const getDefaultUserAddress = async (
-  req?: RequestData
+  req?: RequestData,
 ): Promise<ApiResponse<any>> => {
   try {
     const res = await api.get(`${basePath}/default`, {
@@ -95,7 +95,7 @@ export const getDefaultUserAddress = async (
 
 /** 前台 - 設定預設收件地址 PUT /user/addresses/{id}/default */
 export const setDefaultUserAddress = async (
-  id: string
+  id: string,
 ): Promise<ApiResponse<any>> => {
   try {
     const res = await api.put(`${basePath}/${id}/default`);

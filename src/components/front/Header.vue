@@ -175,6 +175,19 @@
       </div>
     </transition>
   </header>
+  <MobileHeaderMenu
+    v-model="isMobileOpen"
+    :is-login="isLogin"
+    :primary-menu="primaryMenu"
+    :secondary-menu="secondaryMenu"
+    :primary-to="primaryTo"
+    :secondary-to="secondaryTo"
+    @nav="onMobileNav"
+    @login="goLogin"
+    @register="goRegister"
+    @member="goMemberCenter"
+    @logout="handleLogout"
+  />
 </template>
 
 <script setup lang="ts">
@@ -192,6 +205,15 @@ import { useAuthStore } from '@/stores/useAuthStore';
 
 import weblogo from '@/assets/image/weblogo.png';
 import headerBg from '@/assets/image/header_bg.jpg';
+import MobileHeaderMenu from '@/components/header/MobileHeaderMenu.vue';
+
+const isMobileOpen = ref(false);
+
+// 讓 mobile 點連結時也順便關 mega
+const onMobileNav = () => {
+  closeMega();
+  isMobileOpen.value = false;
+};
 
 type MenuItem = { key: string; label: string; mega?: boolean };
 
@@ -201,16 +223,16 @@ const primaryMenu: MenuItem[] = [
   { key: 'custom', label: '自製一番賞' },
   { key: 'card', label: '卡牌' },
 ];
-
-const secondaryMenu: MenuItem[] = [
-  { key: 'theme', label: '主題', mega: true },
-  { key: 'brand', label: '品牌', mega: true },
-  { key: 'model', label: '模型', mega: true },
-  { key: 'kuji2', label: '一番賞' },
-  { key: 'gacha2', label: '扭蛋' },
-  { key: 'figure', label: '可動人偶' },
-  { key: 'pvc', label: '美少PVC' },
-];
+const secondaryMenu: MenuItem[] = [];
+// const secondaryMenu: MenuItem[] = [
+//   { key: 'theme', label: '主題', mega: true },
+//   { key: 'brand', label: '品牌', mega: true },
+//   { key: 'model', label: '模型', mega: true },
+//   { key: 'kuji2', label: '一番賞' },
+//   { key: 'gacha2', label: '扭蛋' },
+//   { key: 'figure', label: '可動人偶' },
+//   { key: 'pvc', label: '美少PVC' },
+// ];
 
 /** ===== Auth / Router ===== */
 const router = useRouter();
@@ -222,14 +244,12 @@ const isLogin = computed(() => !!authStore.token);
 const goLogin = () => {
   router.push({
     name: 'Login',
-    query: { redirect: route.fullPath },
   });
 };
 
 const goRegister = () => {
   router.push({
     name: 'Register',
-    query: { redirect: route.fullPath },
   });
 };
 
@@ -251,24 +271,8 @@ const activeMega = ref<string>('');
 const openMega = (key: string) => (activeMega.value = key);
 const closeMega = () => (activeMega.value = '');
 
-/** =========================================
- * ✅ RouterLink mapping（對齊你現有的 routes）
- * ========================================= */
-/**
- * 你目前 router 真的有的：
- * - Home
- * - IchibanList / IchibanDetail
- * - Ranking
- * - News / NewsDetail
- * - About / Faq / Promotion / Terms / Privacy / Policy / Cooperation / Transaction
- * - MemberCenter...
- *
- * 所以：
- * - Primary / Secondary / Mega 我先全部導到 IchibanList
- * - 用 query 帶分類條件（你之後 IchibanList 再接 query 做 filter 即可）
- */
 const primaryTo = (item: MenuItem): RouteLocationRaw => {
-  // ✅ 主選單全部先導到 IchibanList，用 query 區分分類
+  //  主選單全部先導到 IchibanList，用 query 區分分類
   const map: Record<string, RouteLocationRaw> = {
     kuji: { name: 'IchibanList', query: { type: 'kuji' } },
     gacha: { name: 'IchibanList', query: { type: 'gacha' } },
@@ -279,12 +283,12 @@ const primaryTo = (item: MenuItem): RouteLocationRaw => {
 };
 
 const secondaryTo = (item: MenuItem): RouteLocationRaw => {
-  // ✅ mega 類別：導去 IchibanList 並帶 tab（讓你在列表頁可以知道用哪種篩選）
+  //  mega 類別：導去 IchibanList 並帶 tab（讓你在列表頁可以知道用哪種篩選）
   if (item.mega) {
     return { name: 'IchibanList', query: { tab: item.key } };
   }
 
-  // ✅ 非 mega 的：一樣導到 IchibanList，用 type 區分
+  //  非 mega 的：一樣導到 IchibanList，用 type 區分
   const map: Record<string, RouteLocationRaw> = {
     kuji2: { name: 'IchibanList', query: { type: 'kuji' } },
     gacha2: { name: 'IchibanList', query: { type: 'gacha' } },
@@ -298,7 +302,7 @@ const secondaryTo = (item: MenuItem): RouteLocationRaw => {
 type MegaItem = { name: string; hot?: boolean };
 
 const megaTo = (b: MegaItem): RouteLocationRaw => {
-  // ✅ mega 子項目：依 activeMega 帶不同 query key
+  //  mega 子項目：依 activeMega 帶不同 query key
   // theme → theme=xxx
   // brand → brand=xxx
   // model → model=xxx
@@ -515,7 +519,7 @@ onBeforeUnmount(() => {
 </script>
 
 <style lang="scss" scoped>
-/* ✅ 你的 style 原封不動貼過來即可（不用改） */
+/*  你的 style 原封不動貼過來即可（不用改） */
 .app-header {
   position: relative;
   width: 100%;
@@ -523,7 +527,7 @@ onBeforeUnmount(() => {
 
   --gutter: 18px;
 
-  --hero-h: 92px;
+  --hero-h: 140px;
   --primary-h: 62px;
   --secondary-h: 52px;
 
@@ -547,7 +551,6 @@ onBeforeUnmount(() => {
   position: relative;
   height: var(--hero-h);
   background-color: #efe2d3;
-  overflow: hidden;
 
   &::after {
     content: '';
@@ -568,7 +571,7 @@ onBeforeUnmount(() => {
   inset: 0;
   z-index: 0;
   width: 100%;
-  height: 100%;
+  height: 620px;
   object-fit: cover;
   object-position: center top;
   pointer-events: none;
@@ -581,8 +584,9 @@ onBeforeUnmount(() => {
 
   height: var(--hero-h);
   display: flex;
-  align-items: center;
+  align-items: end;
   justify-content: flex-end;
+  padding: 24px;
 }
 
 /* logo */
@@ -852,21 +856,38 @@ onBeforeUnmount(() => {
 
 @media (max-width: 640px) {
   .app-header {
+    --hero-h: 92px;
+    --primary-h: 0px;
+    --secondary-h: 0px;
+
+    --logo-w: 150px;
+    --logo-img-h: 72px;
     --gutter: 12px;
-    --logo-w: 210px;
-    --logo-img-h: 120px;
-    --logo-gap: 6px;
   }
 
-  .app-header__primary-list,
-  .app-header__secondary-list {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    padding-right: 10px;
+  .app-header__actions {
+    display: none;
   }
 
-  .mega__section-cols {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .app-header__primary,
+  .app-header__secondary {
+    display: none;
+  }
+
+  .app-header__logo {
+    top: 10px;
+    bottom: auto;
+    left: 12px;
+  }
+
+  .app-header__heroBg {
+    height: 220px;
+  }
+
+  .app-header__heroRow {
+    padding: 12px;
+    align-items: center;
+    justify-content: flex-end;
   }
 }
 </style>

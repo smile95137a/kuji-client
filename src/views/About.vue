@@ -1,488 +1,781 @@
-<!-- src/views/DemoDialogs.vue (整份可直接貼上用) -->
+<!-- src/views/About.vue -->
 <template>
-  <div class="demo">
-    <div class="demo__actions">
-      <!-- 原本：完整流程 -->
-      <button class="demo__btn" @click="openGacha10" :disabled="isBusy">
-        打開抽卡（10 次）
-      </button>
+  <div class="about">
+    <!-- Hero -->
+    <section class="about__hero">
+      <div class="about__heroInner">
+        <div class="about__heroLeft">
+          <p class="about__badge">ABOUT STARDO</p>
+          <h1 class="about__title">STARDO｜把「抽到喜歡」做成體驗</h1>
+          <p class="about__subtitle">
+            STARDO
+            專注於一番賞的抽選體驗：賞品展示清楚、流程透明、揭曉瞬間有儀式感。
+            你只需要專心享受那個「揭曉」的那一秒。
+          </p>
 
-      <!-- 原本：只 Demo 結果 Dialog -->
-      <button
-        class="demo__btn demo__btn--secondary"
-        @click="openResultOnly"
-        :disabled="isBusy"
-      >
-        Demo 結果 Dialog（不撕卡）
-      </button>
+          <div class="about__heroActions">
+            <button class="about__btn about__btn--primary" @click="goShop">
+              前往商品
+            </button>
+            <button
+              class="about__btn about__btn--ghost"
+              @click="scrollTo('qa')"
+            >
+              常見問題
+            </button>
+          </div>
 
-      <!-- 原本：扭蛋機 Dialog Demo -->
-      <button
-        class="demo__btn demo__btn--gotcha"
-        @click="openGotchaDialog"
-        :disabled="isBusy"
-      >
-        Demo 扭蛋機 Dialog（1~50 次）
-      </button>
+          <div class="about__stats">
+            <div class="about__stat">
+              <p class="about__statNum">透明</p>
+              <p class="about__statLabel">流程可追蹤</p>
+            </div>
+            <div class="about__stat">
+              <p class="about__statNum">即時</p>
+              <p class="about__statLabel">抽況更新</p>
+            </div>
+            <div class="about__stat">
+              <p class="about__statNum">多元</p>
+              <p class="about__statLabel">玩法支援</p>
+            </div>
+          </div>
+        </div>
 
-      <!-- ✅ 新增：刮刮樂（單抽） -->
-      <button
-        class="demo__btn demo__btn--scratch"
-        @click="openScratchSingle"
-        :disabled="isBusy"
-      >
-        Demo 刮刮樂（單抽）
-      </button>
+        <div class="about__heroRight">
+          <div class="about__heroCard">
+            <div class="about__heroCardTop">
+              <p class="about__heroCardTitle">STARDO 的體驗重點</p>
+              <p class="about__heroCardDesc">
+                我們把流程做得更清楚：先看清楚、再抽得安心、最後漂亮揭曉。
+              </p>
+            </div>
 
-      <!-- ✅ 新增：刮刮樂（十連抽） -->
-      <button
-        class="demo__btn demo__btn--scratch2"
-        @click="openScratchTen"
-        :disabled="isBusy || isScratchTenDrawing"
-      >
-        Demo 刮刮樂（十連抽）
-      </button>
+            <div class="about__heroPreview">
+              <div class="about__previewPoster" aria-hidden="true">
+                <img
+                  class="about__previewImg"
+                  :src="loginLogo"
+                  alt="Login Illustration"
+                />
+              </div>
 
-      <!-- ✅ 新增：Ichiban Info Dialog -->
-      <button
-        class="demo__btn demo__btn--info"
-        @click="openIchibanInfo"
-        :disabled="isBusy"
-      >
-        Demo Ichiban Info Dialog
-      </button>
+              <div class="about__previewTextList">
+                <div class="about__previewTextItem">
+                  <span class="about__previewTextKey">賞品一覽</span>
+                  <span class="about__previewTextVal">等級 / 數量 / 尺寸</span>
+                </div>
 
-      <!-- ✅ 新增：Ichiban Confirm Dialog -->
-      <button
-        class="demo__btn demo__btn--confirm"
-        @click="openIchibanConfirm"
-        :disabled="isBusy"
-      >
-        Demo Ichiban Confirm Dialog
-      </button>
+                <div class="about__previewTextItem">
+                  <span class="about__previewTextKey">抽況追蹤</span>
+                  <span class="about__previewTextVal">剩餘 / 已抽 / 可用</span>
+                </div>
 
-      <!-- ✅✅ 新增：Ichiban Forgot Password Dialog -->
-      <button
-        class="demo__btn demo__btn--forgot"
-        @click="openIchibanForgotPassword"
-        :disabled="isBusy"
-      >
-        Demo Ichiban Forgot Password Dialog
-      </button>
-    </div>
+                <div class="about__previewTextItem">
+                  <span class="about__previewTextKey">揭曉動畫</span>
+                  <span class="about__previewTextVal"
+                    >撕開 / 刮開 / 結果彈窗</span
+                  >
+                </div>
+              </div>
 
-    <!-- 可選：提示 -->
-    <p class="demo__hint" v-if="isScratchTenDrawing">
-      正在進行刮刮樂十連抽⋯⋯（中途關閉任一張就會中斷後面抽卡）
-    </p>
+              <div class="about__previewHint">
+                <span class="about__dot"></span>
+                <span>你會一直知道自己正在做什麼、也知道抽到了什麼</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section class="about__section">
+      <div class="about__container">
+        <header class="about__sectionHeader">
+          <h2 class="about__sectionTitle">我們在乎什麼</h2>
+          <p class="about__sectionSubtitle">
+            不是把抽獎做複雜，而是把每一步做清楚、做順。
+          </p>
+        </header>
+
+        <div class="about__grid">
+          <article class="about__feature">
+            <div class="about__featureIcon" aria-hidden="true">
+              <font-awesome-icon :icon="['fas', 'wand-magic-sparkles']" />
+            </div>
+            <h3 class="about__featureTitle">揭曉儀式感</h3>
+            <p class="about__featureDesc">
+              撕開／刮開的動畫與結果彈窗，讓每一次抽選都像「開箱」。
+            </p>
+          </article>
+
+          <article class="about__feature">
+            <div class="about__featureIcon" aria-hidden="true">
+              <font-awesome-icon :icon="['fas', 'box-open']" />
+            </div>
+            <h3 class="about__featureTitle">賞品資訊清楚</h3>
+            <p class="about__featureDesc">
+              賞品一覽、數量、尺寸、剩餘統計，資訊一眼懂，安心抽。
+            </p>
+          </article>
+
+          <article class="about__feature">
+            <div class="about__featureIcon" aria-hidden="true">
+              <font-awesome-icon :icon="['fas', 'chart-simple']" />
+            </div>
+            <h3 class="about__featureTitle">流程透明可追</h3>
+            <p class="about__featureDesc">
+              可用票券、已抽狀態、剩餘抽數，一個頁面全部掌握。
+            </p>
+          </article>
+
+          <article class="about__feature">
+            <div class="about__featureIcon" aria-hidden="true">
+              <font-awesome-icon :icon="['fas', 'shield-halved']" />
+            </div>
+            <h3 class="about__featureTitle">穩定與安全</h3>
+            <p class="about__featureDesc">
+              交易與結果流程分離，提示清楚、狀態一致，不怕卡住。
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- How it works -->
+    <section class="about__section about__section--dark">
+      <div class="about__container">
+        <header class="about__sectionHeader about__sectionHeader--center">
+          <h2 class="about__sectionTitle about__sectionTitle--light">怎麼玩</h2>
+          <p class="about__sectionSubtitle about__sectionSubtitle--light">
+            三步驟完成一次抽選體驗（抽籤／刮刮樂都適用）
+          </p>
+        </header>
+
+        <ol class="about__steps">
+          <li class="about__step">
+            <div class="about__stepNo">01</div>
+            <div class="about__stepBody">
+              <p class="about__stepTitle">選擇商品</p>
+              <p class="about__stepDesc">
+                查看賞品一覽與介紹內容，先確認喜歡再出手。
+              </p>
+            </div>
+          </li>
+
+          <li class="about__step">
+            <div class="about__stepNo">02</div>
+            <div class="about__stepBody">
+              <p class="about__stepTitle">開始抽 / 開刮</p>
+              <p class="about__stepDesc">
+                抽籤模式可選票與檢視抽況；刮刮樂模式直接進揭曉流程。
+              </p>
+            </div>
+          </li>
+
+          <li class="about__step">
+            <div class="about__stepNo">03</div>
+            <div class="about__stepBody">
+              <p class="about__stepTitle">查看結果與剩餘</p>
+              <p class="about__stepDesc">
+                結果會顯示抽到的賞品與剩餘抽數，並同步更新最新狀態。
+              </p>
+            </div>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- QA -->
+    <section class="about__section" id="qa">
+      <div class="about__container">
+        <header class="about__sectionHeader">
+          <h2 class="about__sectionTitle">常見問題</h2>
+          <p class="about__sectionSubtitle">你可能會想先知道這些。</p>
+        </header>
+
+        <div class="about__faq">
+          <details class="about__qa" open>
+            <summary class="about__qaQ">抽籤模式跟刮刮樂模式差在哪？</summary>
+            <div class="about__qaA">
+              抽籤模式會提供「檢視抽況 /
+              選票」等流程；刮刮樂模式以快速揭曉為主，
+              直接「開刮」進動畫與結果。
+            </div>
+          </details>
+
+          <details class="about__qa">
+            <summary class="about__qaQ">賞品剩餘與抽況是即時的嗎？</summary>
+            <div class="about__qaA">
+              以後端回傳為準。抽完後會自動刷新，確保顯示最新狀態。
+            </div>
+          </details>
+
+          <details class="about__qa">
+            <summary class="about__qaQ">介紹內容支援圖片或表格嗎？</summary>
+            <div class="about__qaA">
+              支援（例如後台編輯器輸出的 HTML）。若內容來源不可信，建議加入
+              sanitize 來避免 XSS 風險。
+            </div>
+          </details>
+
+          <details class="about__qa">
+            <summary class="about__qaQ">如何聯絡 STARDO？</summary>
+            <div class="about__qaA">
+              你可以透過客服信箱或站內聯絡表單（若有）與我們聯繫。
+            </div>
+          </details>
+        </div>
+
+        <div class="about__ctaBlock">
+          <div class="about__ctaLeft">
+            <p class="about__ctaTitle">準備好開始了嗎？</p>
+            <p class="about__ctaDesc">
+              前往商品頁，挑一個你喜歡的系列，享受揭曉的瞬間。
+            </p>
+          </div>
+
+          <div class="about__ctaRight">
+            <button class="about__btn about__btn--primary" @click="goShop">
+              立即前往
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { useOverlayStore } from '@/stores/overlay';
+import { computed } from 'vue';
+import { useRouter } from 'vue-router';
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+import loginLogo from '@/assets/image/login_logo.png';
 
-import demo1 from '@/assets/image/demo1.jpg';
+const router = useRouter();
 
-import { gachaTearDialog } from '@/utils/dialog/kujiRevealStripDialog';
-import { ichibanResultDialog } from '@/utils/dialog/ichibanResultDialog';
-import { ichibanResultCardDialog } from '@/utils/dialog/ichibanResultCardDialog';
-import { gotchaDialog } from '@/utils/dialog/gotchaDialog';
-import { scratchCardDialog } from '@/utils/dialog/scratchCardDialog';
+const goShop = () => router.push({ name: 'IchibanList' });
 
-import { ichibanInfoDialog } from '@/utils/dialog/ichibanInfoDialog';
-import { ichibanConfirmDialog } from '@/utils/dialog/ichibanConfirmDialog';
-
-/** ✅✅ 新增：忘記密碼 Dialog */
-import { ichibanForgotPasswordDialog } from '@/utils/dialog/ichibanForgotPasswordDialog';
-
-const overlay = useOverlayStore();
-
-const isBusy = ref(false);
-const isScratchTenDrawing = ref(false);
-
-/**
- * mock 獎品資料（之後你可以換成 API 回傳）
- */
-function randomGrade(): string {
-  const code = 'A'.charCodeAt(0) + Math.floor(Math.random() * 26);
-  return String.fromCharCode(code); // 'A' ~ 'Z'
-}
-
-function createPrizeList(count: number) {
-  return Array.from({ length: count }, (_, i) => {
-    const grade = randomGrade();
-
-    return {
-      id: `prize-${i}`,
-      name: '「春秋戰國大戰王者天下」The Animation 秦國的末裔 MASTERLISE',
-      image: demo1,
-      grade,
-    };
-  });
-}
-
-/** ====== 刮刮樂：十連抽假資料 ====== */
-type Grade = 'A' | 'B' | 'C' | 'D' | 'Last';
-
-interface Prize {
-  grade: Grade;
-  name: string;
-  imageSrc: string;
-}
-
-const TEN_PRIZES: Prize[] = [
-  { grade: 'A', name: '皮卡丘超大抱枕', imageSrc: demo1 },
-  { grade: 'B', name: '皮卡丘馬克杯', imageSrc: demo1 },
-  { grade: 'B', name: '皮卡丘環保袋', imageSrc: demo1 },
-  { grade: 'C', name: '皮卡丘貼紙組', imageSrc: demo1 },
-  { grade: 'C', name: '皮卡丘鑰匙圈', imageSrc: demo1 },
-  { grade: 'D', name: '皮卡丘徽章', imageSrc: demo1 },
-  { grade: 'D', name: '皮卡丘小吊飾', imageSrc: demo1 },
-  { grade: 'D', name: '皮卡丘明信片', imageSrc: demo1 },
-  { grade: 'Last', name: '最後一抽特別賞・大抱枕套組', imageSrc: demo1 },
-  { grade: 'D', name: '皮卡丘資料夾', imageSrc: demo1 },
-];
-
-/**
- * 原本：完整流程（撕卡 -> 結果）
- */
-async function openGacha10() {
-  if (isBusy.value) return;
-  isBusy.value = true;
-
-  const randomCount = Math.floor(Math.random() * 50) + 1; // 1~50
-  const prizeList = createPrizeList(randomCount);
-
-  const pulls = prizeList.map((prize, index) => ({
-    index,
-    ...prize,
-    title: `今日一番賞・第 ${index + 1} 抽`,
-  }));
-
-  overlay.open('gacha-tear');
-
-  try {
-    const tearResult = await gachaTearDialog({ pulls });
-    if (!tearResult) return;
-
-    await ichibanResultDialog({
-      remain: 71,
-      count: prizeList.length,
-      totalPrice: prizeList.length * 120,
-      items: prizeList,
-    });
-  } finally {
-    overlay.close();
-    isBusy.value = false;
-  }
-}
-
-/**
- * 原本：只 Demo 結果 Dialog（不撕卡）
- */
-async function openResultOnly() {
-  if (isBusy.value) return;
-  isBusy.value = true;
-
-  const randomCount = Math.floor(Math.random() * 50) + 1; // 1~50
-  const prizeList = createPrizeList(randomCount);
-
-  overlay.open('gacha-tear', false);
-
-  try {
-    const again = await ichibanResultCardDialog({
-      remain: 88,
-      count: prizeList.length,
-      totalPrice: prizeList.length * 120,
-      items: prizeList,
-    });
-
-    console.log('[Result Only Demo] 再抽一次？', again);
-  } finally {
-    overlay.close();
-    isBusy.value = false;
-  }
-}
-
-/**
- * 原本：扭蛋機 Dialog Demo
- */
-async function openGotchaDialog() {
-  if (isBusy.value) return;
-  isBusy.value = true;
-
-  const randomCount = Math.floor(Math.random() * 50) + 1; // 1~50
-  const prizeList = createPrizeList(randomCount);
-
-  const pulls = prizeList.map((prize, index) => ({
-    title: `今日一番賞・第 ${index + 1} 抽`,
-    image: prize.image,
-    prize,
-    index,
-  }));
-
-  overlay.open('gacha-tear');
-
-  try {
-    const results = await gotchaDialog({
-      title: '扭蛋機抽獎中',
-      pulls,
-      speed: 0.6,
-    });
-
-    if (!results) return;
-
-    await ichibanResultDialog({
-      remain: 71,
-      count: prizeList.length,
-      totalPrice: prizeList.length * 120,
-      items: prizeList,
-    });
-
-    console.log('[Gotcha Dialog Demo] results=', results);
-  } finally {
-    overlay.close();
-    isBusy.value = false;
-  }
-}
-
-/** ✅ 刮刮樂（單抽） */
-async function openScratchSingle() {
-  if (isBusy.value) return;
-  isBusy.value = true;
-
-  overlay.open('scratch-card');
-
-  try {
-    const ok = await scratchCardDialog({
-      title: '今日一番賞・刮刮樂（單抽）',
-      imageSrc: demo1,
-      idleText: '刮開看看，抽到什麼賞？',
-      revealText: '恭喜抽中 A賞！',
-      threshold: 45,
-      grade: 'A',
-    });
-
-    console.log('[Scratch Single] ok=', ok);
-  } finally {
-    overlay.close();
-    isBusy.value = false;
-  }
-}
-
-/** ✅ 刮刮樂（十連抽） */
-async function openScratchTen() {
-  if (isBusy.value || isScratchTenDrawing.value) return;
-
-  isBusy.value = true;
-  isScratchTenDrawing.value = true;
-
-  overlay.open('scratch-card');
-
-  let finished = 0;
-  let completed = 0;
-  let canceledAt: number | undefined;
-
-  const gradeCounts: Record<Grade, number> = {
-    A: 0,
-    B: 0,
-    C: 0,
-    D: 0,
-    Last: 0,
-  };
-
-  try {
-    for (let i = 0; i < TEN_PRIZES.length; i++) {
-      const drawNo = i + 1;
-      const prize = TEN_PRIZES[i];
-
-      const ok = await scratchCardDialog({
-        title: `今日一番賞・十連抽（第 ${drawNo} 張｜${prize.grade}賞）`,
-        imageSrc: prize.imageSrc,
-        idleText: `第 ${drawNo} 張，刮開看看抽到什麼賞？`,
-        revealText: `第 ${drawNo} 張：${prize.grade}賞・${prize.name}`,
-        threshold: 45,
-        grade: prize.grade,
-      });
-
-      finished++;
-
-      if (!ok) {
-        canceledAt = drawNo;
-        break;
-      }
-
-      completed++;
-      gradeCounts[prize.grade] += 1;
-    }
-
-    console.log('[Scratch Ten] summary=', {
-      finished,
-      completed,
-      canceledAt,
-      gradeCounts,
-    });
-  } finally {
-    overlay.close();
-    isScratchTenDrawing.value = false;
-    isBusy.value = false;
-  }
-}
-
-/** ✅ Demo Ichiban Info Dialog */
-async function openIchibanInfo() {
-  if (isBusy.value) return;
-  isBusy.value = true;
-
-  overlay.open('ichiban-info', false);
-
-  try {
-    const ok = await ichibanInfoDialog({
-      title: '提示訊息',
-      content: `<b>儲存成功</b><br/>已完成新增`,
-      data: {
-        id: 'hello',
-        role: 'dialog',
-        'aria-label': 'info-dialog',
-      },
-    });
-
-    console.log('[Ichiban Info Demo] ok=', ok);
-  } finally {
-    overlay.close();
-    isBusy.value = false;
-  }
-}
-
-/** ✅ Demo Ichiban Confirm Dialog */
-async function openIchibanConfirm() {
-  if (isBusy.value) return;
-  isBusy.value = true;
-
-  overlay.open('ichiban-confirm', false);
-
-  try {
-    const ok = await ichibanConfirmDialog({
-      title: '刪除確認',
-      content: `確定要刪除這筆資料嗎？<br/><b>刪除後無法復原</b>`,
-      data: {
-        id: 'confirm-delete',
-        role: 'dialog',
-        'aria-label': 'delete-confirm',
-      },
-    });
-
-    console.log('[Ichiban Confirm Demo] ok=', ok);
-  } finally {
-    overlay.close();
-    isBusy.value = false;
-  }
-}
-
-/* =========================================================
-   ✅✅ 新增：Demo Ichiban Forgot Password Dialog
-   - 回傳 email 或 null
-========================================================= */
-async function openIchibanForgotPassword() {
-  if (isBusy.value) return;
-  isBusy.value = true;
-
-  overlay.open('ichiban-forgot-password', false);
-
-  try {
-    const email = await ichibanForgotPasswordDialog({
-      title: '忘記密碼',
-      content: `請輸入你的 <b>Email</b><br/>我們會寄送重設密碼連結給你`,
-      confirmText: '送出',
-      cancelText: '取消',
-      placeholder: '請輸入 Email，例如：test@gmail.com',
-      defaultEmail: 'test@gmail.com',
-      hint: '※ 信件可能會在垃圾郵件，請稍微找一下',
-      data: {
-        id: 'forgot-password',
-        role: 'dialog',
-        'aria-label': 'forgot-password-dialog',
-      },
-    });
-
-    console.log('[Ichiban Forgot Password Demo] email =', email);
-
-    // ✅ 你要接 API 的話可以直接用這個 email
-    // if (email) { await forgotPasswordApi({ email }) }
-  } finally {
-    overlay.close();
-    isBusy.value = false;
-  }
-}
+const scrollTo = (id: string) => {
+  const el = document.getElementById(id);
+  el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
 </script>
 
-<style scoped>
-.demo {
+<style scoped lang="scss">
+.about {
+  background: linear-gradient(180deg, #f4e1cc 0%, #f8efe3 40%, #ffffff 100%);
   min-height: 100vh;
-  padding: 28px 18px;
-}
+  position: relative;
+  z-index: 9;
 
-.demo__actions {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
+  &__container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
 
-.demo__btn {
-  padding: 12px 18px;
-  border-radius: 14px;
-  border: 0;
-  cursor: pointer;
-  font-weight: 800;
-  background: linear-gradient(135deg, #f59e0b, #facc15);
-  color: #111827;
-}
+  /* Hero */
+  &__hero {
+    background: #000;
+    color: #fff;
+    padding: 34px 0 28px;
+  }
 
-.demo__btn:disabled {
-  cursor: not-allowed;
-  opacity: 0.6;
-}
+  &__heroInner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
 
-.demo__btn--secondary {
-  background: linear-gradient(135deg, #38bdf8, #a78bfa);
-  color: #0b1220;
-}
+    display: grid;
+    grid-template-columns: 1.15fr 0.85fr;
+    gap: 28px;
+    align-items: stretch;
+  }
 
-.demo__btn--gotcha {
-  background: linear-gradient(135deg, #34d399, #22c55e);
-  color: #052e16;
-}
+  &__badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 26px;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    letter-spacing: 2px;
+    font-weight: 900;
+    color: rgba(229, 166, 87, 0.95);
+    background: rgba(229, 166, 87, 0.12);
+    border: 1px solid rgba(229, 166, 87, 0.35);
+    margin: 0 0 10px;
+  }
 
-.demo__btn--scratch {
-  background: linear-gradient(135deg, #fb7185, #f97316);
-  color: #111827;
-}
+  &__title {
+    font-size: 34px;
+    line-height: 1.15;
+    margin: 0 0 10px;
+    font-weight: 1000;
+    letter-spacing: 0.2px;
+  }
 
-.demo__btn--scratch2 {
-  background: linear-gradient(135deg, #f472b6, #818cf8);
-  color: #0b1220;
-}
+  &__subtitle {
+    margin: 0 0 18px;
+    font-size: 15px;
+    line-height: 1.7;
+    color: rgba(255, 255, 255, 0.82);
+    max-width: 560px;
+  }
 
-.demo__btn--info {
-  background: linear-gradient(135deg, #22c55e, #a3e635);
-  color: #052e16;
-}
+  &__heroActions {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 18px;
+    flex-wrap: wrap;
+  }
 
-.demo__btn--confirm {
-  background: linear-gradient(135deg, #fb7185, #ef4444);
-  color: #1f2937;
-}
+  &__btn {
+    height: 52px;
+    padding: 0 18px;
+    border-radius: 999px;
+    font-weight: 900;
+    font-size: 15px;
+    border: 0;
+    cursor: pointer;
+    letter-spacing: 1px;
 
-/* ✅✅ Forgot Password 按鈕 */
-.demo__btn--forgot {
-  background: linear-gradient(135deg, #f97316, #f59e0b);
-  color: #1f2937;
-}
+    &--primary {
+      background: #b2473a;
+      color: #fff;
+    }
 
-.demo__hint {
-  margin-top: 12px;
-  font-size: 13px;
-  color: #6b7280;
+    &--ghost {
+      background: transparent;
+      color: rgba(229, 166, 87, 0.95);
+      border: 1px solid rgba(229, 166, 87, 0.55);
+    }
+  }
+
+  &__stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    max-width: 520px;
+  }
+
+  &__stat {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: 14px;
+    padding: 12px 12px 10px;
+  }
+
+  &__statNum {
+    margin: 0 0 2px;
+    font-weight: 1000;
+    font-size: 18px;
+    color: rgba(229, 166, 87, 0.95);
+  }
+
+  &__statLabel {
+    margin: 0;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.8);
+    letter-spacing: 1px;
+  }
+
+  &__heroRight {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  &__heroCard {
+    width: 100%;
+    max-width: 420px;
+    border-radius: 18px;
+    padding: 16px;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.08),
+      rgba(255, 255, 255, 0.04)
+    );
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  &__heroCardTop {
+    margin-bottom: 12px;
+  }
+
+  &__heroCardTitle {
+    margin: 0 0 6px;
+    font-weight: 1000;
+    letter-spacing: 1px;
+    font-size: 16px;
+  }
+
+  &__heroCardDesc {
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.7;
+    color: rgba(255, 255, 255, 0.78);
+  }
+
+  &__heroPreview {
+    margin-top: 12px;
+    border-radius: 14px;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.55);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 12px;
+  }
+
+  &__previewPoster {
+    height: 180px;
+    border-radius: 12px;
+    background:
+      radial-gradient(
+        circle at 30% 20%,
+        rgba(229, 166, 87, 0.42),
+        transparent 60%
+      ),
+      linear-gradient(135deg, rgba(178, 71, 58, 0.65), rgba(0, 0, 0, 0.65));
+    margin-bottom: 12px;
+  }
+
+  &__previewImg {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  &__previewTextList {
+    display: grid;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  &__previewTextItem {
+    display: grid;
+    grid-template-columns: 86px 1fr;
+    gap: 10px;
+    align-items: center;
+
+    padding: 10px 10px;
+    border-radius: 12px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.09);
+  }
+
+  &__previewTextKey {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 28px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 1000;
+    letter-spacing: 1px;
+
+    color: rgba(229, 166, 87, 0.95);
+    background: rgba(229, 166, 87, 0.12);
+    border: 1px solid rgba(229, 166, 87, 0.28);
+  }
+
+  &__previewTextVal {
+    font-size: 13px;
+    color: rgba(255, 255, 255, 0.82);
+    line-height: 1.6;
+  }
+
+  &__previewHint {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    font-size: 12px;
+    color: rgba(255, 255, 255, 0.78);
+    line-height: 1.6;
+  }
+
+  &__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(229, 166, 87, 0.95);
+    box-shadow: 0 0 0 4px rgba(229, 166, 87, 0.15);
+    flex: 0 0 auto;
+  }
+
+  &__heroCardBottom {
+    margin-top: 12px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+
+  &__miniBtn {
+    height: 40px;
+    padding: 0 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(0, 0, 0, 0.25);
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 900;
+    cursor: pointer;
+
+    &--gold {
+      background: rgba(229, 166, 87, 0.9);
+      border-color: rgba(229, 166, 87, 0.9);
+      color: #000;
+    }
+  }
+
+  /* Sections */
+  &__section {
+    padding: 36px 0;
+
+    &--dark {
+      background: #000;
+    }
+  }
+
+  &__sectionHeader {
+    margin-bottom: 18px;
+
+    &--center {
+      text-align: center;
+    }
+  }
+
+  &__sectionTitle {
+    margin: 0 0 8px;
+    font-size: 22px;
+    font-weight: 1000;
+    letter-spacing: 1px;
+    color: #111;
+
+    &--light {
+      color: #fff;
+    }
+  }
+
+  &__sectionSubtitle {
+    margin: 0;
+    color: rgba(0, 0, 0, 0.65);
+    line-height: 1.7;
+
+    &--light {
+      color: rgba(255, 255, 255, 0.78);
+    }
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  &__feature {
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    padding: 16px;
+  }
+
+  &__featureIcon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    margin-bottom: 10px;
+
+    background: rgba(178, 71, 58, 0.08);
+    border: 1px solid rgba(178, 71, 58, 0.14);
+    color: rgba(178, 71, 58, 0.95);
+
+    font-size: 18px;
+  }
+
+  &__featureTitle {
+    margin: 0 0 8px;
+    font-weight: 1000;
+    letter-spacing: 0.3px;
+    font-size: 16px;
+  }
+
+  &__featureDesc {
+    margin: 0;
+    line-height: 1.7;
+    color: rgba(0, 0, 0, 0.7);
+    font-size: 14px;
+  }
+
+  /* Steps */
+  &__steps {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: grid;
+    gap: 12px;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  &__step {
+    border-radius: 16px;
+    padding: 16px 16px 14px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+  }
+
+  &__stepNo {
+    width: 54px;
+    height: 54px;
+    border-radius: 14px;
+    display: grid;
+    place-items: center;
+    font-weight: 1000;
+    letter-spacing: 1px;
+    color: #000;
+    background: rgba(229, 166, 87, 0.92);
+    flex: 0 0 auto;
+  }
+
+  &__stepTitle {
+    margin: 2px 0 4px;
+    font-weight: 1000;
+    color: #fff;
+    letter-spacing: 0.2px;
+  }
+
+  &__stepDesc {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.78);
+    line-height: 1.7;
+    font-size: 14px;
+  }
+
+  /* FAQ */
+  &__faq {
+    display: grid;
+    gap: 10px;
+  }
+
+  &__qa {
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 16px;
+    padding: 12px 14px;
+  }
+
+  &__qaQ {
+    cursor: pointer;
+    font-weight: 1000;
+    letter-spacing: 0.2px;
+  }
+
+  &__qaA {
+    margin-top: 10px;
+    line-height: 1.75;
+    color: rgba(0, 0, 0, 0.72);
+    font-size: 14px;
+  }
+
+  /* CTA block */
+  &__ctaBlock {
+    margin-top: 18px;
+    border-radius: 18px;
+    padding: 18px;
+    background: linear-gradient(135deg, #b2473a, #7a1a12);
+    color: #fff;
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  &__ctaTitle {
+    margin: 0 0 4px;
+    font-weight: 1000;
+    letter-spacing: 0.3px;
+    font-size: 18px;
+  }
+
+  &__ctaDesc {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.85);
+    line-height: 1.7;
+    font-size: 14px;
+  }
+
+  /* Footer */
+  &__footer {
+    padding: 18px 0 24px;
+  }
+
+  &__footerInner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  &__footerText {
+    margin: 0;
+    color: rgba(0, 0, 0, 0.6);
+    font-size: 13px;
+  }
+
+  &__footerTop {
+    height: 40px;
+    padding: 0 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    background: rgba(255, 255, 255, 0.7);
+    font-weight: 900;
+    cursor: pointer;
+  }
+
+  /* RWD */
+  @media (max-width: 1024px) {
+    &__heroInner {
+      grid-template-columns: 1fr;
+    }
+
+    &__heroRight {
+      justify-content: flex-start;
+    }
+
+    &__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 640px) {
+    &__container {
+      padding: 0 16px;
+    }
+
+    &__heroInner {
+      padding: 0 16px;
+    }
+
+    &__title {
+      font-size: 28px;
+    }
+
+    &__stats {
+      grid-template-columns: 1fr;
+    }
+
+    &__grid {
+      grid-template-columns: 1fr;
+    }
+  }
 }
 </style>

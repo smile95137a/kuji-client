@@ -21,9 +21,9 @@
         <div class="memberProfile__meta">
           <p class="memberProfile__name">
             {{ user.name || '-' }}
-            <span v-if="user.nickname" class="memberProfile__nickname"
-              >（{{ user.nickname }}）</span
-            >
+            <span v-if="user.nickname" class="memberProfile__nickname">
+              （{{ user.nickname }}）
+            </span>
           </p>
           <p class="memberProfile__line">Email：{{ user.email || '-' }}</p>
           <p class="memberProfile__line">手機：{{ user.phone || '-' }}</p>
@@ -39,30 +39,47 @@
 
       <div class="memberProfile__divider"></div>
 
-      <!-- 其他資訊（你可以自由擴充） -->
+      <!-- 其他資訊 -->
       <div class="memberProfile__grid">
         <div class="memberProfile__info">
           <p class="memberProfile__k">會員等級</p>
-          <p class="memberProfile__v">{{ user.level }}</p>
+          <p class="memberProfile__v">{{ user.level || '-' }}</p>
         </div>
+
         <div class="memberProfile__info">
-          <p class="memberProfile__k">錢包餘額</p>
-          <p class="memberProfile__v">
-            NT$ {{ user.balance.toLocaleString() }}
-          </p>
+          <p class="memberProfile__k">金幣</p>
+          <p class="memberProfile__v">{{ user.goldCoins.toLocaleString() }}</p>
         </div>
+
+        <div class="memberProfile__info">
+          <p class="memberProfile__k">紅利</p>
+          <p class="memberProfile__v">{{ user.bonusCoins.toLocaleString() }}</p>
+        </div>
+
         <div class="memberProfile__info">
           <p class="memberProfile__k">註冊日期</p>
-          <p class="memberProfile__v">{{ user.createdAt }}</p>
+          <p class="memberProfile__v">
+            <DateFormatter
+              v-if="user.createdAt"
+              :date="user.createdAt"
+              format="YYYY-MM-DD HH:mm:ss"
+            />
+          </p>
         </div>
+
         <div class="memberProfile__info">
           <p class="memberProfile__k">最近登入</p>
-          <p class="memberProfile__v">{{ user.lastLoginAt }}</p>
+          <p class="memberProfile__v">
+            <DateFormatter
+              v-if="user.lastLoginAt"
+              :date="user.lastLoginAt"
+              format="YYYY-MM-DD HH:mm:ss"
+            />
+          </p>
         </div>
       </div>
     </div>
 
-    <!-- 快捷入口 -->
     <!-- 快捷入口 -->
     <div class="memberProfile__card">
       <p class="memberProfile__sectionTitle">快捷功能</p>
@@ -100,7 +117,6 @@
           通知訊息
         </button>
 
-        <!-- ✅ 新增：賞品盒 -->
         <button
           class="memberProfile__shortcut"
           type="button"
@@ -109,17 +125,18 @@
           賞品盒
         </button>
       </div>
-
-      <p class="memberProfile__tip">
-        ※ 這裡先用假資料，你接 profile API 後把 user 換掉即可
-      </p>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { reactive } from 'vue';
+import DateFormatter from '@/components/common/DateFormatter.vue';
+
+import { onMounted, reactive } from 'vue';
 import { useRouter } from 'vue-router';
+
+import { getMe } from '@/services/userService';
+import { executeApi } from '@/utils/executeApiUtils';
 
 const router = useRouter();
 
@@ -134,17 +151,79 @@ const fallbackAvatar =
 `);
 
 const user = reactive({
-  name: '王小明',
-  nickname: 'KujiMaster',
-  email: 'demo@kuji.com',
-  phone: '0912-345-678',
-  lineId: 'kuji_demo',
+  name: '',
+  nickname: '',
+  email: '',
+  phone: '',
+  lineId: '',
   avatarUrl: '',
   level: '一般會員',
-  balance: 1280,
-  createdAt: '2025-11-01',
-  lastLoginAt: '2026-01-12',
+  goldCoins: 0,
+  bonusCoins: 0,
+  createdAt: '',
+  lastLoginAt: '',
 });
+
+const normalizeDate = (val: any) => {
+  if (!val) return '';
+  const d = typeof val === 'number' ? new Date(val) : new Date(String(val));
+  if (Number.isNaN(d.getTime())) return String(val);
+
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+};
+
+type MeDto = {
+  id?: string;
+  email?: string;
+  nickname?: string;
+  phoneNumber?: string;
+  lineId?: string;
+  recipientName?: string;
+  goldCoins?: number;
+  bonusCoins?: number;
+  avatar?: string;
+  avatarUrl?: string;
+  createdAt?: string;
+  lastLoginAt?: string;
+};
+
+const applyMeToUser = (data: MeDto) => {
+  // 你的回傳沒有 name，我這裡用 recipientName 當作顯示名稱（你要改成 nickname/別的也可）
+  user.name = data?.recipientName ?? '';
+  user.nickname = data?.nickname ?? '';
+  user.email = data?.email ?? '';
+  user.phone = data?.phoneNumber ?? '';
+  user.lineId = data?.lineId ?? '';
+
+  user.avatarUrl = data?.avatarUrl ?? data?.avatar ?? '';
+
+  user.goldCoins = Number(data?.goldCoins ?? 0);
+  user.bonusCoins = Number(data?.bonusCoins ?? 0);
+
+  user.createdAt = data?.createdAt;
+  user.lastLoginAt = data?.lastLoginAt;
+};
+
+const loadMe = async () => {
+  await executeApi<MeDto>({
+    fn: () => getMe(),
+    showCatchDialog: true,
+    showFailDialog: true,
+    showSuccessDialog: false,
+    errorTitle: '讀取失敗',
+    errorMessage: '無法取得會員資料，請稍後再試。',
+    onSuccess: (data) => {
+      applyMeToUser(data || {});
+    },
+  });
+};
+
+onMounted(loadMe);
 
 const goEdit = () => {
   router.push({ name: 'ProfileEdit' });

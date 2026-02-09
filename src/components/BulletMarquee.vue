@@ -19,16 +19,14 @@ import { gsap } from 'gsap';
 
 const props = defineProps<{
   messages: string[];
-  /** 每秒幾個像素，越大越快，預設 60 */
   speed?: number;
 }>();
 
 const trackRef = ref<HTMLElement | null>(null);
 let tween: gsap.core.Tween | null = null;
 
-// ✅ 這裡就只拿原本 messages，不再複製
 const messagesToShow = computed(() =>
-  props.messages.length ? props.messages : ['歡迎光臨', '今天也來抽一番賞～']
+  props.messages.length ? props.messages : ['歡迎光臨', '今天也來抽一番賞～'],
 );
 
 const playMarquee = async () => {
@@ -66,7 +64,7 @@ const playMarquee = async () => {
       duration,
       ease: 'none',
       repeat: -1,
-    }
+    },
   );
 };
 
@@ -92,8 +90,7 @@ onBeforeUnmount(() => {
 .bullet-marquee {
   width: 100%;
   overflow: hidden;
-  background: rgba(60, 35, 19, 0.9);
-  padding: 6px 0;
+  padding: 24px 0;
   min-height: 36px;
 
   &__inner {
@@ -106,9 +103,9 @@ onBeforeUnmount(() => {
 
   &__item {
     padding: 4px 12px;
-    border-radius: 999px;
-    background: linear-gradient(135deg, #ffbf45, #ff8c3a);
-    color: #3c2313;
+    border-radius: 30px;
+    border: 1px solid #b43325;
+    color: #b43325;
     font-size: 13px;
     font-weight: 600;
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);

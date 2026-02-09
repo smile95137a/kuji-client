@@ -1,110 +1,123 @@
 <!-- src/views/IchibanDetail.vue -->
 <template>
   <div class="ichibanDetail">
-    <!-- 上方 Banner + 資訊區 -->
-    <section class="ichibanDetail__hero">
-      <div class="ichibanDetail__hero-bg" aria-hidden="true" />
+    <main class="ichibanDetail__main">
+      <!-- 賞品一覽 -->
+      <section class="ichibanDetail__hero">
+        <div class="ichibanDetail__hero-bg" aria-hidden="true" />
 
-      <div class="ichibanDetail__hero-inner">
-        <!-- 麵包屑 -->
-        <nav class="ichibanDetail__breadcrumb">
-          <span class="clickable" @click="goHome">首頁</span>
-          <span> / </span>
-          <span>{{ breadcrumbCategory }}</span>
-          <span> / </span>
-          <span class="ichibanDetail__breadcrumb-current">
-            {{ kujiTitle }}
-          </span>
-        </nav>
+        <div class="ichibanDetail__hero-inner">
+          <!-- 麵包屑 -->
+          <nav class="ichibanDetail__breadcrumb">
+            <span class="clickable" @click="goHome">首頁</span>
+            <span> / </span>
+            <span>{{ breadcrumbCategory }}</span>
+            <span> / </span>
+            <span class="ichibanDetail__breadcrumb-current">
+              {{ kujiTitle }}
+            </span>
+          </nav>
 
-        <div class="ichibanDetail__top">
-          <!-- Banner -->
-          <div class="ichibanDetail__banner">
-            <img :src="bannerSrc" alt="Ichiban Banner" />
-          </div>
+          <div class="ichibanDetail__top">
+            <div class="ichibanDetail__banner">
+              <img :src="bannerSrc" alt="Ichiban Banner" />
 
-          <!-- Info -->
-          <aside class="ichibanDetail__info">
-            <template v-if="loading">
-              <h1 class="ichibanDetail__title">載入中...</h1>
-              <p class="ichibanDetail__subtitle">請稍候</p>
-            </template>
-
-            <template v-else-if="errorMsg">
-              <h1 class="ichibanDetail__title">載入失敗</h1>
-              <p class="ichibanDetail__subtitle">{{ errorMsg }}</p>
-              <div class="ichibanDetail__actions">
-                <KujiButton variant="secondary" block @click="reload">
-                  重新載入
-                </KujiButton>
-              </div>
-            </template>
-
-            <template v-else>
-              <h1 class="ichibanDetail__title">{{ kujiTitle }}</h1>
-              <p class="ichibanDetail__subtitle">{{ kujiSubTitle }}</p>
-
-              <!-- 價格區 -->
-              <div class="ichibanDetail__prices">
-                <div
-                  v-for="p in prices"
-                  :key="p.label"
-                  class="ichibanDetail__priceItem"
+              <div v-if="galleryThumbs.length" class="ichibanDetail__gallery">
+                <button
+                  v-for="(img, idx) in galleryThumbs"
+                  :key="img + idx"
+                  type="button"
+                  class="ichibanDetail__galleryItem"
+                  :class="{ 'is-active': idx === activeGalleryIndex }"
+                  @click="activeGalleryIndex = idx"
                 >
-                  <div class="ichibanDetail__priceLabel">{{ p.label }}</div>
-                  <div class="ichibanDetail__priceValue">
-                    <span class="ichibanDetail__priceNumber">
-                      <NumberFormatter :number="p.amount" locale="zh-TW" />
+                  <img :src="img" alt="Gallery" />
+                </button>
+              </div>
+            </div>
+
+            <!-- Info -->
+            <aside class="ichibanDetail__info">
+              <template v-if="loading">
+                <h1 class="ichibanDetail__title">載入中...</h1>
+                <p class="ichibanDetail__subtitle">請稍候</p>
+              </template>
+
+              <template v-else-if="errorMsg">
+                <h1 class="ichibanDetail__title">載入失敗</h1>
+                <p class="ichibanDetail__subtitle">{{ errorMsg }}</p>
+                <div class="ichibanDetail__actions">
+                  <KujiButton variant="secondary" block @click="reload">
+                    重新載入
+                  </KujiButton>
+                </div>
+              </template>
+
+              <template v-else>
+                <h1 class="ichibanDetail__title">{{ kujiTitle }}</h1>
+                <p class="ichibanDetail__subtitle">{{ kujiSubTitle }}</p>
+
+                <div class="ichibanDetail__priceBox">
+                  <div class="ichibanDetail__priceBoxLeft">
+                    <span class="ichibanDetail__priceBoxTag">特價</span>
+                  </div>
+
+                  <div class="ichibanDetail__priceBoxRight">
+                    <span class="ichibanDetail__priceBoxNumber">
+                      <NumberFormatter :number="displayPrice" locale="zh-TW" />
                     </span>
-                    <span class="ichibanDetail__priceUnit">
-                      / {{ p.unit }}
-                    </span>
+                    <span class="ichibanDetail__priceBoxUnit">元</span>
                   </div>
                 </div>
-              </div>
 
-              <!-- 補充資訊 -->
-              <div class="ichibanDetail__meta">
-                <div class="ichibanDetail__metaRow">
-                  <span class="ichibanDetail__metaKey">店家</span>
-                  <span class="ichibanDetail__metaVal">{{
-                    detail?.storeName || '-'
-                  }}</span>
-                </div>
-                <div class="ichibanDetail__metaRow">
-                  <span class="ichibanDetail__metaKey">期間</span>
-                  <span class="ichibanDetail__metaVal">{{ periodText }}</span>
-                </div>
-                <div class="ichibanDetail__metaRow">
-                  <span class="ichibanDetail__metaKey">狀態</span>
-                  <span class="ichibanDetail__metaVal">{{
-                    detail?.statusName || detail?.status || '-'
-                  }}</span>
-                </div>
-              </div>
+                <IchibanMetaInfo
+                  :detail="detail"
+                  :play-mode-text="playModeText"
+                  :period-text="periodText"
+                  :tags="tags"
+                />
 
-              <!-- 按鈕 -->
-              <div class="ichibanDetail__actions">
-                <KujiButton variant="primary" block @click="handleDraw">
-                  開抽！
-                </KujiButton>
+                <div class="ichibanDetail__actions">
+                  <KujiButton
+                    class="ichibanDetail__cta ichibanDetail__cta--primary"
+                    variant="primary"
+                    block
+                    @click="handlePrimaryAction"
+                  >
+                    {{ primaryCtaText }}
+                  </KujiButton>
 
-                <KujiButton variant="secondary" block @click="handleViewStatus">
-                  <template #icon>
-                    <font-awesome-icon :icon="['fas', 'square-check']" />
-                  </template>
-                  檢視抽況
-                </KujiButton>
-              </div>
-            </template>
-          </aside>
+                  <KujiButton
+                    v-if="showStatus"
+                    class="ichibanDetail__cta ichibanDetail__cta--secondary"
+                    variant="secondary"
+                    block
+                    @click="handleViewStatus"
+                  >
+                    <template #icon>
+                      <span class="ichibanDetail__ctaIcon">
+                        <font-awesome-icon :icon="['fas', 'square-check']" />
+                      </span>
+                    </template>
+                    檢視抽況
+                  </KujiButton>
+                </div>
+              </template>
+            </aside>
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
+      <!-- 賞品介紹 -->
+      <section class="ichibanDetail__intro" v-if="detail?.content">
+        <header class="ichibanDetail__intro-header">
+          <h2 class="ichibanDetail__intro-title">賞品介紹</h2>
+        </header>
 
-    <!-- 主內容 -->
-    <main class="ichibanDetail__main">
-      <!-- 賞品一覽（目前你沒給 prize API，這段先保留 demo，之後接 API 我再幫你換） -->
+        <div class="ichibanDetail__intro-body">
+          <div class="ichibanDetail__intro-content" v-html="detail.content" />
+        </div>
+      </section>
+
       <section class="ichibanDetail__prizes">
         <header class="ichibanDetail__prizes-header">
           <h2 class="ichibanDetail__prizes-title">賞品一覽</h2>
@@ -125,18 +138,23 @@
       </section>
 
       <!-- 抽況 -->
-      <section class="ichibanDetail__status" ref="statusSectionRef">
+      <section
+        class="ichibanDetail__status"
+        ref="statusSectionRef"
+        v-if="showStatus"
+      >
         <h2 class="ichibanDetail__status-title">檢視抽況</h2>
 
-        <p class="ichibanDetail__status-summary">
-          剩餘抽數：
-          <NumberFormatter :number="remainingQuantity" locale="zh-TW" /> 抽
-        </p>
+        <RemainingCounter
+          :remaining-prizes="detail?.remainingPrizes ?? null"
+          :total-prizes="detail?.totalPrizes ?? null"
+          :tickets="statusCards"
+        />
 
+        <!-- ⚠️ 這裡 @select 請改成 emit ticketId(UUID) -->
         <IchibanStatusGrid
           :cards="statusCards"
           :active-cards="activeCards"
-          :card-img="ichibanCardBack"
           @select="openDrawPanelFromCard"
         />
       </section>
@@ -144,11 +162,11 @@
       <IchibanNoticeSection />
     </main>
 
-    <!-- 抽選面板 -->
     <IchibanDrawPanel
       :is-open="isDrawPanelOpen"
-      :remaining="remainingQuantity"
+      :remaining="detail?.remainingPrizes"
       :active-cards="activeCards"
+      :active-card-numbers="activeCardNumbers"
       @close="closeDrawPanel"
       @randomSelect="handleRandomSelect"
       @exchange="handleExchange"
@@ -161,43 +179,93 @@ import { computed, ref, onMounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import KujiButton from '@/components/common/KujiButton.vue';
+import NumberFormatter from '@/components/common/NumberFormatter.vue';
 
 import IchibanPrizeCard from '@/components/ichiban/IchibanPrizeCard.vue';
 import IchibanNoticeSection from '@/components/ichiban/IchibanNoticeSection.vue';
 import IchibanStatusGrid from '@/components/ichiban/IchibanStatusGrid.vue';
 import IchibanDrawPanel from '@/components/ichiban/IchibanDrawPanel.vue';
+import RemainingCounter from '@/components/IchibanDetail/RemainingCounter.vue';
+import IchibanMetaInfo from '@/components/IchibanDetail/IchibanMetaInfo.vue';
 
 import demo1 from '@/assets/image/demo1.jpg';
-import ichibanCardBack from '@/assets/image/ichibanCardBack.png';
+
 import { getBrowseLotteryById } from '@/services/lotteryBrowseService';
-import { getTickets } from '@/services/lotteryDrawService';
+import { drawLottery } from '@/services/lotteryDrawService';
+import { executeApi } from '@/utils/executeApiUtils';
+import { useOverlayStore } from '@/stores/overlay';
+import { ichibanInfoDialog } from '@/utils/dialog/ichibanInfoDialog';
+import { gachaTearDialog } from '@/utils/dialog/kujiRevealStripDialog';
+import { ichibanResultDialog } from '@/utils/dialog/ichibanResultDialog';
+
+const overlay = useOverlayStore();
 
 /* -----------------------------
  * Route
  * ----------------------------- */
 const route = useRoute();
 const router = useRouter();
-
 const kujiId = computed(() => String(route.params.id || ''));
+
+/* -----------------------------
+ * types
+ * ----------------------------- */
+type TicketItem = {
+  id: string; //  UUID
+  ticketNumber: number;
+  status: 'AVAILABLE' | 'DRAWN' | 'RESERVED' | 'LOCKED' | string;
+  isDesignatedPrize?: boolean;
+
+  level?: string | null;
+  prizeLevel?: string | null;
+  prize?: { level?: string | null } | null;
+};
 
 /* -----------------------------
  * API state
  * ----------------------------- */
 const loading = ref(false);
 const errorMsg = ref('');
-const detail = ref(null);
 
-const bannerSrc = computed(() => detail.value?.imageUrl || demo1);
+const detail = ref<any>(null);
+const prizesData = ref<any[]>([]);
+const ticketData = ref<TicketItem[]>([]);
+const session = ref<any>(null);
 
-const kujiTitle = computed(() => detail.value?.title || '未命名商品');
-const kujiSubTitle = computed(() => detail.value?.description || '');
+/* -----------------------------
+ * gallery / banner
+ * ----------------------------- */
+const activeGalleryIndex = ref(0);
 
-// breadcrumb 類別顯示
-const breadcrumbCategory = computed(() => {
-  // 你也可以改成依 category mapping 成「一番賞/扭蛋...」
-  return detail.value?.categoryName || '商城';
+const galleryThumbs = computed<string[]>(() => {
+  const imgs = detail.value?.galleryImages;
+  return Array.isArray(imgs) ? imgs.filter(Boolean) : [];
 });
 
+const bannerSrc = computed(() => {
+  const imgs = galleryThumbs.value;
+  if (imgs.length)
+    return imgs[Math.min(activeGalleryIndex.value, imgs.length - 1)];
+  return detail.value?.imageUrl || demo1;
+});
+
+watch(
+  () => detail.value?.id,
+  () => {
+    activeGalleryIndex.value = 0;
+  },
+);
+
+/* -----------------------------
+ * title / breadcrumb
+ * ----------------------------- */
+const kujiTitle = computed(() => detail.value?.title || '未命名商品');
+const kujiSubTitle = computed(() => detail.value?.description || '');
+const breadcrumbCategory = computed(() => detail.value?.categoryName || '商城');
+
+/* -----------------------------
+ * helpers
+ * ----------------------------- */
 const formatDate = (iso?: string | null) => {
   if (!iso) return '';
   const d = new Date(iso);
@@ -218,7 +286,63 @@ const periodText = computed(() => {
 });
 
 /* -----------------------------
- * Prices（每抽 + 多抽）
+ * playMode / tags
+ * ----------------------------- */
+const showStatus = computed(() => {
+  const m = String(detail.value?.playMode ?? '').toUpperCase();
+  return m !== 'SCRATCH_MODE';
+});
+const isScratchMode = computed(() => {
+  const m = String(detail.value?.playMode ?? '').toUpperCase();
+  return m === 'SCRATCH_MODE';
+});
+
+const primaryCtaText = computed(() =>
+  isScratchMode.value ? '開刮！' : '開抽！',
+);
+
+const playModeText = computed(() => {
+  const m = String(detail.value?.playMode ?? '').toUpperCase();
+  if (m === 'SCRATCH_MODE') return '刮刮樂';
+  if (m === 'LOTTERY_MODE') return '抽籤';
+  return '-';
+});
+
+const tags = computed<string[]>(() => {
+  const arr = detail.value?.tags;
+  return Array.isArray(arr)
+    ? arr.filter((x: any) => typeof x === 'string' && x.trim())
+    : [];
+});
+
+/* -----------------------------
+ * session.canDraw
+ * ----------------------------- */
+const canDraw = computed(() => session.value?.canDraw !== false);
+const cannotDrawReason = computed(
+  () => session.value?.cannotDrawReason || '目前無法抽選',
+);
+
+const goLogin = () => {
+  router.push({ path: '/login' });
+};
+
+/* -----------------------------
+ *  設計圖特價顯示：discounted 優先，沒有就用 per draw
+ * ----------------------------- */
+const displayPrice = computed(() => {
+  const d = detail.value;
+  if (!d) return 0;
+
+  const discounted =
+    d.discountedPrice != null ? Number(d.discountedPrice) : NaN;
+  if (Number.isFinite(discounted) && discounted > 0) return discounted;
+
+  return Number(d.currentPrice ?? d.pricePerDraw ?? 0) || 0;
+});
+
+/* -----------------------------
+ * Prices（保留：若其他地方要用）
  * ----------------------------- */
 type PriceItem = { label: string; amount: number; unit: string };
 
@@ -227,27 +351,85 @@ const prices = computed<PriceItem[]>(() => {
   if (!d) return [];
 
   const per = Number(d.currentPrice ?? d.pricePerDraw ?? 0) || 0;
+  const discounted =
+    d.discountedPrice != null ? Number(d.discountedPrice) : null;
 
-  // 多抽 options：優先 10 連、其次 5 連
-  const opts = Array.isArray(d.multiDrawOptions) ? [...d.multiDrawOptions] : [];
-  const prefer = [10, 5];
-  const chosen =
-    prefer.find((x) => opts.includes(x)) ?? (opts.length ? opts[0] : null);
+  const hasDiscount =
+    discounted != null && Number.isFinite(discounted) && discounted > 0;
 
   const arr: PriceItem[] = [{ label: '每抽', amount: per, unit: '元' }];
 
-  if (d.allowMultiDraw && chosen) {
-    // ✅ 你的 res 有 discountedPrice（看起來是 10 連的折扣價）
-    // 若是 10 連且有 discountedPrice 就用它；否則用 per * chosen
-    const multiPrice =
-      chosen === 10 && d.discountedPrice != null
-        ? Number(d.discountedPrice) || per * chosen
-        : per * chosen;
+  if (hasDiscount) {
+    const label = d.discountTriggered ? '折扣中' : '折扣後';
+    arr.push({ label, amount: discounted!, unit: '元' });
+  }
 
-    arr.push({ label: `${chosen}連`, amount: multiPrice, unit: '元' });
+  const opts = Array.isArray(d.multiDrawOptions) ? d.multiDrawOptions : [];
+  const chosen = opts.length ? opts[0] : null;
+
+  if (d.allowMultiDraw && chosen) {
+    arr.push({ label: `${chosen}連`, amount: per * chosen, unit: '元' });
   }
 
   return arr;
+});
+
+/* -----------------------------
+ * Prizes（排序：LAST 最後、等級、prizeNumber）
+ * ----------------------------- */
+const prizes = computed(() => {
+  const arr = Array.isArray(prizesData.value) ? prizesData.value : [];
+
+  const levelOrder: Record<string, number> = {
+    A: 1,
+    B: 2,
+    C: 3,
+    D: 4,
+    E: 5,
+    F: 6,
+    G: 7,
+    H: 8,
+    I: 9,
+    J: 10,
+    LAST: 99,
+  };
+
+  const mapped = arr.map((p: any) => {
+    const level = String(p?.level ?? '').toUpperCase();
+    const gradeLabel =
+      level === 'LAST' ? '最後賞' : level ? `${level}賞` : '賞品';
+
+    const q = Number(p?.quantity ?? 0) || 0;
+    const r = Number(p?.remaining ?? 0) || 0;
+    const countText = `${r}/${q}`;
+
+    const gradeType: 'primary' | 'secondary' =
+      p?.isGrandPrize || level === 'A' || level === 'B'
+        ? 'primary'
+        : 'secondary';
+
+    return {
+      id: String(p?.id),
+      gradeLabel,
+      gradeType,
+      countText,
+      sizeText: p?.sizeText ? String(p.sizeText) : '-',
+      name: String(p?.name ?? '未命名賞品'),
+      imgSrc: String(p?.imageUrl ?? '') || demo1,
+
+      _lvlOrder: levelOrder[level] ?? 50,
+      _num: Number(p?.prizeNumber ?? 9999) || 9999,
+      _isLast: !!p?.isLastPrize || level === 'LAST',
+    };
+  });
+
+  mapped.sort((a: any, b: any) => {
+    if (a._isLast !== b._isLast) return a._isLast ? 1 : -1;
+    if (a._lvlOrder !== b._lvlOrder) return a._lvlOrder - b._lvlOrder;
+    return a._num - b._num;
+  });
+
+  return mapped.map(({ _lvlOrder, _num, _isLast, ...rest }: any) => rest);
 });
 
 /* -----------------------------
@@ -256,31 +438,44 @@ const prices = computed<PriceItem[]>(() => {
 const statusSectionRef = ref<HTMLElement | null>(null);
 
 const isDrawPanelOpen = ref(false);
-const activeCards = ref<number[]>([]);
 
-// 剩餘抽數：用 remainingDraws（你 res 有），沒有就 0
-const remainingQuantity = computed(() => {
-  const n = Number(detail.value?.remainingDraws ?? 0);
-  return Number.isNaN(n) ? 0 : n;
+/**  改成存 ticket UUID（string[]） */
+const activeCards = ref<string[]>([]);
+
+const statusCards = computed<TicketItem[]>(() => {
+  const arr = Array.isArray(ticketData.value) ? ticketData.value : [];
+  return arr;
+});
+const ticketNoById = computed<Record<string, number>>(() => {
+  const map: Record<string, number> = {};
+  const arr = statusCards.value || [];
+  for (const t of arr) {
+    const id = String((t as any).id || '');
+    if (!id) continue;
+    map[id] = Number((t as any).ticketNumber ?? 0);
+  }
+  return map;
 });
 
-// 抽況格子：用 maxDraws 做總格數（保護上限避免一次渲染爆掉）
-const statusCards = computed(() => {
-  const total = Number(detail.value?.maxDraws ?? 0) || 0;
-  const SAFE_MAX = 120; // UI 保護：最多渲染 120 格
-  const len = Math.min(Math.max(total, 0), SAFE_MAX);
-  return Array.from({ length: len }, (_, i) => i + 1);
+const activeCardNumbers = computed<number[]>(() => {
+  return activeCards.value
+    .map((id) => ticketNoById.value[id])
+    .filter((n) => Number.isFinite(n) && n > 0);
 });
 
-const toggleCardSelection = (card: number) => {
-  const idx = activeCards.value.indexOf(card);
+/**  可用票券 UUID（AVAILABLE） */
+const availableTicketIds = computed<string[]>(() => {
+  return statusCards.value
+    .filter((t) => String(t.status).toUpperCase() === 'AVAILABLE')
+    .map((t) => String(t.id));
+});
+
+const toggleCardSelection = (ticketId: string) => {
+  if (!availableTicketIds.value.includes(ticketId)) return;
+
+  const idx = activeCards.value.indexOf(ticketId);
   if (idx >= 0) activeCards.value.splice(idx, 1);
-  else activeCards.value.push(card);
-};
-
-const openDrawPanelFromCard = (card: number) => {
-  toggleCardSelection(card);
-  isDrawPanelOpen.value = true;
+  else activeCards.value.push(ticketId);
 };
 
 const closeDrawPanel = () => {
@@ -289,63 +484,109 @@ const closeDrawPanel = () => {
 };
 
 /* -----------------------------
- * demo 賞品（待接 prize API）
+ * Actions（全部 await ensureCanDraw）
  * ----------------------------- */
-type PrizeItem = {
-  id: number;
-  gradeLabel: string;
-  gradeType: 'primary' | 'secondary';
-  countText: string;
-  sizeText: string;
-  name: string;
-  imgSrc: string;
+const ensureCanDraw = async () => {
+  if (!canDraw.value) {
+    try {
+      overlay.open('ichiban-info', false);
+      await ichibanInfoDialog({
+        title: '提示訊息',
+        content: cannotDrawReason.value,
+      });
+      goLogin();
+    } finally {
+      overlay.close();
+    }
+    return false;
+  }
+  return true;
 };
 
-const prizes: PrizeItem[] = [
-  {
-    id: 1,
-    gradeLabel: 'A賞',
-    gradeType: 'primary',
-    countText: '3/3',
-    sizeText: '約25cm',
-    name: '示意賞品 A',
-    imgSrc: demo1,
-  },
-  {
-    id: 2,
-    gradeLabel: 'B賞',
-    gradeType: 'primary',
-    countText: '3/3',
-    sizeText: '約25cm',
-    name: '示意賞品 B',
-    imgSrc: demo1,
-  },
-  {
-    id: 3,
-    gradeLabel: '最後賞',
-    gradeType: 'secondary',
-    countText: '1/1',
-    sizeText: '約25cm',
-    name: '示意最後賞',
-    imgSrc: demo1,
-  },
-];
+const handleScratch = async () => {
+  const ok = await ensureCanDraw();
+  if (!ok) return;
 
-/* -----------------------------
- * Actions
- * ----------------------------- */
-const handleDraw = () => {
+  const count = 1;
+
+  await executeApi({
+    fn: () =>
+      drawLottery(kujiId.value, {
+        count,
+        ticket: [],
+      }),
+    onSuccess: async (data: any) => {
+      overlay.open();
+
+      try {
+        const tearResult = await gachaTearDialog({ pulls: data });
+        if (!tearResult) return;
+
+        const drawnCount = Array.isArray(data) ? data.length : 0;
+        const unitPrice = Number(displayPrice.value ?? 0) || 0;
+        const totalPrice = unitPrice * drawnCount;
+
+        const beforeRemain = Math.max(
+          0,
+          Number(detail.value?.remainingPrizes ?? 0) || 0,
+        );
+        const remain = Math.max(0, beforeRemain - drawnCount);
+
+        await ichibanResultDialog({
+          remain,
+          count: drawnCount,
+          totalPrice,
+          items: data,
+        });
+      } finally {
+        overlay.close();
+      }
+
+      await reload();
+    },
+    onFail: async () => {
+      await ichibanInfoDialog({
+        title: '刮刮樂失敗',
+        content: '請稍後再試',
+      });
+    },
+  });
+};
+
+const handleDraw = async () => {
+  const ok = await ensureCanDraw();
+  if (!ok) return;
+
   statusSectionRef.value?.scrollIntoView({ behavior: 'smooth' });
   isDrawPanelOpen.value = true;
+};
+const handlePrimaryAction = async () => {
+  if (isScratchMode.value) {
+    await handleScratch();
+    return;
+  }
+  await handleDraw(); // LOTTERY_MODE
 };
 
 const handleViewStatus = () => {
   statusSectionRef.value?.scrollIntoView({ behavior: 'smooth' });
 };
 
-// 隨機選擇
-const handleRandomSelect = (count: number) => {
-  const available = [...statusCards.value];
+/**  這裡接收 ticketId(UUID) */
+const openDrawPanelFromCard = async (ticketId: string) => {
+  const ok = await ensureCanDraw();
+  if (!ok) return;
+
+  toggleCardSelection(ticketId);
+  isDrawPanelOpen.value = true;
+};
+
+/**  隨機挑 N 張（只是 UI 上選取 tickets） */
+const handleRandomSelect = async (count: number) => {
+  const ok = await ensureCanDraw();
+  if (!ok) return;
+
+  const available = [...availableTicketIds.value];
   if (!available.length) return;
 
   const selectCount = Math.min(count, available.length);
@@ -355,13 +596,107 @@ const handleRandomSelect = (count: number) => {
   isDrawPanelOpen.value = true;
 };
 
-// 兌換（你原本邏輯保留）
-const handleExchange = (type: 'gold' | 'silver') => {
-  if (!activeCards.value.length) {
-    alert('請先選擇想要抽的格數');
+/**
+ *  兌換：送後端 DrawRequest
+ * 規則：count = tickets.length
+ * payload 只需要 type + tickets
+ */
+const handleExchange = async (payload: {
+  type: 'gold' | 'silver';
+  tickets: string[]; // UUID list
+}) => {
+  console.log(payload);
+
+  const ok = await ensureCanDraw();
+  if (!ok) return;
+
+  const tickets = Array.isArray(payload.tickets) ? payload.tickets : [];
+  const count = tickets.length;
+
+  if (count <= 0) {
+    try {
+      overlay.open('ichiban-info', false);
+      await ichibanInfoDialog({
+        title: '提示訊息',
+        content: '請先選擇至少 1 張獎籤',
+      });
+    } finally {
+      overlay.close();
+    }
     return;
   }
-  console.log('[Exchange]', type, activeCards.value);
+
+  const safeRemaining = Math.max(
+    0,
+    Number(
+      detail.value?.remainingPrizes ?? availableTicketIds.value.length ?? 0,
+    ),
+  );
+
+  if (safeRemaining <= 0) {
+    try {
+      overlay.open('ichiban-info', false);
+      await ichibanInfoDialog({
+        title: '提示訊息',
+        content: '已無剩餘抽數',
+      });
+    } finally {
+      overlay.close();
+    }
+    return;
+  }
+
+  const safeTickets = tickets.slice(0, safeRemaining);
+  const safeCount = safeTickets.length;
+
+  await executeApi({
+    fn: () =>
+      drawLottery(kujiId.value, {
+        count: safeCount,
+        ticket: safeTickets,
+      }),
+    onSuccess: async (data: any) => {
+      closeDrawPanel();
+      overlay.open();
+
+      try {
+        const tearResult = await gachaTearDialog({ pulls: data });
+        if (!tearResult) return;
+
+        const drawnCount = Array.isArray(data) ? data.length : 0;
+        const unitPrice = Number(displayPrice.value ?? 0) || 0;
+        const totalPrice = unitPrice * drawnCount;
+        const beforeRemain = Math.max(
+          0,
+          Number(
+            detail.value?.remainingPrizes ??
+              availableTicketIds.value.length ??
+              0,
+          ) || 0,
+        );
+
+        const remain = Math.max(0, beforeRemain - drawnCount);
+
+        await ichibanResultDialog({
+          remain,
+          count: drawnCount,
+          totalPrice,
+          items: data,
+        });
+      } finally {
+        overlay.close();
+      }
+
+      await reload();
+    },
+
+    onFail: async () => {
+      await ichibanInfoDialog({
+        title: '抽獎失敗',
+        content: '請稍後再試',
+      });
+    },
+  });
 };
 
 /* -----------------------------
@@ -370,27 +705,24 @@ const handleExchange = (type: 'gold' | 'silver') => {
 const reload = async () => {
   if (!kujiId.value) return;
 
-  loading.value = true;
-  errorMsg.value = '';
-  detail.value = null;
-
   try {
-    const resp = await getBrowseLotteryById(kujiId.value);
-    const data = (resp as any)?.data ?? resp;
-    detail.value = data;
-
-    try {
-      const ticketResp = await getTickets(kujiId.value);
-      const ticketData = (ticketResp as any)?.data ?? ticketResp;
-
-      // 你要怎麼用 tickets 看你 API 回傳格式
-      console.log('[tickets]', ticketData);
-    } catch (err) {
-      console.warn('[getTickets failed]', err);
-    }
+    await executeApi({
+      fn: () => getBrowseLotteryById(kujiId.value),
+      showCatchDialog: false,
+      showFailDialog: false,
+      onSuccess: async (data) => {
+        detail.value = data?.lottery ?? null;
+        prizesData.value = Array.isArray(data?.prizes) ? data.prizes : [];
+        ticketData.value = Array.isArray(data?.tickets) ? data.tickets : [];
+        session.value = data?.session ?? null;
+      },
+      onFail: async () => {
+        errorMsg.value = '載入失敗，請稍後再試';
+      },
+    });
   } catch (e) {
     console.error(e);
-    errorMsg.value = '無法取得商品資料，請稍後再試';
+    errorMsg.value = '載入失敗，請稍後再試';
   } finally {
     loading.value = false;
   }
@@ -412,228 +744,3 @@ watch(
  * ----------------------------- */
 const goHome = () => router.push({ name: 'Home' });
 </script>
-
-<style scoped lang="scss">
-.ichibanDetail {
-  background: linear-gradient(180deg, #f4e1cc 0%, #f8efe3 40%, #ffffff 100%);
-  min-height: 100vh;
-  padding-bottom: 120px;
-
-  &__hero {
-    position: relative;
-    padding-top: 24px;
-    padding-bottom: 32px;
-  }
-
-  &__hero-bg {
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(
-      180deg,
-      #f4e1cc 0%,
-      #f8efe3 50%,
-      rgba(255, 255, 255, 0) 100%
-    );
-    pointer-events: none;
-  }
-
-  &__hero-inner {
-    position: relative;
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 24px;
-  }
-
-  &__breadcrumb {
-    font-size: 13px;
-    color: #7b6a5a;
-    margin-bottom: 8px;
-
-    &-current {
-      color: #3f2412;
-      font-weight: 600;
-    }
-  }
-
-  &__top {
-    display: flex;
-    gap: 24px;
-    align-items: stretch;
-  }
-
-  &__banner {
-    flex: 3;
-    background: #000;
-    border-radius: 12px;
-    overflow: hidden;
-
-    img {
-      display: block;
-      width: 100%;
-      height: auto;
-      object-fit: cover;
-    }
-  }
-
-  &__info {
-    flex: 2;
-    background: #fbe8d6;
-    border-radius: 12px;
-    padding: 20px 24px 24px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  &__title {
-    font-size: 20px;
-    font-weight: 900;
-    color: #3f2412;
-    line-height: 1.4;
-  }
-
-  &__subtitle {
-    font-size: 14px;
-    color: #7b6a5a;
-    line-height: 1.5;
-  }
-
-  &__prices {
-    display: flex;
-    gap: 18px;
-    margin-top: 4px;
-  }
-
-  &__priceItem {
-    min-width: 90px;
-    text-align: right;
-  }
-
-  &__priceLabel {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    padding: 2px 10px;
-    border-radius: 999px;
-    background: #ffffff;
-    color: #e5a657;
-    font-size: 12px;
-    font-weight: 700;
-  }
-
-  &__priceValue {
-    margin-top: 4px;
-    color: #3f2412;
-    font-weight: 900;
-  }
-
-  &__priceNumber {
-    font-size: 22px;
-  }
-
-  &__priceUnit {
-    font-size: 11px;
-    margin-left: 2px;
-  }
-
-  &__meta {
-    display: grid;
-    gap: 6px;
-    padding-top: 6px;
-  }
-
-  &__metaRow {
-    display: flex;
-    justify-content: space-between;
-    gap: 12px;
-    font-size: 13px;
-    color: #6b5a4d;
-  }
-
-  &__metaKey {
-    opacity: 0.85;
-  }
-
-  &__metaVal {
-    color: #3f2412;
-    font-weight: 700;
-    text-align: right;
-  }
-
-  &__actions {
-    margin-top: auto;
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-  }
-
-  &__main {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 24px;
-  }
-
-  &__prizes {
-    margin-top: 24px;
-    background: #a23b2f;
-    border-radius: 18px 18px 0 0;
-    padding: 24px 24px 32px;
-    color: #ffffff;
-  }
-
-  &__prizes-header {
-    text-align: center;
-    margin-bottom: 24px;
-  }
-
-  &__prizes-title {
-    font-size: 20px;
-    font-weight: 900;
-    letter-spacing: 2px;
-  }
-
-  &__prizes-grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 24px 20px;
-  }
-
-  &__status {
-    background: #000000;
-    color: #ffffff;
-    padding: 32px 24px 40px;
-    border-radius: 0 0 18px 18px;
-    margin-top: 0;
-  }
-
-  &__status-title {
-    text-align: center;
-    font-size: 20px;
-    font-weight: 900;
-    letter-spacing: 2px;
-    margin: 0 0 12px;
-  }
-
-  &__status-summary {
-    text-align: center;
-    font-size: 14px;
-    margin-bottom: 16px;
-    color: #f3cf7a;
-  }
-
-  @media (max-width: 1024px) {
-    &__top {
-      flex-direction: column;
-    }
-    &__prizes-grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-
-  @media (max-width: 640px) {
-    &__prizes-grid {
-      grid-template-columns: minmax(0, 1fr);
-    }
-  }
-}
-</style>

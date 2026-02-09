@@ -2,7 +2,6 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
 import FrontLayout from '@/layouts/FrontLayout.vue';
 import Home from '@/views/Home.vue';
-import Ranking from '@/views/Ranking.vue';
 import News from '@/views/News.vue';
 import NewsDetail from '@/views/NewsDetail.vue';
 import NotFound from '@/views/NotFound.vue';
@@ -17,7 +16,6 @@ import Faq from '@/views/Faq.vue';
 import Promotion from '@/views/Promotion.vue';
 import Transaction from '@/views/Transaction.vue';
 import Cooperation from '@/views/Cooperation.vue';
-import Terms from '@/views/Terms.vue';
 import MemberCenter from '@/views/member/MemberCenter.vue';
 
 import MemberProfile from '@/views/member/MemberProfile.vue';
@@ -60,11 +58,6 @@ export const routes: Array<RouteRecordRaw> = [
         path: 'cooperation',
         name: 'Cooperation',
       },
-      {
-        component: Terms,
-        path: 'terms',
-        name: 'Terms',
-      },
 
       {
         component: Login,
@@ -91,12 +84,6 @@ export const routes: Array<RouteRecordRaw> = [
         path: 'home',
         name: 'Home',
         component: Home,
-      },
-
-      {
-        path: 'ranking',
-        name: 'Ranking',
-        component: Ranking,
       },
 
       {

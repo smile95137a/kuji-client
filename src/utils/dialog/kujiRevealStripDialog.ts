@@ -9,7 +9,6 @@ export interface KujiRevealStripResult<T = unknown> {
 }
 
 export interface KujiRevealStripOptions<T = unknown> {
-  title?: string;
   pulls: T[];
   slots?: {
     front?: () => any;
@@ -25,7 +24,6 @@ export function gachaTearDialog<T>(
       h(
         KujiRevealStripDialog as any,
         {
-          title: options.title,
           pulls: options.pulls,
 
           onFinish: (results: T[]) => {

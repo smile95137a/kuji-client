@@ -3,6 +3,19 @@ import { ichibanInfoDialog } from './dialog/ichibanInfoDialog';
 import { getErrorMessage } from './ErrorUtils';
 import { withLoading } from './loadingUtils';
 
+function pickApiErrorMessage(err: unknown, fallback: string) {
+  const anyErr = err as any;
+
+  const body = anyErr?.response?.data || anyErr?.data || anyErr;
+
+  const msgFromBody =
+    body?.error?.message || body?.message || body?.error?.code;
+
+  const msg = msgFromBody || getErrorMessage(err) || fallback;
+
+  return msg;
+}
+
 interface ExecuteApiOptions<T> {
   fn: () => Promise<ApiResponse<T> | T>;
   successTitle?: string;
@@ -14,7 +27,7 @@ interface ExecuteApiOptions<T> {
   showCatchDialog?: boolean;
   showFailDialog?: boolean;
   showSuccessDialog?: boolean;
-  finalFn?: () => void | Promise<void>;
+  onFinal?: () => void | Promise<void>;
 }
 export async function executeApi<T = any>({
   fn,
@@ -27,19 +40,13 @@ export async function executeApi<T = any>({
   showCatchDialog = true,
   showFailDialog = false,
   showSuccessDialog = false,
-  finalFn,
+  onFinal,
 }: ExecuteApiOptions<T>): Promise<ApiResponse<T> | null> {
   const overlay = useOverlayStore();
   try {
-    const res = await withLoading(() => fn());
+    const res: any = await withLoading(() => fn());
 
-    const normalized: ApiResponse<T> =
-      (res as any)?.success !== undefined
-        ? (res as ApiResponse<T>)
-        : { success: true, code: '', data: res as T, message: '' };
-
-    const { success, data, message } = normalized;
-
+    const { success, data, message } = res;
     if (success) {
       if (showSuccessDialog) {
         overlay.open();
@@ -61,18 +68,20 @@ export async function executeApi<T = any>({
       }
       if (onFail) await onFail(data);
     }
-    return normalized;
+    return res;
   } catch (error) {
     if (showCatchDialog) {
       overlay.open();
+
       await ichibanInfoDialog({
         title: errorTitle,
-        content: getErrorMessage(error),
+        content: pickApiErrorMessage(error, errorMessage),
       });
+
       overlay.close();
     }
     return null;
   } finally {
-    if (finalFn) await finalFn();
+    if (onFinal) await onFinal();
   }
 }

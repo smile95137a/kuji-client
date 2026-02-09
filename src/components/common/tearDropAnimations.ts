@@ -28,7 +28,7 @@ function dropSlide(ctx: TearAnimationContext) {
         rotate: -18,
         onComplete: ctx.onDone,
       },
-      0
+      0,
     )
     .to(ctx.shadow, { opacity: 0, duration: 0.2 }, 0);
 }
@@ -50,7 +50,7 @@ function dropSpin(ctx: TearAnimationContext) {
         ease: 'power4.in',
         onComplete: ctx.onDone,
       },
-      0
+      0,
     )
     .to(ctx.shadow, { opacity: 0, duration: 0.15 }, 0);
 }
@@ -72,7 +72,7 @@ function dropBurst(ctx: TearAnimationContext) {
         ease: 'expo.in',
         onComplete: ctx.onDone,
       },
-      0
+      0,
     )
     .to(
       ctx.tab,
@@ -80,12 +80,12 @@ function dropBurst(ctx: TearAnimationContext) {
         scale: 0.85,
         duration: 0.15,
       },
-      0
+      0,
     )
     .to(ctx.shadow, { opacity: 0, duration: 0.15 }, 0);
 }
 
-/* ✅ 所有動畫集合 */
+/*  所有動畫集合 */
 const ANIMATIONS = [dropSlide];
 
 /**

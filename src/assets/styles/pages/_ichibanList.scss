@@ -1,0 +1,129 @@
+.ichibanList {
+  position: relative;
+  padding: 40px 0 80px;
+  z-index: 9;
+  &__inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px 48px;
+  }
+
+  &__header {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  &__title {
+    font-size: 28px;
+    font-weight: 900;
+    color: #3f2412;
+  }
+
+  &__categories {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  &__tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  &__chip {
+    border-radius: 999px;
+    border: 1px solid transparent;
+    padding: 8px 18px;
+    font-size: 14px;
+    background: #f4e1cc;
+    color: #3f2412;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &--active {
+      background: #eb6c4d;
+      color: #fff;
+    }
+
+    &:hover {
+      filter: brightness(0.96);
+    }
+  }
+
+  &__sortBar {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  &__sortLabel {
+    font-size: 14px;
+    color: #666;
+  }
+
+  &__sortTabs {
+    display: inline-flex;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.8);
+    padding: 2px;
+    gap: 4px;
+  }
+
+  &__sortTab {
+    border-radius: 999px;
+    border: none;
+    padding: 6px 12px;
+    font-size: 13px;
+    background: transparent;
+    color: #8c5b3b;
+    cursor: pointer;
+    transition: all 0.2s ease;
+
+    &--active {
+      background: #3f2412;
+      color: #fff;
+    }
+  }
+
+  &__state {
+    padding: 24px 0;
+    text-align: center;
+    color: #3f2412;
+    opacity: 0.9;
+
+    &--error {
+      color: #b42318;
+    }
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 28px 24px;
+  }
+
+  @media (max-width: 900px) {
+    &__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+
+  @media (max-width: 600px) {
+    &__grid {
+      grid-template-columns: minmax(0, 1fr);
+    }
+  }
+
+  &__pagination {
+    margin-top: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+  }
+}

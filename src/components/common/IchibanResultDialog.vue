@@ -1,7 +1,7 @@
 <template>
   <div class="ichiban-dialog" @click="emitCancel">
-    <!-- panel -->
-    <div class="ichiban-dialog__panel">
+    <!-- panel：防止點內部也觸發 cancel -->
+    <div class="ichiban-dialog__panel" @click.stop>
       <!-- LOGO -->
       <div class="ichiban-dialog__logo">
         <img :src="weblogo" alt="ichiban kuji" />
@@ -21,17 +21,26 @@
           <div class="ichiban-dialog__stats">
             <div class="stat">
               <span class="label">目前剩餘</span>
-              <span class="value">{{ remain }}</span>
+              <span class="value">
+                <NumberFormatter :number="remain" locale="zh-TW" />
+              </span>
               <span class="unit">抽</span>
             </div>
+
             <div class="stat">
               <span class="label">連續次數</span>
-              <span class="value">{{ count }}</span>
+              <span class="value">
+                <NumberFormatter :number="count" locale="zh-TW" />
+              </span>
               <span class="unit">抽</span>
             </div>
+
             <div class="stat stat--price">
               <span class="label">共花費</span>
-              <span class="value">{{ totalPrice }}</span>
+              <span class="value">
+                <NumberFormatter :number="totalPrice" locale="zh-TW" />
+              </span>
+              <span class="unit">元</span>
             </div>
           </div>
 
@@ -41,11 +50,15 @@
 
           <!-- grid -->
           <div class="ichiban-dialog__grid">
-            <div v-for="item in items" :key="item.id" class="prize">
+            <div
+              v-for="(item, idx) in items"
+              :key="item?.id ?? idx"
+              class="prize"
+            >
               <div class="prize__image">
-                <img :src="item.image" />
+                <img :src="item.prizeImageUrl" alt="prize" />
               </div>
-              <p class="prize__name">{{ item.name }}</p>
+              <p class="prize__name">{{ item.prizeName }}</p>
             </div>
           </div>
 
@@ -53,8 +66,12 @@
 
           <!-- actions -->
           <div class="ichiban-dialog__actions">
-            <button class="btn btn--ghost" @click="emitCancel">取消</button>
-            <button class="btn btn--primary" @click="emitConfirm">確認</button>
+            <button type="button" class="btn btn--ghost" @click="emitCancel">
+              取消
+            </button>
+            <button type="button" class="btn btn--primary" @click="emitConfirm">
+              確認
+            </button>
           </div>
         </div>
       </div>
@@ -64,17 +81,13 @@
 
 <script setup lang="ts">
 import weblogo from '@/assets/image/weblogo.png';
+import NumberFormatter from '@/components/common/NumberFormatter.vue';
 
 defineProps<{
   remain: number;
   count: number;
   totalPrice: number;
-  items: {
-    id: string;
-    name: string;
-    image: string;
-    grade?: 'A' | 'B' | 'C' | 'D';
-  }[];
+  items: any[];
 }>();
 
 const emit = defineEmits<{
@@ -115,7 +128,7 @@ const emitCancel = () => emit('cancel');
    Base layout
 ================================================= */
 .ichiban-dialog {
-  position: absolute;
+  position: fixed;
   inset: 0;
   z-index: 10000;
   display: flex;
@@ -331,7 +344,9 @@ const emitCancel = () => emit('cancel');
   &--main {
     border-radius: 12px;
     background: linear-gradient(135deg, #fff6cc, #f6e7d5);
-    box-shadow: 0 0 0 2px #d4a94f inset, 0 0 18px rgba(255, 210, 120, 0.55);
+    box-shadow:
+      0 0 0 2px #d4a94f inset,
+      0 0 18px rgba(255, 210, 120, 0.55);
     animation: prize-glow 2.8s ease-in-out infinite alternate;
 
     .prize__name {
@@ -343,10 +358,14 @@ const emitCancel = () => emit('cancel');
 
 @keyframes prize-glow {
   from {
-    box-shadow: 0 0 0 2px #d4a94f inset, 0 0 14px rgba(255, 200, 80, 0.45);
+    box-shadow:
+      0 0 0 2px #d4a94f inset,
+      0 0 14px rgba(255, 200, 80, 0.45);
   }
   to {
-    box-shadow: 0 0 0 2px #f2d675 inset, 0 0 26px rgba(255, 220, 120, 0.75);
+    box-shadow:
+      0 0 0 2px #f2d675 inset,
+      0 0 26px rgba(255, 220, 120, 0.75);
   }
 }
 </style>

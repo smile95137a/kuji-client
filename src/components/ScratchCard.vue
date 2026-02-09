@@ -140,7 +140,7 @@ const props = withDefaults(
     revealText: '🎉 You got a $50 Apple gift card!',
     threshold: 45,
     grade: '',
-  }
+  },
 );
 
 // 依照 grade 切換 cover 顏色 class
@@ -199,7 +199,7 @@ onMounted(() => {
   ctx.fillStyle = '#000';
 
   isSafariBrowser.value = /^((?!chrome|android).)*safari/i.test(
-    navigator.userAgent
+    navigator.userAgent,
   );
 
   canvas.addEventListener('pointerdown', onPointerDown, { passive: true });
@@ -427,7 +427,7 @@ const reveal = () => {
 
   const rect = targetEl.getBoundingClientRect();
 
-  // ✅ 以「圖的中間」當作爆炸中心
+  //  以「圖的中間」當作爆炸中心
   const originX = (rect.left + rect.width / 2) / window.innerWidth;
   const originY = (rect.top + rect.height) / window.innerHeight;
 

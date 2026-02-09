@@ -7,15 +7,11 @@ export interface IchibanResultOptions {
   remain: number;
   count: number;
   totalPrice: number;
-  items: {
-    id: string;
-    name: string;
-    image: string;
-  }[];
+  items: any[];
 }
 
 export function ichibanResultDialog(
-  options: IchibanResultOptions
+  options: IchibanResultOptions,
 ): Promise<boolean> {
   return new Promise((resolve) => {
     createDialog((close) =>
@@ -29,7 +25,7 @@ export function ichibanResultDialog(
           resolve(false);
           close();
         },
-      })
+      }),
     );
   });
 }

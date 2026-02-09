@@ -139,7 +139,7 @@
         </div>
       </div>
 
-      <!-- ✅ 分頁：使用 BasePagination -->
+      <!--  分頁：使用 BasePagination -->
       <div class="depositHistory__pagination">
         <BasePagination
           v-model:page="page"
@@ -175,7 +175,7 @@ const dateTo = ref('');
 const status = ref<Status | ''>('');
 const keyword = ref('');
 
-/** ✅ Mock：用迴圈產生 70+ 筆資料 */
+/**  Mock：用迴圈產生 70+ 筆資料 */
 const COUNT = 75;
 
 const payMethods: PayMethod[] = ['CREDIT_CARD', 'ATM', 'CVS'];
@@ -247,7 +247,7 @@ const filteredRows = computed(() => {
 });
 
 const totalPages = computed(() =>
-  Math.max(1, Math.ceil(filteredRows.value.length / pageSize))
+  Math.max(1, Math.ceil(filteredRows.value.length / pageSize)),
 );
 
 const pageRows = computed(() => {
@@ -424,8 +424,9 @@ const badgeClass = (s: Status) => ({
   }
 
   &__mono {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-      'Liberation Mono', 'Courier New', monospace;
+    font-family:
+      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+      'Courier New', monospace;
     font-size: 13px;
   }
 

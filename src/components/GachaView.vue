@@ -1,36 +1,36 @@
-<!-- src/views/BlindboxView.vue -->
+<!-- src/components/GachaView.vue -->
 <template>
-  <div class="blindbox">
-    <div class="blindbox__bg" aria-hidden="true">
-      <img :src="blindboxbg" alt="" class="blindbox__bgImg" />
+  <div class="gacha">
+    <div class="gacha__bg" aria-hidden="true">
+      <img :src="gachaBg" alt="" class="gacha__bgImg" />
     </div>
 
-    <div class="blindbox__container">
-      <header class="blindbox__header">
-        <h2 class="blindbox__title">盲盒</h2>
+    <div class="gacha__container">
+      <header class="gacha__header">
+        <h2 class="gacha__title">扭蛋</h2>
 
-        <div class="blindbox__filters">
-          <div class="blindbox__selects">
+        <div class="gacha__filters">
+          <div class="gacha__selects">
             <MSelect
-              v-model="filterSeries"
-              :options="seriesOptions"
+              v-model="filterTheme"
+              :options="themeOptions"
               placeholder="全部系列"
               placeholder-value=""
-              class="blindbox__selectItem"
+              class="gacha__selectItem"
             />
             <MSelect
               v-model="filterStatus"
               :options="statusOptions"
               placeholder="全部狀態"
               placeholder-value=""
-              class="blindbox__selectItem"
+              class="gacha__selectItem"
             />
           </div>
 
           <MSearch
             v-model="keyword"
             placeholder="搜尋"
-            class="blindbox__searchItem"
+            class="gacha__searchItem"
             @search="onSearch"
           >
             <template #icon>
@@ -40,17 +40,30 @@
         </div>
       </header>
 
-      <section class="blindbox__grid">
-        <IchibanKujiCard
-          v-for="item in pagedList"
-          :key="item.id"
-          class="ichibanList__card"
-          :item="item"
-          @click="goDetail(item.id)"
-        />
-      </section>
+      <!--  固定內容高度，避免空資料造成跳動 -->
+      <div class="gacha__content">
+        <!-- 空資料狀態（用佔位高度，不會跑版） -->
+        <div v-if="filteredList.length === 0" class="gacha__state">
+          目前沒有商品
+        </div>
 
-      <div class="blindbox__pagination">
+        <!-- 列表 -->
+        <section v-else class="gacha__grid">
+          <IchibanKujiCard
+            v-for="item in pagedList"
+            :key="item.id"
+            class="ichibanList__card"
+            :item="item"
+            @click="goDetail(item.id)"
+          />
+        </section>
+      </div>
+
+      <!--  分頁永遠保留空間，避免跳動 -->
+      <div
+        class="gacha__pagination"
+        :class="{ 'is-hidden': filteredList.length === 0 }"
+      >
         <BasePagination
           v-model:page="page"
           :total-pages="totalPages"
@@ -63,85 +76,92 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
 
 import IchibanKujiCard from '@/components/IchibanKujiCard.vue';
 import MSelect from '@/components/common/MSelect.vue';
 import MSearch from '@/components/common/MSearch.vue';
 import BasePagination from '@/components/common/BasePagination.vue';
 
-import blindboxbg from '@/assets/image/blindboxbg.png';
+import gachaBg from '@/assets/image/blindboxbg.png';
 
-type PriceItem = { label: string; amount: number; unit: string };
-type KujiItem = {
+type GachaItem = {
   id: string;
-  bannerSrc: string;
+  imageUrl: string;
   title: string;
-  remaining: number;
-  remainingUnit: string;
-  prices: PriceItem[];
-  timeText: string;
-  tagText: string;
-  series?: string;
+  theme?: string;
   status?: string;
+  tags?: string[];
+
+  storeName?: string;
+  currentPrice?: number;
+  remainingDraws?: number;
 };
 
-const seriesOptions = [
-  { label: '鋼彈系列', value: 'gundam' },
-  { label: '新世紀福音戰士', value: 'eva' },
-  { label: '航海王', value: 'op' },
+const themeOptions = [
+  { label: '咒術迴戰', value: '咒術迴戰' },
+  { label: '鋼彈', value: '鋼彈' },
+  { label: '航海王', value: '航海王' },
 ];
 
 const statusOptions = [
-  { label: '開抽中', value: 'open' },
-  { label: '已結束', value: 'close' },
+  { label: '已上架', value: 'ON_SHELF' },
+  { label: '未上架', value: 'OFF_SHELF' },
 ];
 
-const filterSeries = ref('');
+const filterTheme = ref('');
 const filterStatus = ref('');
 const keyword = ref('');
 
-const list: KujiItem[] = [
+const router = useRouter();
+
+const list = ref<GachaItem[]>([
   {
-    id: 'kuji-001',
-    bannerSrc: '/images/kuji-banner.png',
-    title:
-      '一番賞 哥吉拉 MACHINE CHRONICLE 抽先公開！收錄23公分 SOFVICS 機械哥吉拉軟膠',
-    remaining: 100,
-    remainingUnit: '抽',
-    prices: [
-      { label: '金幣', amount: 250, unit: '抽' },
-      { label: '銀幣', amount: 1250, unit: '抽' },
-    ],
-    timeText: '一週前',
-    tagText: '動感光波',
-    series: 'gundam',
-    status: 'open',
+    id: 'gacha-001',
+    imageUrl: 'https://picsum.photos/seed/gacha_001/800/800',
+    title: '咒術迴戰 扭蛋 Vol.1',
+    theme: '咒術迴戰',
+    status: 'ON_SHELF',
+    storeName: 'KUJI 測試商店',
+    currentPrice: 120,
+    remainingDraws: 28,
+    tags: ['新品', '收藏'],
   },
-  ...Array.from({ length: 11 }).map((_, i) => ({
-    id: `kuji-${i + 2}`.padStart(7, '0'),
-    bannerSrc: '/images/kuji-banner.png',
-    title:
-      '一番賞 哥吉拉 MACHINE CHRONICLE 抽先公開！收錄23公分 SOFVICS 機械哥吉拉軟膠',
-    remaining: 100 - i * 3,
-    remainingUnit: '抽',
-    prices: [
-      { label: '金幣', amount: 250, unit: '抽' },
-      { label: '銀幣', amount: 1250, unit: '抽' },
-    ],
-    timeText: '一週前',
-    tagText: '動感光波',
-    series: i % 2 === 0 ? 'gundam' : 'op',
-    status: i % 3 === 0 ? 'open' : 'close',
+  {
+    id: 'gacha-002',
+    imageUrl: 'https://picsum.photos/seed/gacha_002/800/800',
+    title: '鋼彈 扭蛋 機體收藏',
+    theme: '鋼彈',
+    status: 'OFF_SHELF',
+    storeName: 'KUJI 測試商店',
+    currentPrice: 150,
+    remainingDraws: 12,
+    tags: ['熱銷'],
+  },
+  ...Array.from({ length: 10 }).map((_, i) => ({
+    id: `gacha-${String(i + 3).padStart(3, '0')}`,
+    imageUrl: `https://picsum.photos/seed/gacha_${i + 3}/800/800`,
+    title: `航海王 扭蛋 角色系列 ${i + 1}`,
+    theme: i % 2 === 0 ? '航海王' : '咒術迴戰',
+    status: i % 3 === 0 ? 'ON_SHELF' : 'OFF_SHELF',
+    storeName: 'KUJI 測試商店',
+    currentPrice: 100 + i * 10,
+    remainingDraws: 30 - i,
+    tags: i % 2 === 0 ? ['新品'] : ['收藏'],
   })),
-];
+]);
 
 const filteredList = computed(() => {
   const kw = keyword.value.trim().toLowerCase();
-  return list.filter((x) => {
-    const okSeries = !filterSeries.value || x.series === filterSeries.value;
+
+  return list.value.filter((x) => {
+    const okTheme = !filterTheme.value || x.theme === filterTheme.value;
     const okStatus = !filterStatus.value || x.status === filterStatus.value;
-    const okKw = !kw || x.title.toLowerCase().includes(kw);
-    return okSeries && okStatus && okKw;
+
+    const title = String(x.title ?? '').toLowerCase();
+    const okKw = !kw || title.includes(kw);
+
+    return okTheme && okStatus && okKw;
   });
 });
 
@@ -162,21 +182,22 @@ const onSearch = () => {
 };
 
 const goDetail = (id: string) => {
-  console.log('go detail:', id);
+  router.push({ name: 'IchibanDetail', params: { id } });
 };
 
-watch([filterSeries, filterStatus], () => {
+watch([filterTheme, filterStatus], () => {
   page.value = 1;
 });
 
-/* ✅ 防呆：篩完後總頁數變小，避免 page 超出 */
 watch(totalPages, (tp) => {
   if (page.value > tp) page.value = tp;
 });
 </script>
 
 <style scoped lang="scss">
-.blindbox {
+/* src/components/GachaView.vue (scoped) */
+
+.gacha {
   position: relative;
   width: 100%;
   overflow: hidden;
@@ -213,6 +234,7 @@ watch(totalPages, (tp) => {
     max-width: 1080px;
     margin: 0 auto;
     padding: 0 18px;
+
     display: flex;
     flex-direction: column;
     align-items: stretch;
@@ -247,6 +269,33 @@ watch(totalPages, (tp) => {
     flex-wrap: wrap;
   }
 
+  &__selectItem {
+    /* 需要的話可加寬度 */
+  }
+
+  &__searchItem {
+    /* 需要的話可加寬度 */
+  }
+
+  &__content {
+    min-height: 740px;
+
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__state {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 28px 0;
+    text-align: center;
+    font-weight: 900;
+    color: rgba(0, 0, 0, 0.55);
+  }
+
   &__grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -259,23 +308,36 @@ watch(totalPages, (tp) => {
     }
   }
 
+  /*  分頁保留高度，避免有/無分頁時版面跳動 */
   &__pagination {
     margin-top: 26px;
     display: flex;
     justify-content: center;
+
+    min-height: 44px;
+  }
+
+  &__pagination.is-hidden {
+    visibility: hidden;
+    pointer-events: none;
   }
 }
 
 @media (max-width: 1024px) {
-  .blindbox {
+  .gacha {
     &__grid {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    /* 平板卡片通常更高，內容區加大 */
+    &__content {
+      min-height: 860px;
     }
   }
 }
 
 @media (max-width: 640px) {
-  .blindbox {
+  .gacha {
     min-height: 100vh;
 
     &__bg {
@@ -322,6 +384,11 @@ watch(totalPages, (tp) => {
 
     &__grid {
       grid-template-columns: 1fr;
+    }
+
+    /* 手機卡片更高，內容區再加大 */
+    &__content {
+      min-height: 980px;
     }
   }
 }

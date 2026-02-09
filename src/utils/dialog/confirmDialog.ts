@@ -35,12 +35,12 @@ export function openConfirmDialog(options: DialogOptions): DialogController {
         options.onCancel?.();
         close();
       },
-    })
+    }),
   );
 }
 
 /**
- * ✅ await 版本：confirmDialog
+ *  await 版本：confirmDialog
  * 回傳 true = 確定
  * 回傳 false = 取消 / 關閉
  */

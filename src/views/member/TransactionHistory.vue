@@ -204,7 +204,7 @@
         </div>
       </div>
 
-      <!-- ✅ 分頁：使用 BasePagination -->
+      <!--  分頁：使用 BasePagination -->
       <div class="transactionHistory__pagination">
         <BasePagination
           v-model:page="page"
@@ -439,7 +439,7 @@ const filteredRows = computed(() => {
 });
 
 const totalPages = computed(() =>
-  Math.max(1, Math.ceil(filteredRows.value.length / pageSize))
+  Math.max(1, Math.ceil(filteredRows.value.length / pageSize)),
 );
 
 const pageRows = computed(() => {
@@ -448,7 +448,7 @@ const pageRows = computed(() => {
 });
 
 const pageSum = computed(() =>
-  pageRows.value.reduce((sum, r) => sum + r.amount, 0)
+  pageRows.value.reduce((sum, r) => sum + r.amount, 0),
 );
 
 // 條件變動時回第一頁
@@ -647,8 +647,9 @@ const openDetail = (row: TransactionRow) => {
   }
 
   &__mono {
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-      'Liberation Mono', 'Courier New', monospace;
+    font-family:
+      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+      'Courier New', monospace;
     font-size: 13px;
   }
 

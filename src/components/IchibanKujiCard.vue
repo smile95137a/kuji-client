@@ -12,8 +12,7 @@
       <div class="kuji-card__banner-frame">
         <img
           class="kuji-card__banner-img"
-          :src="resolvedBannerSrc"
-          :alt="resolvedAlt"
+          :src="resolvedImgSrc"
           loading="lazy"
         />
       </div>
@@ -27,23 +26,19 @@
               class="kuji-card__status-badgeImg"
               :src="IchibanKujiCardOpen"
               alt=""
-              draggable="false"
             />
-
-            <!-- ✅ 狀態字：已上架 / 草稿 / 已下架 -->
-            <span class="kuji-card__status-text">
-              {{ resolvedStatusText }}
-            </span>
           </div>
 
           <div class="kuji-card__status-sub">
             <p class="kuji-card__status-subLabel">剩餘</p>
 
             <div class="kuji-card__status-subRow">
-              <span class="kuji-card__status-subValue">
-                {{ resolvedRemaining }}
-              </span>
-              <span class="kuji-card__status-subUnit">抽</span>
+              <span class="kuji-card__status-subValue">{{
+                resolvedRemainingPrizes
+              }}</span>
+              <span class="kuji-card__status-subUnit"
+                >/ {{ resolvedTotalPrizes }}</span
+              >
             </div>
           </div>
         </div>
@@ -66,7 +61,6 @@
         </div>
       </div>
     </section>
-
     <div class="kuji-card__body">
       <!-- Title -->
       <h3 class="kuji-card__title">
@@ -80,7 +74,7 @@
             class="kuji-card__meta-icon"
             :icon="['fas', 'calendar-days']"
           />
-          <span class="kuji-card__meta-text">{{ resolvedTimeText }}</span>
+          <span class="kuji-card__meta-text">{{ relativeCreatedAt }}</span>
         </div>
 
         <div class="kuji-card__meta-item">
@@ -96,112 +90,130 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
 import IchibanKujiCardOpen from '@/assets/image/IchibanKujiCardOpen.png';
 import demo1 from '@/assets/image/demo1.jpg';
-
-type PriceItem = {
-  label: string; // 單抽 / 十連 / 金幣 / 銀幣...
-  amount: number;
-  unit: string; // 抽
-};
-
-type LotteryItem = {
-  id: string;
-  storeId?: string;
-  storeName?: string;
-
-  title?: string;
-
-  category?: string;
-  categoryName?: string;
-  subCategory?: string;
-
-  pricePerDraw?: number;
-  currentPrice?: number;
-
-  scheduledAt?: string; // 2026-01-20T10:24:00
-  endTime?: string;
-
-  totalDraws?: number;
-  maxDraws?: number;
-  remainingDraws?: number;
-
-  totalPrizes?: number;
-  remainingPrizes?: number;
-
-  status?: string;
-  statusName?: string;
-
-  imageUrl?: string;
-};
+import { computed } from 'vue';
 
 const props = defineProps<{
-  item: LotteryItem;
+  item: any;
 }>();
 
 defineEmits<{ (e: 'click'): void }>();
-
 /* ------------------------------
  * computed display
  * ------------------------------ */
 const resolvedTitle = computed(() => props.item?.title || '未命名商品');
 
-const resolvedAlt = computed(() => props.item?.title || 'kuji');
-
-const resolvedBannerSrc = computed(() => {
+const resolvedImgSrc = computed(() => {
   const url = String(props.item?.imageUrl ?? '').trim();
   return url ? url : demo1;
 });
 
-const resolvedRemaining = computed(() => {
-  const n =
-    props.item?.remainingDraws ??
-    props.item?.remainingPrizes ??
-    props.item?.maxDraws ??
-    0;
-  return Number(n) || 0;
+const resolvedRemainingPrizes = computed(() => {
+  const n = props.item?.remainingPrizes;
+  return ~~n;
 });
 
-const resolvedStatusText = computed(() => {
-  return props.item?.statusName || '開抽中';
+const resolvedTotalPrizes = computed(() => {
+  const n = props.item?.totalPrizes;
+  return ~~n;
 });
 
 const resolvedTagText = computed(() => {
-  // 你要顯示品牌/分類/店家都可以，這邊優先店家，再來分類名
-  return props.item?.storeName || props.item?.categoryName || 'KUJI';
+  return props.item?.storeName || 'KUJI';
 });
 
-const formatDate = (iso?: string) => {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}/${m}/${day}`;
-};
-
-const resolvedTimeText = computed(() => {
-  const start = formatDate(props.item?.scheduledAt);
-  const end = formatDate(props.item?.endTime);
-
-  if (start && end) return `${start} - ${end}`;
-  if (end) return `至 ${end}`;
-  if (start) return `自 ${start}`;
-  return '-';
-});
-
-const resolvedPrices = computed<PriceItem[]>(() => {
+const resolvedPrices = computed<any[]>(() => {
   const base =
     Number(props.item?.currentPrice ?? props.item?.pricePerDraw ?? 0) || 0;
 
-  // ✅ 你可以把這裡改成你想要的顯示方式
-  // 我先做「單抽 / 十連」最直覺
   return [
     { label: '單抽', amount: base || 0, unit: '抽' },
     { label: '十連', amount: (base || 0) * 10, unit: '抽' },
   ];
+});
+
+const parseDate = (input: any): Date | null => {
+  if (!input) return null;
+
+  // Date 物件
+  if (input instanceof Date) return isNaN(input.getTime()) ? null : input;
+
+  // number timestamp（秒 / 毫秒）
+  if (typeof input === 'number') {
+    const ms = input < 1e12 ? input * 1000 : input;
+    const d = new Date(ms);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  // string（ISO / 'YYYY-MM-DD HH:mm:ss' 等）
+  if (typeof input === 'string') {
+    const s = input.trim();
+    if (!s) return null;
+
+    // 兼容 'YYYY-MM-DD HH:mm:ss' -> 'YYYY-MM-DDTHH:mm:ss'
+    const normalized = s.includes('T') ? s : s.replace(' ', 'T');
+    const d = new Date(normalized);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  return null;
+};
+
+const formatRelativeTimeZh = (date: Date, now = new Date()) => {
+  const diffMs = now.getTime() - date.getTime();
+  if (diffMs < 0) return '剛剛';
+
+  const minute = 60 * 1000;
+  const hour = 60 * minute;
+  const day = 24 * hour;
+
+  if (diffMs < hour) {
+    const mins = Math.max(1, Math.floor(diffMs / minute));
+    return mins <= 1 ? '1分鐘前' : `${mins}分鐘前`;
+  }
+
+  if (diffMs < day) {
+    const hrs = Math.floor(diffMs / hour);
+    return hrs <= 1 ? '1小時前' : `${hrs}小時前`;
+  }
+
+  const days = Math.floor(diffMs / day);
+
+  if (days < 7) return days <= 1 ? '1天前' : `${days}天前`;
+
+  if (days < 30) {
+    const weeks = Math.floor(days / 7);
+    return weeks <= 1 ? '1週前' : `${weeks}週前`;
+  }
+
+  // >= 30 天：用「月」(以年月差計算，避免 31/28 天問題)
+  const y1 = now.getFullYear();
+  const m1 = now.getMonth();
+  const y2 = date.getFullYear();
+  const m2 = date.getMonth();
+
+  let months = (y1 - y2) * 12 + (m1 - m2);
+
+  // 如果「本月還沒到那一天」，月數要 -1（避免 1/30 對 12/31 算成 1 個月）
+  if (now.getDate() < date.getDate()) months -= 1;
+
+  if (months <= 0) {
+    // 落在 30~59 天但月差算出 0 的 case（例如 1/31 vs 1/01）
+    const approxWeeks = Math.floor(days / 7);
+    return approxWeeks <= 1 ? '1週前' : `${approxWeeks}週前`;
+  }
+
+  if (months < 12) return months === 1 ? '1個月前' : `${months}個月前`;
+
+  const years = Math.floor(months / 12);
+  return years === 1 ? '1年前' : `${years}年前`;
+};
+
+const relativeCreatedAt = computed(() => {
+  const d = parseDate(props.item?.createdAt);
+  if (!d) return '—';
+  return formatRelativeTimeZh(d);
 });
 
 const formatNumber = (n: number) => new Intl.NumberFormat('en-US').format(n);
@@ -235,7 +247,7 @@ const formatNumber = (n: number) => new Intl.NumberFormat('en-US').format(n);
     height: auto;
     display: block;
     aspect-ratio: 16 / 9;
-    object-fit: cover; /* ✅ 建議 cover：圖片會更像商城卡片 */
+    object-fit: contain;
   }
 
   &__overlay {
@@ -265,33 +277,32 @@ const formatNumber = (n: number) => new Intl.NumberFormat('en-US').format(n);
     justify-content: flex-start;
   }
 
+  /* badge 容器 */
   &__status-badge {
-    position: relative;
     display: flex;
     align-items: flex-start;
     justify-content: flex-start;
   }
 
+  /* badge 圖片（你 template 用 img 的話就用這個 class） */
   &__status-badgeImg {
-    width: 80px;
+    width: 80px; /* 視你的圖再微調 */
     height: auto;
     display: block;
   }
 
-  /* ✅ 狀態字（壓在 badge 上） */
-  &__status-text {
-    position: absolute;
-    left: 50%;
-    top: 18px;
-    transform: translateX(-50%);
-    font-size: 12px;
+  /* 你如果還有用文字版 badge 才會用到 */
+  &__status-badgeText {
+    display: inline-block;
     font-weight: 900;
-    letter-spacing: 1px;
+    font-size: 34px;
     color: #111;
-    background: rgba(255, 255, 255, 0.9);
-    padding: 2px 8px;
-    border-radius: 999px;
-    white-space: nowrap;
+    letter-spacing: 2px;
+    transform: skewX(8deg);
+
+    -webkit-text-stroke: 4px #111;
+    text-shadow: 0 4px 0 rgba(0, 0, 0, 0.25);
+    paint-order: stroke fill;
   }
 
   /* 下方剩餘區 */
@@ -305,24 +316,28 @@ const formatNumber = (n: number) => new Intl.NumberFormat('en-US').format(n);
     margin-top: -4px;
   }
 
+  /* 「剩餘」 */
   &__status-subLabel {
     margin: 0;
     opacity: 0.95;
     letter-spacing: 1px;
   }
 
+  /* 數字 + 單位那一行（你 template 如果有包一層 div，建議加這個 class） */
   &__status-subRow {
     display: flex;
     align-items: baseline;
     gap: 4px;
   }
 
+  /* 數字 */
   &__status-subValue {
     font-weight: 900;
     font-size: 18px;
     line-height: 1;
   }
 
+  /* 單位 */
   &__status-subUnit {
     font-size: 12px;
     opacity: 0.95;
@@ -356,8 +371,6 @@ const formatNumber = (n: number) => new Intl.NumberFormat('en-US').format(n);
     color: #e5a657;
     background: #ffffff;
     border-radius: 12px;
-    font-size: 11px;
-    font-weight: 900;
   }
 
   &__price-value {
@@ -372,7 +385,6 @@ const formatNumber = (n: number) => new Intl.NumberFormat('en-US').format(n);
   &__price-unit {
     font-size: 10px;
   }
-
   &__body {
     margin-top: -12px;
     background-color: rgba(255, 255, 255, 0.5);
@@ -383,6 +395,7 @@ const formatNumber = (n: number) => new Intl.NumberFormat('en-US').format(n);
   &__title {
     padding: 24px 12px 6px 12px;
     font-size: 18px;
+
     font-weight: 900;
     color: #111;
     line-height: 1.35;

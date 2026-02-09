@@ -1,62 +1,52 @@
 <script setup lang="ts">
 import { computed, ref, watch, onMounted } from 'vue';
-import { useRouter } from 'vue-router';
-
+import { useRoute, useRouter } from 'vue-router';
 import IchibanKujiCard from '@/components/IchibanKujiCard.vue';
 import BasePagination from '@/components/common/BasePagination.vue';
-import demo1 from '@/assets/image/demo1.jpg';
-
+import NoData from '@/components/common/NoData.vue';
 import { queryBrowseLotteries } from '@/services/lotteryBrowseService';
-
-type CategoryValue =
-  | 'all'
-  | 'ichiban'
-  | 'figure'
-  | 'prize'
-  | 'gacha'
-  | 'box'
-  | 'others';
-
-type SortValue = 'latest' | 'hot' | 'priceAsc' | 'priceDesc';
-
-type KujiItem = {
-  id: string; // UUID
-  title: string;
-  bannerSrc: string;
-  remaining: number; // remainingDraws（或 remainingPrizes）
-  timeText: string;
-  tagText: string;
-  category: CategoryValue;
-  basePrice: number;
-
-  // 給排序用（可選）
-  orderNum?: number;
-  scheduledAt?: string;
-  createdAt?: string;
-  endTime?: string;
+import { executeApi } from '@/utils/executeApiUtils';
+const DEFAULT_SORT = 'latest';
+const DEFAULT_TAG = 'all';
+const DEFAULT_PAGE = 1;
+const resetUiState = () => {
+  currentSort.value = DEFAULT_SORT;
+  currentTag.value = DEFAULT_TAG;
+  currentPage.value = DEFAULT_PAGE;
 };
 
 const router = useRouter();
+const route = useRoute();
 
-const categories = [
-  { label: '全部', value: 'all' as CategoryValue },
-  { label: '一番賞', value: 'ichiban' as CategoryValue },
-  { label: '景品 / 公仔', value: 'figure' as CategoryValue },
-  { label: '獎品組', value: 'prize' as CategoryValue },
-  { label: '扭蛋', value: 'gacha' as CategoryValue },
-  { label: '盒玩', value: 'box' as CategoryValue },
-  { label: '其他', value: 'others' as CategoryValue },
-];
+const typeToCategory: Record<string, string | 'all'> = {
+  kuji: 'OFFICIAL_ICHIBAN', // 官方一番賞
+  gacha: 'GACHA', // 扭蛋
+  custom: 'CUSTOM_GACHA', // 自製賞
+  card: 'TRADING_CARD', // 卡牌
+};
+const typeToTitle: Record<string, string> = {
+  kuji: '一番賞',
+  gacha: '扭蛋',
+  custom: '自製賞',
+  card: '卡牌',
+};
+
+const pageTitle = computed(() => typeToTitle[currentType.value] ?? '商城');
+
+const currentType = computed(() => String(route.query.type ?? 'kuji'));
+
+const currentCategory = ref<string>('all');
+
+const currentTag = ref('all');
 
 const sortTabs = [
-  { label: '最新', value: 'latest' as SortValue },
-  { label: '最熱銷', value: 'hot' as SortValue },
-  { label: '價格低到高', value: 'priceAsc' as SortValue },
-  { label: '價格高到低', value: 'priceDesc' as SortValue },
+  { label: '最新', value: 'latest' },
+  { label: '最熱銷', value: 'hot' },
+  { label: '價格低到高', value: 'priceAsc' },
+  { label: '價格高到低', value: 'priceDesc' },
 ];
 
-const currentCategory = ref<CategoryValue>('all');
-const currentSort = ref<SortValue>('latest');
+const currentSort = ref('latest');
 
 const pageSize = 12;
 const currentPage = ref(1);
@@ -64,112 +54,77 @@ const currentPage = ref(1);
 /** API data */
 const loading = ref(false);
 const errorMsg = ref('');
-const kujiList = ref<KujiItem[]>([]);
+const kujiList = ref([]);
 
 /* ------------------------------
- * mapping helpers
+ * categories chips (dynamic)
  * ------------------------------ */
-const formatDate = (iso?: string | null) => {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}/${m}/${day}`;
-};
+const categories = computed(() => {
+  const map = new Map<string, string>(); // key=category, value=categoryName
 
-const toCategoryValue = (
-  category?: string,
-  _subCategory?: string,
-): CategoryValue => {
-  const c = String(category ?? '').toUpperCase();
+  for (const item of kujiList.value) {
+    const key = item.category;
+    const name = item.categoryName || item.category || '其他';
+    if (!map.has(key)) map.set(key, name);
+  }
 
-  // 你提供的 res：OFFICIAL_ICHIBAN => ichiban
-  if (c === 'OFFICIAL_ICHIBAN') return 'ichiban';
+  const chips = Array.from(map.entries())
+    .map(([value, label]) => ({ value, label }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'zh-Hant'));
 
-  // 其他未對應先丟 others（你之後有新增分類再補）
-  return 'others';
-};
+  return [{ label: '全部', value: 'all' }, ...chips];
+});
+const tags = computed(() => {
+  const set = new Set<string>();
 
-const toKujiItem = (x: any): KujiItem => {
-  const id = String(x?.id ?? '');
-  const title = String(x?.title ?? '未命名商品');
-  const bannerSrc = String(x?.imageUrl ?? '') || demo1;
+  for (const item of kujiList.value as any[]) {
+    const arr = Array.isArray(item?.tags) ? item.tags : [];
+    for (const t of arr) {
+      const s = String(t ?? '').trim();
+      if (s) set.add(s);
+    }
+  }
 
-  // ✅ 卡片顯示 remaining：先用 remainingDraws（抽數剩餘）
-  // 如果你想顯示「獎品剩餘」就改成 remainingPrizes
-  const remaining = Number(x?.remainingDraws ?? x?.remainingPrizes ?? 0) || 0;
+  const chips = Array.from(set)
+    .map((t) => ({ label: t, value: t }))
+    .sort((a, b) => a.label.localeCompare(b.label, 'zh-Hant'));
 
-  // ✅ 價格：優先 currentPrice，沒有就 pricePerDraw
-  const basePrice = Number(x?.currentPrice ?? x?.pricePerDraw ?? 0) || 0;
-
-  const category = toCategoryValue(x?.category, x?.subCategory);
-
-  // ✅ tagText：用 categoryName 或 storeName
-  const tagText = String(x?.categoryName ?? x?.storeName ?? 'HOT');
-
-  // ✅ timeText：用活動區間
-  const start = formatDate(x?.startTime);
-  const end = formatDate(x?.endTime);
-  const timeText =
-    start && end
-      ? `${start} - ${end}`
-      : end
-        ? `至 ${end}`
-        : start
-          ? `自 ${start}`
-          : '-';
-
-  return {
-    id,
-    title,
-    bannerSrc,
-    remaining,
-    timeText,
-    tagText,
-    category,
-    basePrice,
-
-    orderNum: x?.orderNum ?? undefined,
-    scheduledAt: x?.scheduledAt ?? undefined,
-    createdAt: x?.createdAt ?? undefined,
-    endTime: x?.endTime ?? undefined,
-  };
-};
+  return [{ label: '全部', value: 'all' }, ...chips];
+});
 
 /* ------------------------------
  * fetch
  * ------------------------------ */
 const fetchList = async () => {
-  loading.value = true;
-  errorMsg.value = '';
-
-  try {
-    const resp = await queryBrowseLotteries({ condition: {} });
-
-    // 你系統常見回傳：{ success, data }
-    const data = (resp as any)?.data ?? resp;
-
-    const arr = Array.isArray(data) ? data : [];
-    kujiList.value = arr.map((x: any) => toKujiItem(x));
-  } catch (e: any) {
-    console.error(e);
-    errorMsg.value = '載入商品失敗，請稍後再試';
-    kujiList.value = [];
-  } finally {
-    loading.value = false;
-  }
+  await executeApi({
+    fn: () => queryBrowseLotteries({ condition: {} }),
+    onSuccess: async (data) => {
+      const arr = Array.isArray(data) ? data : [];
+      kujiList.value = arr.map((x) => {
+        return { ...x.lottery, prizes: x.prizes };
+      });
+    },
+  });
 };
 
 /* ------------------------------
  * filter/sort/pagination
  * ------------------------------ */
 const filteredList = computed(() => {
-  if (currentCategory.value === 'all') return kujiList.value;
-  return kujiList.value.filter(
-    (item) => item.category === currentCategory.value,
-  );
+  let list = kujiList.value as any[];
+
+  if (currentCategory.value !== 'all') {
+    list = list.filter((item) => item.category === currentCategory.value);
+  }
+
+  if (currentTag.value !== 'all') {
+    list = list.filter((item) => {
+      const arr = Array.isArray(item?.tags) ? item.tags : [];
+      return arr.includes(currentTag.value);
+    });
+  }
+
+  return list;
 });
 
 const sortedList = computed(() => {
@@ -177,18 +132,16 @@ const sortedList = computed(() => {
 
   switch (currentSort.value) {
     case 'priceAsc':
-      return list.sort((a, b) => a.basePrice - b.basePrice);
+      return list.sort((a, b) => a.currentPrice - b.currentPrice);
     case 'priceDesc':
-      return list.sort((a, b) => b.basePrice - a.basePrice);
+      return list.sort((a, b) => b.currentPrice - a.currentPrice);
     case 'hot':
-      // demo：remaining 少的當作較熱
-      return list.sort((a, b) => a.remaining - b.remaining);
+      return list.sort((a, b) => a.hotCount - b.hotCount);
     case 'latest':
     default:
-      // ✅ 改成用 scheduledAt / createdAt 當最新排序（比 id 更準）
       return list.sort((a, b) => {
-        const at = a.scheduledAt || a.createdAt || '';
-        const bt = b.scheduledAt || b.createdAt || '';
+        const at = a.createdAt;
+        const bt = b.createdAt;
         return new Date(bt).getTime() - new Date(at).getTime();
       });
   }
@@ -203,9 +156,37 @@ const pagedList = computed(() => {
   return sortedList.value.slice(start, start + pageSize);
 });
 
-watch([currentCategory, currentSort], () => {
+watch([currentCategory, currentTag, currentSort], () => {
   currentPage.value = 1;
 });
+
+watch(
+  categories,
+  () => {
+    const exists = categories.value.some(
+      (c) => c.value === currentCategory.value,
+    );
+    if (!exists) currentCategory.value = 'all';
+  },
+  { immediate: true },
+);
+watch(
+  tags,
+  () => {
+    const exists = tags.value.some((t) => t.value === currentTag.value);
+    if (!exists) currentTag.value = 'all';
+  },
+  { immediate: true },
+);
+
+watch(
+  currentType,
+  (type) => {
+    currentCategory.value = typeToCategory[type] ?? 'all';
+    resetUiState();
+  },
+  { immediate: true },
+);
 
 /* ------------------------------
  * nav
@@ -224,21 +205,20 @@ onMounted(async () => {
     <div class="ichibanList__inner">
       <!-- 標題 -->
       <header class="ichibanList__header">
-        <h1 class="ichibanList__title">商城</h1>
+        <h1 class="ichibanList__title">{{ pageTitle }}</h1>
 
-        <!-- 類別 chips -->
-        <div class="ichibanList__categories">
+        <div class="ichibanList__tags" v-if="tags.length > 1">
           <button
-            v-for="cat in categories"
-            :key="cat.value"
+            v-for="t in tags"
+            :key="t.value"
             type="button"
             class="ichibanList__chip"
             :class="{
-              'ichibanList__chip--active': currentCategory === cat.value,
+              'ichibanList__chip--active': currentTag === t.value,
             }"
-            @click="currentCategory = cat.value"
+            @click="currentTag = t.value"
           >
-            {{ cat.label }}
+            {{ t.label }}
           </button>
         </div>
       </header>
@@ -271,7 +251,7 @@ onMounted(async () => {
         {{ errorMsg }}
       </div>
       <div v-else-if="sortedList.length === 0" class="ichibanList__state">
-        目前沒有商品
+        <NoData message="目前沒有商品" />
       </div>
 
       <!-- 商品列表 -->
@@ -285,7 +265,7 @@ onMounted(async () => {
         />
       </section>
 
-      <!-- 分頁 ㄈ-->
+      <!-- 分頁 -->
       <BasePagination
         v-if="!loading && !errorMsg && sortedList.length > 0"
         class="ichibanList__pagination"
@@ -297,130 +277,3 @@ onMounted(async () => {
     </div>
   </div>
 </template>
-
-<style scoped lang="scss">
-.ichibanList {
-  padding: 40px 0 80px;
-  background: linear-gradient(180deg, #f4e1cc 0%, #f8efe3 40%, #ffffff 100%);
-
-  &__inner {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 0 24px 48px;
-  }
-
-  &__header {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-    margin-bottom: 24px;
-  }
-
-  &__title {
-    font-size: 28px;
-    font-weight: 900;
-    color: #3f2412;
-  }
-
-  &__categories {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  &__chip {
-    border-radius: 999px;
-    border: 1px solid transparent;
-    padding: 8px 18px;
-    font-size: 14px;
-    background: #f4e1cc;
-    color: #3f2412;
-    cursor: pointer;
-    transition: all 0.2s ease;
-
-    &--active {
-      background: #eb6c4d;
-      color: #fff;
-    }
-
-    &:hover {
-      filter: brightness(0.96);
-    }
-  }
-
-  &__sortBar {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 24px;
-  }
-
-  &__sortLabel {
-    font-size: 14px;
-    color: #666;
-  }
-
-  &__sortTabs {
-    display: inline-flex;
-    border-radius: 999px;
-    background: rgba(255, 255, 255, 0.8);
-    padding: 2px;
-    gap: 4px;
-  }
-
-  &__sortTab {
-    border-radius: 999px;
-    border: none;
-    padding: 6px 12px;
-    font-size: 13px;
-    background: transparent;
-    color: #8c5b3b;
-    cursor: pointer;
-    transition: all 0.2s ease;
-
-    &--active {
-      background: #3f2412;
-      color: #fff;
-    }
-  }
-
-  &__state {
-    padding: 24px 0;
-    text-align: center;
-    color: #3f2412;
-    opacity: 0.9;
-
-    &--error {
-      color: #b42318;
-    }
-  }
-
-  &__grid {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 28px 24px;
-  }
-
-  @media (max-width: 900px) {
-    &__grid {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-    }
-  }
-
-  @media (max-width: 600px) {
-    &__grid {
-      grid-template-columns: minmax(0, 1fr);
-    }
-  }
-
-  &__pagination {
-    margin-top: 40px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 6px;
-    font-size: 14px;
-  }
-}
-</style>

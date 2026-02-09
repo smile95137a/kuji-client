@@ -1,8 +1,10 @@
 <script setup lang="ts">
+import { inject, ref, type Ref } from 'vue';
 import { useFormContext } from 'vee-validate';
 
-const { defineField, errors } = useFormContext();
+const submitted = inject<Ref<boolean>>('registerSubmitted', ref(false));
 
+const { defineField, errors } = useFormContext();
 const [agreeTerms] = defineField('agreeTerms');
 </script>
 
@@ -13,10 +15,10 @@ const [agreeTerms] = defineField('agreeTerms');
         id="agreeTerms"
         type="checkbox"
         v-model="agreeTerms"
-        :class="{ 'register__checkbox--error': errors.agreeTerms }"
+        :class="{ 'register__checkbox--error': submitted && errors.agreeTerms }"
       />
       <label for="agreeTerms">
-        我同意 <u>再來一抽</u> 提供的
+        我同意 <u>STARDO</u> 提供的
         <u><a href="./policy" target="_blank">網站服務條款</a></u>
         與
         <u><a href="./privacy" target="_blank">隱私權政策</a></u
@@ -24,7 +26,10 @@ const [agreeTerms] = defineField('agreeTerms');
       </label>
     </div>
 
-    <p class="register__text register__text--error">
+    <p
+      v-if="submitted && errors.agreeTerms"
+      class="register__text register__text--error"
+    >
       {{ errors.agreeTerms }}
     </p>
 

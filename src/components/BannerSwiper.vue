@@ -13,7 +13,7 @@
           </div>
 
           <!-- 文字區 -->
-          <span class="banner-tag">熱門活動</span>
+          <span class="banner-tag">{{ getBannerTag(banner) }}</span>
 
           <div class="banner-content">
             <h2 class="banner-title">{{ banner.title }}</h2>
@@ -90,17 +90,9 @@ import 'swiper/css/pagination';
 import 'swiper/css/effect-coverflow';
 import { getCarouselBanners } from '@/services/bannerService';
 import { executeApi } from '@/utils/executeApiUtils';
+import { getBannerTag } from '@/utils/timeUtils';
 
-type BannerItem = {
-  id: string;
-  storeId: string;
-  storeName: string;
-  title: string;
-  imageUrl: string;
-  orderNum: number | null;
-};
-
-const banners = ref<BannerItem[]>([]);
+const banners = ref<any[]>([]);
 
 const swiperEl = ref<HTMLDivElement | null>(null);
 const prevBtnEl = ref<HTMLButtonElement | null>(null);
@@ -120,7 +112,7 @@ const updateNavPosition = () => {
   if (!host || !prevBtn || !nextBtn) return;
 
   const active = host.querySelector(
-    '.swiper-slide-active'
+    '.swiper-slide-active',
   ) as HTMLElement | null;
   if (!active) return;
 
@@ -172,21 +164,11 @@ const loadBanners = async () => {
   await executeApi<any>({
     fn: async () => getCarouselBanners(),
     onSuccess: (data) => {
-      banners.value = data
-        .map((b: any) => ({
-          id: String(b?.id ?? ''),
-          storeId: String(b?.storeId ?? ''),
-          storeName: String(b?.storeName ?? ''),
-          title: String(b?.title ?? ''),
-          imageUrl: String(b?.imageUrl ?? ''),
-          orderNum: typeof b?.orderNum === 'number' ? b.orderNum : null,
-        }))
-        .filter((b: any) => !!b.id && !!b.imageUrl);
+      banners.value = data;
     },
   });
 };
 onMounted(async () => {
-  // ✅ 1) 先抓 API，確保 banners 有資料
   await loadBanners();
   nextTick(() => {
     if (!swiperEl.value) return;
@@ -194,7 +176,6 @@ onMounted(async () => {
     swiperInstance = new Swiper(swiperEl.value, {
       modules: [EffectCoverflow, Keyboard, Mousewheel, Pagination, Navigation],
 
-      // ✅ 用 ref 綁定 navigation（避免同頁多個 swiper 互相打架）
       navigation: {
         prevEl: prevBtnEl.value!,
         nextEl: nextBtnEl.value!,
@@ -205,7 +186,6 @@ onMounted(async () => {
       centeredSlides: true,
       speed: 500,
 
-      // RWD slidesPerView
       breakpoints: {
         0: {
           slidesPerView: 1,
@@ -233,7 +213,6 @@ onMounted(async () => {
         enabled: true,
       },
 
-      // ✅ 無限迴圈
       loop: true,
       watchSlidesProgress: true,
 
@@ -244,7 +223,6 @@ onMounted(async () => {
 
       on: {
         init(swiper) {
-          // 一開始就站在真正的第 0 張
           swiper.slideToLoop(0, 0, false);
           requestAnimationFrame(updateNavPosition);
         },
@@ -266,194 +244,30 @@ onMounted(async () => {
   });
 });
 </script>
-
 <style scoped lang="scss">
-.banner-section {
-  position: relative;
-  width: 100%;
-  margin: 0 auto;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  overflow: hidden;
+:deep(.swiper-3d) {
+  .swiper-slide-shadow-left,
+  .swiper-slide-shadow-right {
+    background-image: none;
+  }
 }
 
-.swiper {
-  width: 100%;
-  padding-top: 32px;
-  padding-bottom: 40px;
-}
-
-/* 每張卡片：16:9，最大高度 320px */
-.swiper-slide {
-  position: relative;
-  aspect-ratio: 16 / 9;
-  max-height: 480px;
-  overflow: hidden;
-
-  border-radius: 16px;
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  align-items: flex-start;
-  transform-origin: center center;
-
-  filter: blur(1px);
-  transition: transform 0.35s ease, filter 0.35s ease, box-shadow 0.35s ease;
-}
-
-/* 圖片容器 */
-.banner-image-wrapper {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-}
-
-/* 真正的圖片，object-fit: cover */
-.banner-image {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center top;
-  display: block;
-}
-
-/* 疊上原本的漸層效果（從下往上） */
-.banner-image-wrapper::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(to top, #0f2027, #203a4300, #2c536400);
-}
-
-/* 內文區塊改成相對定位，壓在圖片上面 */
-.banner-tag,
-.banner-content {
-  position: relative;
-  z-index: 1;
-}
-
-/* Active 那張更突出 */
-.swiper-slide-active {
-  filter: blur(0);
-  transform: scale(1.04);
-  z-index: 2;
-}
-
-/* 移除 3D 陰影（coverflow 預設會有） */
-.swiper-3d .swiper-slide-shadow-left,
-.swiper-3d .swiper-slide-shadow-right {
-  background-image: none;
-}
-
-/* 內文區塊 */
-.banner-content {
-  width: 100%;
-}
-
-/* 小標籤 */
-.banner-tag {
-  text-transform: uppercase;
-  color: #fff;
-  background: #1b7402;
-  padding: 7px 18px 7px 25px;
-  display: inline-block;
-  border-radius: 0 20px 20px 0px;
-  letter-spacing: 2px;
-  font-size: 0.8rem;
-  font-family: 'Open Sans', sans-serif;
-  margin-bottom: 8px;
-}
-
-/* 標題 */
-.banner-title {
-  color: #fff;
-  font-family: 'Roboto', sans-serif;
-  font-weight: 500;
-  font-size: 1.1rem;
-  line-height: 1.4;
-  margin-bottom: 8px;
-  padding: 0 36px 0 20px;
-}
-
-/* 副標 + icon */
-.banner-subtitle {
-  color: #fff;
-  font-family: 'Roboto', sans-serif;
-  font-weight: 300;
-  display: flex;
-  align-items: center;
-  padding: 0 20px 18px 20px;
-}
-
-.banner-icon {
-  width: 20px;
-  height: 20px;
-  margin-right: 6px;
-}
-
-/* 分頁 dots → 長條形 */
 :deep(.swiper-pagination) {
   bottom: 8px;
 }
+
 :deep(.swiper-pagination-bullet) {
   width: 24px !important;
   height: 3px !important;
   border-radius: 999px;
+
   background: #dfbc94;
   opacity: 1;
+
   margin: 0 4px !important;
 }
 
 :deep(.swiper-pagination-bullet-active) {
   background: #b43325 !important;
-}
-
-/* ✅ 箭頭：吃 JS 動態算出的 CSS 變數，定位到主圖兩側 */
-.banner-nav {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 10;
-
-  width: 44px;
-  height: 44px;
-  border: 0;
-  border-radius: 999px;
-
-  background: transparent;
-  color: #fff;
-  font-size: 34px;
-  line-height: 44px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-}
-
-.banner-nav--prev {
-  left: var(--nav-prev-left, 14px);
-}
-
-.banner-nav--next {
-  left: var(--nav-next-left, calc(100% - 58px)); /* 44 + 14 */
-  right: auto;
-}
-
-/* 小尺寸調整 */
-@media (max-width: 639px) {
-  .swiper {
-    padding-top: 24px;
-    padding-bottom: 32px;
-  }
-
-  .banner-title {
-    font-size: 1rem;
-  }
-
-  .banner-subtitle {
-    font-size: 0.85rem;
-  }
 }
 </style>

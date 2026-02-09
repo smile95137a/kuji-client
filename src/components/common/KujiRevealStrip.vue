@@ -8,7 +8,10 @@
       :aria-hidden="!torn"
       :aria-live="torn ? 'polite' : 'off'"
     >
-      <img :src="prizeImg" />
+      <img
+        :src="prizeImg"
+        :class="['prize-img', { 'prize-img--show': isShown }]"
+      />
     </div>
 
     <!-- 左側陰影 -->
@@ -71,7 +74,7 @@ type PolerKey = keyof typeof polerImages;
 const gradeKey = computed<PolerKey>(() => {
   const raw = (props.grade ?? 'SP').toString().trim().toUpperCase();
 
-  // ✅ 常見資料清洗： "A賞" / "a" / " last " 都能吃
+  //  常見資料清洗： "A賞" / "a" / " last " 都能吃
   const normalized = raw
     .replace(/賞/g, '') // A賞 -> A
     .replace(/LAST賞/g, 'LAST')
@@ -93,6 +96,7 @@ const shadowRef = ref(null);
 const contentRef = ref<HTMLElement | null>(null);
 
 const torn = ref(false);
+const isShown = ref(false);
 const proxy = document.createElement('div');
 
 // 掉落動畫的共用設定
@@ -130,6 +134,7 @@ function initDraggable() {
     allowContextMenu: true,
     dragResistance: 0.9, // 比 0.99 更滑一點
     onDrag() {
+      isShown.value = true;
       if (this.__void) return;
 
       if (this.__torn) {
@@ -523,5 +528,12 @@ onBeforeUnmount(() => {
   filter: blur(14px);
   transform: scale(1.3);
   mix-blend-mode: screen;
+}
+
+.prize-img {
+  opacity: 0;
+}
+.prize-img--show {
+  opacity: 1;
 }
 </style>

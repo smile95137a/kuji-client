@@ -3,7 +3,7 @@ import { App, createApp, h } from 'vue';
 import ScratchCardDialog from '@/components/common/ScratchCardDialog.vue';
 
 /**
- * ✅ await 版本的 ScratchCardDialog
+ *  await 版本的 ScratchCardDialog
  * 使用方式：
  *   const ok = await scratchCardDialog({
  *     title: '每日刮刮樂',

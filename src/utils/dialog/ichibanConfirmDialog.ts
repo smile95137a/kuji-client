@@ -4,12 +4,12 @@ import IchibanConfirmDialog from '@/components/common/IchibanConfirmDialog.vue';
 
 export interface IchibanConfirmOptions {
   title?: string;
-  content?: string; // ✅ v-html
+  content?: string; //  v-html
 
-  confirmText?: string; // ✅ default 確定
-  cancelText?: string; // ✅ default 取消
+  confirmText?: string; //  default 確定
+  cancelText?: string; //  default 取消
 
-  /** ✅ 直接 v-bind 用（不限制 data-*） */
+  /**  直接 v-bind 用（不限制 data-*） */
   data?: Record<string, string | number | boolean | null | undefined>;
 
   showLogo?: boolean;
@@ -17,7 +17,7 @@ export interface IchibanConfirmOptions {
 }
 
 export function ichibanConfirmDialog(
-  options: IchibanConfirmOptions
+  options: IchibanConfirmOptions,
 ): Promise<boolean> {
   return new Promise((resolve) => {
     createDialog((close) =>
@@ -40,7 +40,7 @@ export function ichibanConfirmDialog(
           resolve(false);
           close();
         },
-      })
+      }),
     );
   });
 }

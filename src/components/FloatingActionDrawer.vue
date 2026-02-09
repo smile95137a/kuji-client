@@ -15,7 +15,7 @@
         <button
           type="button"
           class="floating-drawer__iconBtn"
-          aria-label="前往儲值紀錄"
+          aria-label="前往儲值"
           @click="handleRecharge"
         >
           <font-awesome-icon
@@ -28,7 +28,7 @@
         <button
           type="button"
           class="floating-drawer__iconBtn"
-          aria-label="查看每日活動"
+          aria-label="查看活動"
           @click="handleActivities"
         >
           <font-awesome-icon
@@ -37,7 +37,7 @@
           />
         </button>
 
-        <!-- 客服 / 聊天 -->
+        <!-- 客服 / FAQ -->
         <button
           type="button"
           class="floating-drawer__iconBtn"
@@ -85,11 +85,15 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
+import { useAuthStore } from '@/stores/useAuthStore';
 
-const isOpen = ref(false); // 控制抽屜展開
-const hasScrolled = ref(false); // 控制整個元件是否顯示
+const isOpen = ref(false);
+const hasScrolled = ref(false);
+
 const router = useRouter();
+const route = useRoute();
+const authStore = useAuthStore();
 
 const emit = defineEmits<{
   (e: 'click-recharge'): void;
@@ -98,54 +102,79 @@ const emit = defineEmits<{
 }>();
 
 const triggerLabel = computed(() =>
-  isOpen.value ? '關閉快速功能列' : '開啟快速功能列'
+  isOpen.value ? '關閉快速功能列' : '開啟快速功能列',
 );
 
 const toggleDrawer = () => {
   isOpen.value = !isOpen.value;
 };
 
+const closeDrawer = () => {
+  isOpen.value = false;
+};
+
 const handleScroll = () => {
-  // 捲動超過 80px 才顯示
   hasScrolled.value = window.scrollY > 80;
 
-  // 如果回到頂部就順便關掉抽屜
   if (!hasScrolled.value) {
-    isOpen.value = false;
+    closeDrawer();
   }
 };
 
-/** 點「儲值」 */
-const handleRecharge = () => {
-  console.log('[FloatingDrawer] go to 充值 / 儲值畫面');
+const go = async (to: any) => {
+  closeDrawer();
+  await router.push(to);
+};
+
+const isLogin = computed(() => !!authStore.token);
+
+const goRequireAuth = async (path: string) => {
+  if (!isLogin.value) {
+    closeDrawer();
+    await router.push({
+      name: 'Login',
+      query: { redirect: path },
+    });
+    return;
+  }
+  await go(path);
+};
+
+/** 點「儲值」：導到 會員中心 > 儲值（需要登入） */
+const handleRecharge = async () => {
   emit('click-recharge');
-  // 你之後可以直接改成：
-  // router.push('/recharge');
+  await goRequireAuth('/member-center/deposit');
 };
 
-/** 點「活動」 */
-const handleActivities = () => {
-  console.log('[FloatingDrawer] go to 活動頁');
+/** 點「活動」：導到 Promotion（你 router 有） */
+const handleActivities = async () => {
   emit('click-activities');
-  // router.push('/events');
+  await go({ name: 'Promotion' });
 };
 
-/** 點「客服」 */
-const handleSupport = () => {
-  console.log('[FloatingDrawer] open 客服 / 聊天視窗');
+/** 點「客服」：先導到 FAQ（你 router 有） */
+const handleSupport = async () => {
   emit('click-support');
-  // 可以開 dialog 或導到客服頁
+  await go({ name: 'Faq' });
+};
+
+/** ESC 關閉抽屜 */
+const onKeydown = (e: KeyboardEvent) => {
+  if (e.key === 'Escape') closeDrawer();
 };
 
 onMounted(() => {
   window.addEventListener('scroll', handleScroll, { passive: true });
+  window.addEventListener('keydown', onKeydown);
   handleScroll(); // 進來時先判一次
 });
 
 onBeforeUnmount(() => {
   window.removeEventListener('scroll', handleScroll);
+  window.removeEventListener('keydown', onKeydown);
 });
 </script>
+
 <style scoped lang="scss">
 .floating-drawer {
   position: fixed;
@@ -155,7 +184,9 @@ onBeforeUnmount(() => {
   opacity: 0;
   pointer-events: none;
   transform: translateY(12px);
-  transition: opacity 0.25s ease, transform 0.25s ease;
+  transition:
+    opacity 0.25s ease,
+    transform 0.25s ease;
 
   /* 有捲動時才顯示 */
   &--visible {
@@ -179,14 +210,16 @@ onBeforeUnmount(() => {
     gap: 8px;
     padding: 8px 12px;
     border-radius: 999px;
-    background: rgba(25, 15, 11, 0.96); /* 深咖啡黑，讓主色更跳 */
+    background: rgba(25, 15, 11, 0.96); /* 深咖啡黑 */
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
-    border: 1px solid rgba(229, 166, 87, 0.28); /* #E5A657 金邊 */
+    border: 1px solid rgba(229, 166, 87, 0.28); /* 金邊 */
     backdrop-filter: blur(10px);
     transform: translateX(10px);
     opacity: 0;
     pointer-events: none;
-    transition: transform 0.22s ease, opacity 0.22s ease;
+    transition:
+      transform 0.22s ease,
+      opacity 0.22s ease;
   }
 
   /* 展開時顯示膠囊 */
@@ -209,12 +242,15 @@ onBeforeUnmount(() => {
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: background 0.18s ease, transform 0.18s ease,
-      box-shadow 0.18s ease, border-color 0.18s ease;
+    transition:
+      background 0.18s ease,
+      transform 0.18s ease,
+      box-shadow 0.18s ease,
+      border-color 0.18s ease;
 
     &:hover {
       background: rgba(255, 255, 255, 0.12);
-      border-color: rgba(229, 166, 87, 0.7); /* hover 時金邊更明顯 */
+      border-color: rgba(229, 166, 87, 0.7);
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
       transform: translateY(-1px);
     }
@@ -231,20 +267,22 @@ onBeforeUnmount(() => {
     font-size: 16px;
     transform: translateX(12px);
     opacity: 0;
-    transition: transform 0.2s ease, opacity 0.2s ease;
+    transition:
+      transform 0.2s ease,
+      opacity 0.2s ease;
   }
 
   /* label 小標籤文字 */
   &__label {
     font-size: 12px;
-    color: #e5a657; /* 金橘做標籤色 */
+    color: #e5a657;
     margin-left: 4px;
     padding-left: 8px;
     border-left: 1px solid rgba(229, 166, 87, 0.4);
     white-space: nowrap;
   }
 
-  /* icon 展開時的滑出動畫（有一點 stagger 感覺） */
+  /* icon 展開時的滑出動畫 */
   &__drawer--open &__icon {
     transform: translateX(0);
     opacity: 1;
@@ -273,28 +311,29 @@ onBeforeUnmount(() => {
     border: none;
     padding: 0;
     outline: none;
-    background: linear-gradient(
-      135deg,
-      #b43325 0%,
-      #e5a657 50%,
-      #fff2d6 100%
-    ); /* 主色 → 副色 → 淺金 */
-    box-shadow: 0 8px 20px rgba(180, 51, 37, 0.55),
+    background: linear-gradient(135deg, #b43325 0%, #e5a657 50%, #fff2d6 100%);
+    box-shadow:
+      0 8px 20px rgba(180, 51, 37, 0.55),
       0 0 0 1px rgba(255, 245, 230, 0.75);
     color: #fff;
     overflow: hidden;
-    transition: transform 0.15s ease, box-shadow 0.15s ease, filter 0.15s ease;
+    transition:
+      transform 0.15s ease,
+      box-shadow 0.15s ease,
+      filter 0.15s ease;
 
     &:hover {
       transform: translateY(-1px) scale(1.03);
-      box-shadow: 0 12px 26px rgba(180, 51, 37, 0.7),
+      box-shadow:
+        0 12px 26px rgba(180, 51, 37, 0.7),
         0 0 0 1px rgba(255, 247, 235, 0.9);
       filter: brightness(1.04);
     }
 
     &:active {
       transform: translateY(1px) scale(0.97);
-      box-shadow: 0 4px 12px rgba(180, 51, 37, 0.55),
+      box-shadow:
+        0 4px 12px rgba(180, 51, 37, 0.55),
         0 0 0 1px rgba(255, 243, 226, 0.7);
       filter: brightness(0.98);
     }
@@ -323,13 +362,15 @@ onBeforeUnmount(() => {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: 0.5s ease, opacity 0.3s ease;
+    transition:
+      0.5s ease,
+      opacity 0.3s ease;
     font-size: 20px;
     line-height: 1;
     color: #fffdf7;
   }
 
-  /* 關閉 icon：預設看不到，打開時轉出來 */
+  /* 關閉 icon */
   &__triggerIcon--close {
     opacity: 0;
     transform: translate(-50%, -50%) rotate(0deg) scale(0.8);
@@ -340,7 +381,7 @@ onBeforeUnmount(() => {
     opacity: 1;
   }
 
-  /* 齒輪 icon：預設顯示，打開時轉走 */
+  /* 齒輪 icon */
   &__triggerIcon--gear {
     opacity: 1;
     transform: translate(-50%, -50%) rotate(0deg) scale(1);
@@ -364,7 +405,7 @@ onBeforeUnmount(() => {
     }
 
     &__label {
-      display: none; /* 手機就只留 icon 就好 */
+      display: none; /* 手機只留 icon */
     }
   }
 }

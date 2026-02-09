@@ -8,7 +8,7 @@ interface RequestData {
 }
 
 export const queryBrowseLotteries = async (
-  req?: RequestData
+  req?: RequestData,
 ): Promise<ApiResponse<any>> => {
   try {
     const res = await api.post(`${basePath}/list`, req ?? undefined);
@@ -20,10 +20,10 @@ export const queryBrowseLotteries = async (
 };
 
 export const getBrowseLotteryById = async (
-  id: string
+  id: string,
 ): Promise<ApiResponse<any>> => {
   try {
-    const res = await api.get(`${basePath}/${id}`);
+    const res = await api.get(`${basePath}/${id}/detail`);
     return res.data;
   } catch (e) {
     console.error('LotteryBrowse - getBrowseLotteryById error:', e);

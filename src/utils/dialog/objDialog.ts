@@ -8,13 +8,13 @@ export interface ObjDialogOptions<T = any> {
 }
 
 /**
- * ✅ await 版本的 ObjDialog
+ *  await 版本的 ObjDialog
  * 使用方式：
  *   const result = await objDialog({ title: '編輯', data: obj });
  *   // result = 編輯後的物件；如果按取消 / 關閉 → null
  */
 export function objDialog<T extends Record<string, any>>(
-  options: ObjDialogOptions<T>
+  options: ObjDialogOptions<T>,
 ): Promise<T | null> {
   return new Promise<T | null>((resolve) => {
     const container = document.createElement('div');

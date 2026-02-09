@@ -1,17 +1,16 @@
 <template>
   <div class="home">
-    <!-- 上方 Banner -->
-    <BannerSwiper />
-
-    <!-- 彈幕跑馬燈 -->
     <BulletMarquee
       class="home__marquee"
       :messages="marqueeMessages"
-      :duration="25"
+      :speed="300"
     />
+    <BannerSwiper />
+    <OfficialIchibanView />
+    <!-- 彈幕跑馬燈 -->
     <HotTopicsSection />
     <!-- 直接放盲盒列表畫面 -->
-    <BlindBoxListView />
+    <GachaView />
   </div>
 </template>
 
@@ -19,7 +18,8 @@
 import BannerSwiper from '@/components/BannerSwiper.vue';
 import BulletMarquee from '@/components/BulletMarquee.vue';
 import HotTopicsSection from '@/components/HotTopicsSection.vue';
-import BlindBoxListView from '@/components/BlindBoxListView.vue';
+import GachaView from '@/components/GachaView.vue';
+import OfficialIchibanView from '@/components/OfficialIchibanView.vue';
 
 const marqueeMessages = [
   '今日一番賞 A賞 剩餘 2 個',

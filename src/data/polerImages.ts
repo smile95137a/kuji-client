@@ -27,7 +27,38 @@ import polerY from '@/assets/image/poler-Y.png';
 import polerZ from '@/assets/image/poler-Z.png';
 import polerLast from '@/assets/image/poler-last.png';
 import polerSP from '@/assets/image/poler-SP.png';
-const polerImages = {
+
+export type PolerLevel =
+  | 'A'
+  | 'B'
+  | 'C'
+  | 'D'
+  | 'E'
+  | 'F'
+  | 'G'
+  | 'H'
+  | 'I'
+  | 'J'
+  | 'K'
+  | 'L'
+  | 'M'
+  | 'N'
+  | 'O'
+  | 'P'
+  | 'Q'
+  | 'R'
+  | 'S'
+  | 'T'
+  | 'U'
+  | 'V'
+  | 'W'
+  | 'X'
+  | 'Y'
+  | 'Z'
+  | 'LAST'
+  | 'SP';
+
+const polerImages: Record<PolerLevel, string> = {
   A: polerA,
   B: polerB,
   C: polerC,

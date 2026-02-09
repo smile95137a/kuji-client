@@ -5,7 +5,7 @@ import IchibanForgotPasswordDialog from '@/components/common/IchibanForgotPasswo
 
 export interface IchibanForgotPasswordOptions {
   title?: string;
-  content?: string; // ✅ v-html
+  content?: string; //  v-html
 
   confirmText?: string; // default 送出
   cancelText?: string; // default 取消
@@ -13,7 +13,7 @@ export interface IchibanForgotPasswordOptions {
   placeholder?: string;
   defaultEmail?: string;
 
-  /** ✅ 直接 v-bind 用（不限制 data-*） */
+  /**  直接 v-bind 用（不限制 data-*） */
   data?: Record<string, string | number | boolean | null | undefined>;
 
   showLogo?: boolean;
@@ -23,12 +23,12 @@ export interface IchibanForgotPasswordOptions {
 }
 
 /**
- * ✅ 回傳：
+ *  回傳：
  * - confirm => resolve(email)
  * - cancel  => resolve(null)
  */
 export function ichibanForgotPasswordDialog(
-  options: IchibanForgotPasswordOptions
+  options: IchibanForgotPasswordOptions,
 ): Promise<string | null> {
   return new Promise((resolve) => {
     createDialog((close) =>
@@ -56,7 +56,7 @@ export function ichibanForgotPasswordDialog(
           resolve(null);
           close();
         },
-      })
+      }),
     );
   });
 }

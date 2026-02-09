@@ -1,302 +1,1067 @@
+<!-- src/views/Policy.vue -->
 <template>
-  <section class="policyPage">
-    <SectionHeader title="網站服務條款" />
-
-    <Card custom-class="policyPage__card m-t-24">
-      <div class="policy">
-        <!-- Intro 區塊 -->
-        <div class="policy__intro">
-          <p class="policy__text">
-            歡迎您使用再來一抽網站，再來一抽網站（https://
-            onemorelottery..tw/；以下稱｢本網站｣）是由再來一抽娛樂有限公司（以下稱本公司）所經營之電子商務網站，並依據本網站使用條款及其他相關規範或公告提供您相關服務。
+  <div class="policy">
+    <!-- Hero -->
+    <section class="policy__hero">
+      <div class="policy__heroInner">
+        <div class="policy__heroLeft">
+          <p class="policy__badge">TERMS</p>
+          <h1 class="policy__title">STARDO 網站服務條款</h1>
+          <p class="policy__subtitle">
+            歡迎你使用 STARDO。本頁為 STARDO
+            網站與相關服務之使用條款，說明你在註冊、登入、
+            抽選/刮刮樂、儲值、兌換、出貨、客服與其他功能使用時，彼此的權利義務與重要規範。
+            若你不同意本條款全部或部分內容，請停止使用本服務。
           </p>
-          <p class="policy__text">
-            您第一次消費前，請詳細閱讀並同意本網站使用條款後，再填寫基本資料加入會員。當您完成前述流程，即表示您已經閱讀、瞭解且同意本網站使用條款之全部內容與約定，如不同意本網站使用條款之全部或部分者，請勿填寫基本資料註冊本網站會員。
+
+          <div class="policy__heroActions">
+            <button
+              class="policy__btn policy__btn--primary"
+              type="button"
+              @click="scrollTo('content')"
+            >
+              查看條款
+            </button>
+          </div>
+
+          <div class="policy__hint" role="note">
+            <span class="policy__hintIcon" aria-hidden="true">
+              <font-awesome-icon :icon="['fas', 'file-signature']" />
+            </span>
+            <span class="policy__hintText">
+              條款可能因營運需求更新。你於更新後繼續使用服務，視為同意更新內容。
+            </span>
+          </div>
+        </div>
+
+        <aside class="policy__heroRight">
+          <div class="policy__panel">
+            <div class="policy__panelHeader">
+              <p class="policy__panelTitle">快速導覽</p>
+              <p class="policy__panelDesc">點選可跳到對應段落。</p>
+            </div>
+
+            <div class="policy__nav">
+              <button
+                class="policy__chip"
+                type="button"
+                @click="scrollTo('s1')"
+              >
+                <span class="policy__chipIcon" aria-hidden="true">
+                  <font-awesome-icon :icon="['fas', 'circle-question']" />
+                </span>
+                條款適用與同意
+              </button>
+
+              <button
+                class="policy__chip"
+                type="button"
+                @click="scrollTo('s2')"
+              >
+                <span class="policy__chipIcon" aria-hidden="true">
+                  <font-awesome-icon :icon="['fas', 'user-shield']" />
+                </span>
+                帳號與安全
+              </button>
+
+              <button
+                class="policy__chip"
+                type="button"
+                @click="scrollTo('s3')"
+              >
+                <span class="policy__chipIcon" aria-hidden="true">
+                  <font-awesome-icon :icon="['fas', 'coins']" />
+                </span>
+                代幣/點數與儲值
+              </button>
+
+              <button
+                class="policy__chip"
+                type="button"
+                @click="scrollTo('s4')"
+              >
+                <span class="policy__chipIcon" aria-hidden="true">
+                  <font-awesome-icon :icon="['fas', 'cart-shopping']" />
+                </span>
+                訂單與交易
+              </button>
+
+              <button
+                class="policy__chip"
+                type="button"
+                @click="scrollTo('s5')"
+              >
+                <span class="policy__chipIcon" aria-hidden="true">
+                  <font-awesome-icon :icon="['fas', 'truck']" />
+                </span>
+                兌換/寄送/保管
+              </button>
+
+              <button
+                class="policy__chip"
+                type="button"
+                @click="scrollTo('s6')"
+              >
+                <span class="policy__chipIcon" aria-hidden="true">
+                  <font-awesome-icon :icon="['fas', 'scale-balanced']" />
+                </span>
+                禁止行為與違約
+              </button>
+
+              <button
+                class="policy__chip"
+                type="button"
+                @click="scrollTo('s7')"
+              >
+                <span class="policy__chipIcon" aria-hidden="true">
+                  <font-awesome-icon :icon="['fas', 'copyright']" />
+                </span>
+                智慧財產權
+              </button>
+
+              <button
+                class="policy__chip"
+                type="button"
+                @click="scrollTo('s8')"
+              >
+                <span class="policy__chipIcon" aria-hidden="true">
+                  <font-awesome-icon :icon="['fas', 'triangle-exclamation']" />
+                </span>
+                服務中斷與免責
+              </button>
+
+              <button
+                class="policy__chip"
+                type="button"
+                @click="scrollTo('s9')"
+              >
+                <span class="policy__chipIcon" aria-hidden="true">
+                  <font-awesome-icon :icon="['fas', 'envelope']" />
+                </span>
+                聯絡方式
+              </button>
+            </div>
+
+            <div class="policy__panelFooter">
+              <button
+                class="policy__miniBtn policy__miniBtn--gold"
+                type="button"
+                @click="scrollTo('s9')"
+              >
+                聯絡我們
+              </button>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </section>
+
+    <!-- Content -->
+    <section class="policy__section" id="content">
+      <div class="policy__container">
+        <header class="policy__header">
+          <h2 class="policy__h2">服務條款內容</h2>
+          <p class="policy__desc">
+            以下條款為一般性規範，實際交易與功能細則仍以各頁面規則、結帳顯示、活動說明與平台公告為準。
           </p>
-          <p class="policy__text">
-            您同意本公司有權因應營運之需求，隨時調整本網站使用條款，除對您已完成之權益有重大影響外，本公司將不會個別通知。本網站使用條款之最新內容，將公佈於本網站首頁連結，您於每次進行購物之前，均可詳細閱讀，以維護您的權益，您於任何修改或變更之後繼續使用本網站服務，將視為您已經閱讀、瞭解且同意接收相關修改即變更。如您不同意本網站使用條款之修改或變更，請停止使用本網站相關服務。
-          </p>
-          <p class="policy__text">
-            若您為未滿二十歲，請於您的家長（或監護人）閱讀、瞭解並同意本服務條款之所有內容後，方得使用或繼續使用本網站服務。當您使用或繼續使用本網站時，即表示您的家長（或監護人）已閱讀、瞭解並同意接受本服務條款之所有內容及其後修改變更。
-          </p>
+        </header>
+
+        <div class="policy__grid">
+          <!-- s1 -->
+          <article class="policy__card" id="s1">
+            <div class="policy__cardTop">
+              <span class="policy__cardBadge">
+                <span class="policy__cardBadgeIcon" aria-hidden="true">
+                  <font-awesome-icon :icon="['fas', 'circle-question']" />
+                </span>
+                條款適用與同意
+              </span>
+              <h3 class="policy__cardTitle">使用本服務即表示同意</h3>
+              <p class="policy__cardDesc">
+                STARDO（以下稱「本平台」）提供線上抽選、刮刮樂、儲值、兌換與相關電商服務。
+                你在註冊會員、登入、下單或使用任何功能前，應閱讀並同意本條款與本平台公告之相關規範。
+              </p>
+            </div>
+
+            <ul class="policy__list">
+              <li class="policy__item">
+                你完成註冊或使用本服務，即表示你已閱讀、理解並同意本條款全部內容。
+              </li>
+              <li class="policy__item">
+                本平台得因營運需求更新條款，更新後公布於本頁或以平台公告方式提示。
+                你於更新後繼續使用服務，視為同意更新內容。
+              </li>
+              <li class="policy__item">
+                若你未滿二十歲，應由法定代理人閱讀、理解並同意本條款後，方可使用或繼續使用本服務。
+              </li>
+            </ul>
+
+            <div class="policy__reserve">
+              <p class="policy__reserveTitle">與其他規範的關係</p>
+              <p class="policy__reserveText">
+                若本條款與個別活動規則、商品頁說明或結帳頁顯示內容有差異，以個別規則或結帳顯示為準。
+              </p>
+            </div>
+          </article>
+
+          <!-- s2 -->
+          <article class="policy__card" id="s2">
+            <div class="policy__cardTop">
+              <span class="policy__cardBadge">
+                <span class="policy__cardBadgeIcon" aria-hidden="true">
+                  <font-awesome-icon :icon="['fas', 'user-shield']" />
+                </span>
+                帳號與安全
+              </span>
+              <h3 class="policy__cardTitle">帳號、密碼與使用責任</h3>
+              <p class="policy__cardDesc">
+                為保障交易安全，你需要使用電子郵件（或平台支援之第三方登入方式）建立帳號並設定密碼。
+                你應確保帳號資訊正確並妥善保管登入憑證。
+              </p>
+            </div>
+
+            <ul class="policy__list">
+              <li class="policy__item">
+                請勿將帳號、密碼或驗證碼提供給第三人，亦不得與他人共用帳號。
+              </li>
+              <li class="policy__item">
+                建議使用不同於其他網站的密碼，並定期更新，以降低風險。
+              </li>
+              <li class="policy__item">
+                以你的帳號完成之登入與操作，推定為你本人行為；若有異常或疑似遭冒用，請立即通知客服。
+              </li>
+              <li class="policy__item">
+                你應提供真實、完整且最新之會員資料；若資料不實或冒用他人資訊，本平台得限制或終止你的使用權限。
+              </li>
+            </ul>
+
+            <div class="policy__callout" role="note">
+              <span class="policy__calloutIcon" aria-hidden="true">
+                <font-awesome-icon :icon="['fas', 'triangle-exclamation']" />
+              </span>
+              <p class="policy__calloutText">
+                若你收到可疑郵件或訊息要求提供帳密/驗證碼，請勿提供並立即聯繫客服確認。
+              </p>
+            </div>
+          </article>
+
+          <!-- s3 -->
+          <article class="policy__card" id="s3">
+            <div class="policy__cardTop">
+              <span class="policy__cardBadge">
+                <span class="policy__cardBadgeIcon" aria-hidden="true">
+                  <font-awesome-icon :icon="['fas', 'coins']" />
+                </span>
+                代幣/點數與儲值
+              </span>
+              <h3 class="policy__cardTitle">代幣用途、限制與確認</h3>
+              <p class="policy__cardDesc">
+                本平台可能提供可於平台內使用的代幣/點數（以下統稱「代幣」）作為付款或參與抽選/刮刮樂之媒介。
+                代幣僅限於本平台使用，且不得任意轉讓或兌換為現金（除法律另有規定或平台公告者外）。
+              </p>
+            </div>
+
+            <ul class="policy__list">
+              <li class="policy__item">
+                儲值完成後，本平台將依系統紀錄更新你的代幣餘額；若有異常請盡速聯繫客服查核。
+              </li>
+              <li class="policy__item">
+                系統通知（Email/站內通知）僅為交易訊息提示，不代表交易必然完成或契約成立；
+                是否成立以付款狀態、風控結果與系統最終紀錄為準。
+              </li>
+              <li class="policy__item">
+                代幣可用範圍、活動回饋、折抵限制與有效期限（若有）以平台公告或各活動規則為準。
+              </li>
+            </ul>
+
+            <div class="policy__reserve">
+              <p class="policy__reserveTitle">儲值與退款原則</p>
+              <p class="policy__reserveText">
+                若你申請取消或退款，需符合平台規則（例如未使用之代幣、申請期限、付款方式限制等），
+                實際受理與處理時間仍以本平台審核與金流作業為準。
+              </p>
+            </div>
+          </article>
+
+          <!-- s4 -->
+          <article class="policy__card" id="s4">
+            <div class="policy__cardTop">
+              <span class="policy__cardBadge">
+                <span class="policy__cardBadgeIcon" aria-hidden="true">
+                  <font-awesome-icon :icon="['fas', 'cart-shopping']" />
+                </span>
+                訂單與交易
+              </span>
+              <h3 class="policy__cardTitle">下單流程、契約成立與限制</h3>
+              <p class="policy__cardDesc">
+                商品頁面所示之名稱、價格、規格、活動規則與注意事項，均為交易契約的一部分。
+                你應於下單前確認內容、數量、收件資訊與金額。
+              </p>
+            </div>
+
+            <ul class="policy__list">
+              <li class="policy__item">
+                你送出訂單後，本平台仍得基於交易條件、庫存狀態、風險控管或系統異常等正當理由拒絕或取消訂單。
+              </li>
+              <li class="policy__item">
+                特定商品或活動可能設有購買/參與上限；同一會員以多帳號或其他方式規避限制者，本平台得取消相關權益。
+              </li>
+              <li class="policy__item">
+                折扣、優惠券、紅利與免運券等使用方式與限制，以結帳頁顯示、券面條款或活動規則為準。
+              </li>
+              <li class="policy__item">
+                交易與使用紀錄以本平台系統所保存之電子資料為準；若有爭議，亦以該資料作為主要認定依據。
+              </li>
+            </ul>
+
+            <div class="policy__callout" role="note">
+              <span class="policy__calloutIcon" aria-hidden="true">
+                <font-awesome-icon :icon="['fas', 'circle-info']" />
+              </span>
+              <p class="policy__calloutText">
+                有關發票、出貨、取消、保管與其他未盡事項，可另參考本平台「交易說明」與各頁面公告。
+              </p>
+            </div>
+          </article>
+
+          <!-- s5 -->
+          <article class="policy__card" id="s5">
+            <div class="policy__cardTop">
+              <span class="policy__cardBadge">
+                <span class="policy__cardBadgeIcon" aria-hidden="true">
+                  <font-awesome-icon :icon="['fas', 'truck']" />
+                </span>
+                兌換/寄送/保管
+              </span>
+              <h3 class="policy__cardTitle">獎品與商品之寄送處理</h3>
+              <p class="policy__cardDesc">
+                你在本平台獲得之獎品或兌換商品，可能涉及保管、寄送、超商取貨或宅配等流程。
+                寄送與保管規則以各商品頁、兌換頁與平台公告為準。
+              </p>
+            </div>
+
+            <ul class="policy__list">
+              <li class="policy__item">
+                請確保會員資料與收件資訊正確；因地址錯誤、拒收或逾期未取所致的退件，可能影響再次寄送與相關費用負擔。
+              </li>
+              <li class="policy__item">
+                商品圖片可能因螢幕顯示而有差異；量產品可能存在非功能性細微差異（例如塗裝、外盒輕微壓痕），以實際商品狀況為準。
+              </li>
+              <li class="policy__item">
+                若收到商品有缺件、明顯破損或功能異常，請於平台規範期限內（例如收貨後數日內）完成開箱錄影並聯繫客服。
+              </li>
+            </ul>
+
+            <div class="policy__reserve">
+              <p class="policy__reserveTitle">保管與自動處理</p>
+              <p class="policy__reserveText">
+                若平台提供保管服務，本平台可能依規則於保管期限到期時自動安排寄送或其他處理。
+                相關條件以平台公告與你的會員設定為準。
+              </p>
+            </div>
+          </article>
+
+          <!-- s6 -->
+          <article class="policy__card" id="s6">
+            <div class="policy__cardTop">
+              <span class="policy__cardBadge">
+                <span class="policy__cardBadgeIcon" aria-hidden="true">
+                  <font-awesome-icon :icon="['fas', 'scale-balanced']" />
+                </span>
+                禁止行為與違約
+              </span>
+              <h3 class="policy__cardTitle">為維護平台公平與安全</h3>
+              <p class="policy__cardDesc">
+                為保障所有使用者權益，本平台禁止任何影響平台正常運作、破壞公平或違反法令之行為。
+                若你違反，本平台得限制或終止你的使用權利。
+              </p>
+            </div>
+
+            <ul class="policy__list">
+              <li class="policy__item">
+                提供不實資料、冒用他人身份、偽造或變造交易資料。
+              </li>
+              <li class="policy__item">
+                未經授權使用他人付款工具、疑似盜刷或洗錢等可疑行為。
+              </li>
+              <li class="policy__item">
+                以程式、外掛、爬蟲或其他方式干擾系統、竄改資料或大量異常請求。
+              </li>
+              <li class="policy__item">
+                惡意濫用退款/取消、重複下單規避限制、或不當取得優惠利益。
+              </li>
+              <li class="policy__item">
+                對客服或平台人員進行騷擾、威脅、辱罵或其他不當言行。
+              </li>
+              <li class="policy__item">
+                其他違反法令、本條款或平台公告之行為。
+              </li>
+            </ul>
+
+            <div class="policy__callout" role="note">
+              <span class="policy__calloutIcon" aria-hidden="true">
+                <font-awesome-icon :icon="['fas', 'triangle-exclamation']" />
+              </span>
+              <p class="policy__calloutText">
+                若因你的違規造成平台或第三人損害，你可能需負擔相關賠償責任；平台亦得採取必要之風控或法律措施。
+              </p>
+            </div>
+          </article>
+
+          <!-- s7 -->
+          <article class="policy__card" id="s7">
+            <div class="policy__cardTop">
+              <span class="policy__cardBadge">
+                <span class="policy__cardBadgeIcon" aria-hidden="true">
+                  <font-awesome-icon :icon="['fas', 'copyright']" />
+                </span>
+                智慧財產權
+              </span>
+              <h3 class="policy__cardTitle">內容與素材之權利歸屬</h3>
+              <p class="policy__cardDesc">
+                本平台上的文字、圖片、設計、程式、商標、版面與其他內容（包含但不限於商品圖、活動圖、介面設計與程式碼），
+                均受著作權、商標法、專利法、營業秘密或其他法令保護。
+              </p>
+            </div>
+
+            <ul class="policy__list">
+              <li class="policy__item">
+                未經本平台或權利人事先書面同意，不得重製、改作、公開傳輸、散布或商業使用。
+              </li>
+              <li class="policy__item">
+                你上傳或提供給平台之內容（若有）應保證不侵害第三人權利；若涉侵權你應自負責任。
+              </li>
+              <li class="policy__item">
+                本平台得為提供服務之必要，在合理範圍內展示你所提供內容（例如評價、留言或客服附件）。
+              </li>
+            </ul>
+          </article>
+
+          <!-- s8 -->
+          <article class="policy__card" id="s8">
+            <div class="policy__cardTop">
+              <span class="policy__cardBadge">
+                <span class="policy__cardBadgeIcon" aria-hidden="true">
+                  <font-awesome-icon :icon="['fas', 'triangle-exclamation']" />
+                </span>
+                服務中斷與免責
+              </span>
+              <h3 class="policy__cardTitle">維運、暫停與風險說明</h3>
+              <p class="policy__cardDesc">
+                本平台會在合理技術範圍內維護服務品質，但不保證服務永遠不中斷或完全無誤。
+                當發生維護、突發故障或不可抗力因素時，平台可能暫停或中斷部分或全部服務。
+              </p>
+            </div>
+
+            <ul class="policy__list">
+              <li class="policy__item">系統維護、搬遷、升級、保養或修復。</li>
+              <li class="policy__item">
+                電信或第三方服務中斷、設備故障或不可歸責於平台之原因。
+              </li>
+              <li class="policy__item">
+                天災、停電、網路攻擊或其他不可抗力事件。
+              </li>
+              <li class="policy__item">
+                為維護平台安全、公平或依法配合要求所採取之必要措施。
+              </li>
+            </ul>
+
+            <div class="policy__reserve">
+              <p class="policy__reserveTitle">提前公告</p>
+              <p class="policy__reserveText">
+                若為可預期之維護計畫，平台會盡可能提前以網站公告或社群公告方式提示。
+              </p>
+            </div>
+          </article>
+
+          <!-- s9 -->
+          <article class="policy__card" id="s9">
+            <div class="policy__cardTop">
+              <span class="policy__cardBadge">
+                <span class="policy__cardBadgeIcon" aria-hidden="true">
+                  <font-awesome-icon :icon="['fas', 'envelope']" />
+                </span>
+                聯絡方式
+              </span>
+              <h3 class="policy__cardTitle">問題諮詢與爭議處理</h3>
+              <p class="policy__cardDesc">
+                若你對本條款、交易、儲值或權益有疑問，可透過客服管道聯繫我們。
+                為加速處理，建議提供會員帳號、訂單編號與相關截圖/影片佐證（若適用）。
+              </p>
+            </div>
+
+            <div class="policy__contact">
+              <div class="policy__contactRow">
+                <span class="policy__contactKey">
+                  <font-awesome-icon :icon="['fas', 'at']" />
+                  客服信箱
+                </span>
+                <span class="policy__contactVal">service@stardo.example</span>
+              </div>
+
+              <div class="policy__contactRow">
+                <span class="policy__contactKey">
+                  <font-awesome-icon :icon="['fas', 'clock']" />
+                  客服時間
+                </span>
+                <span class="policy__contactVal">以平台公告為準</span>
+              </div>
+
+              <div class="policy__contactRow">
+                <span class="policy__contactKey">
+                  <font-awesome-icon :icon="['fas', 'scale-balanced']" />
+                  準據法
+                </span>
+                <span class="policy__contactVal">中華民國法律</span>
+              </div>
+            </div>
+
+            <div class="policy__callout" role="note">
+              <span class="policy__calloutIcon" aria-hidden="true">
+                <font-awesome-icon :icon="['fas', 'circle-info']" />
+              </span>
+              <p class="policy__calloutText">
+                上述信箱為範例字串。你可改成實際客服信箱，或改成從設定檔帶入。
+                公司名稱、統編、地址等資訊亦可在你確定後補上。
+              </p>
+            </div>
+          </article>
         </div>
 
-        <!-- 帳號、密碼 -->
-        <div class="policy__item">
-          <div class="policy__item-title">
-            <p class="policy__text">帳號、密碼</p>
-          </div>
-          <div class="policy__item-main">
-            <p class="policy__text">
-              1.本網站為保障交易安全，將以您的Facebook帳號或所填寫之基本資料中的電子郵件信箱作為帳號，並由您自行設定密碼作為個人登入辨識使用，您可依需要自行變更個人密碼。請勿使用與其他網站相同的密碼或經常變更您的密碼，以維護自身帳號安全。
-            </p>
-            <p class="policy__text">
-              2.您同意就您的帳號及密碼善盡保管及保密之責任，包含但不限於：不洩漏帳戶、密碼予第三人、不與他人共用帳號及密碼、適時登出本網站等。除經證明係第三人違法使用之情形，您須為您所設定的正確帳號、密碼登入之使用行為負全部責任，不得任意否認交易。
-            </p>
-            <p class="policy__text">
-              3.您聲明並保證您所填寫之基本資料為您正確且完整的資料，不得使用他人資料，如有違反前開保證，本公司有權暫停或終止您的帳號，並拒絕您使用本公司的服務。
-            </p>
-            <p class="policy__text">
-              4.您的帳號若有被冒用、盜用之情形，應立即通知本公司，以避免損害擴大。本公司將協助暫停該帳號相關交易及後續利用，並於釐清帳號使用問題後，依您的請求重新設定密碼開通使用。
+        <div class="policy__cta">
+          <div class="policy__ctaLeft">
+            <p class="policy__ctaTitle">相關頁面</p>
+            <p class="policy__ctaDesc">
+              你也可以查看「交易說明」「FAQ」「隱私權政策」以了解更多細則與常見問題。
             </p>
           </div>
-        </div>
 
-        <!-- 個人資料保護 -->
-        <div class="policy__item">
-          <div class="policy__item-title">
-            <p class="policy__text">個人資料保護</p>
-          </div>
-          <div class="policy__item-main">
-            <p class="policy__text">
-              本公司於您每次交易或參加活動時，為提供本公司相關服務及行銷之目的，蒐集、處理及利用您的個人資料。有關個人資料相關應告知事項，請參閱隱私權保護政策。
-            </p>
-            <p class="policy__text">
-              您同意本公司得不定期發送商品訊息至您的電子郵件或手機簡訊，若您欲訂閱、停止訂閱或修改相關訂閱設定，您可連結至本網站會員中心修改或請客服人員協助。
-            </p>
-            <p class="policy__text">
-              本公司將遵守個人資料保護相關法令的規定，除依本網站使用條款、隱私權政策或法律規定外，不會違法利用您的個人資料。在下列情況下，本公司有可能會提供您的個人資料給相關機關，或主張其權利受侵害並提示司法機關正式文件之第三人：
-            </p>
-            <p class="policy__text">
-              依法令或檢警調、司法機關或其他有權機關基於法定程序之要求；
-            </p>
-            <p class="policy__text">
-              在緊急情況下為維護其他客戶或第三人之合法權益；
-            </p>
-            <p class="policy__text">為維護本網站的正常運作；</p>
-            <p class="policy__text">
-              為提供本公司相關服務產生的金流、物流或其他協力廠商或合作廠商必要資訊；
-            </p>
-            <p class="policy__text">
-              使用者有任何違反政府法令或本網站使用條款之情形。
-            </p>
-            <p class="policy__text">
-              本網站可能因廣告或其他合作促銷活動而包含其他網站之連結，您點選該等連結至其他網站，即不適用本網站使用條款及隱私權政策之規範，您須自行判斷各該網站相關條款對您的保障權益，再決定是否使用該網站服務。
-            </p>
-          </div>
-        </div>
-
-        <!-- 儲值代幣說明 -->
-        <div class="policy__item">
-          <div class="policy__item-title">
-            <p class="policy__text">儲值代幣說明</p>
-          </div>
-          <div class="policy__item-main">
-            <p class="policy__text">
-              1.再來一抽會員所儲值的代幣等同於「現金禮券」，以下簡稱「代幣」。會員可以在再來一抽平台上消費任何商品。
-            </p>
-            <p class="policy__text">
-              2.當會員確認儲值後，本網站系統會自動經由電子郵件方式通知會員，但並未表示交易完成或契約成立，本網站保留是否接受訂單權利，須待本網站確認交易條件無誤及確認收款後才算契約成立。
-            </p>
-            <p class="policy__text">
-              3.消費爭議處理：服務信箱 easonandjenny@gmail.com 或 官方Line
-              @again888 。
-            </p>
-          </div>
-        </div>
-
-        <!-- 交易注意事項 -->
-        <div class="policy__item">
-          <div class="policy__item-title">
-            <p class="policy__text">交易注意事項</p>
-          </div>
-          <div class="policy__item-main">
-            <p class="policy__text">
-              1.商品交易頁面呈現之商品名稱、價格、內容、規格、型號及其他相關資訊，皆為您與本公司締結契約之一部分。
-            </p>
-            <p class="policy__text">
-              2.您同意依據本公司所提供之確認商品數量及價格機制進行下單。本公司對於下單內容，得於下單後三個工作日內附正當理由拒絕。
-            </p>
-            <p class="policy__text">
-              3.本網站得就特定商品訂定個別消費者每次訂購的數量上限。逾越該數量上限進行下單或同一消費者以複數帳號重覆、多次下單時，本網站僅負單一消費者依該數量上限出貨之責任。
-            </p>
-            <p class="policy__text">
-              4.有關本網站購物相關未盡事宜，請參閱本網站交易說明。
-            </p>
-          </div>
-        </div>
-
-        <!-- 智慧財產權 -->
-        <div class="policy__item">
-          <div class="policy__item-title">
-            <p class="policy__text">智慧財產權</p>
-          </div>
-          <div class="policy__item-main">
-            <p class="policy__text">
-              本網站所有內容，包括但不限於：商品攝影、模特兒照片、美術插圖、程式設計、網站畫面的安排、網頁設計版式、商標、其他標示或資訊，均屬本公司或相關權利人依法擁有智慧財產權之客體，受著作權法、商標法、專利法、營業秘密法及公平交易法之保護，非經本公司或權利人事先許可或授權，不得任意使用，以免涉侵權或違法之責任。
-            </p>
-          </div>
-        </div>
-
-        <!-- 服務終止及免責聲明 -->
-        <div class="policy__item">
-          <div class="policy__item-title">
-            <p class="policy__text">服務終止及免責聲明</p>
-          </div>
-          <div class="policy__item-main">
-            <p class="policy__text">
-              本公司將以符合目前一般可合理期待安全性之方法及技術，維護本網站的正常運作。下列情形本公司有權暫停提供本網站服務的全部或部分，且不負事先通知您的義務，本公司對因而產生任何直接或間接的損害，均不負任何賠償或補償的義務；
-            </p>
-            <p class="policy__text">
-              對本網站相關軟硬體設備進行搬遷、更換、升級、保養或維修；
-            </p>
-            <p class="policy__text">
-              天災或其他不可抗力因素所導致的服務停止或中斷；
-            </p>
-            <p class="policy__text">
-              因電信或網站公司服務中斷或其他不可歸責於本公司事由所致的服務停止或中斷；
-            </p>
-            <p class="policy__text">
-              本網站遭外力影響致資訊顯示不正確、或遭偽造、竄改、刪除或擷取，或致系統中斷或不能正常運作；
-            </p>
-            <p class="policy__text">
-              使用者有違反本公司網站服務條款或法令之情形，而對該使用者暫停或終止服務；
-            </p>
-            <p class="policy__text">
-              其他本公司認為有需要暫停或終止服務之情形。
-            </p>
-            <p class="policy__text">
-              本公司針對可預知的軟硬體維護計畫，將盡可能提前於本網站或社群平台公告。
-            </p>
-          </div>
-        </div>
-
-        <!-- 違約處理 -->
-        <div class="policy__item">
-          <div class="policy__item-title">
-            <p class="policy__text">違約處理</p>
-          </div>
-          <div class="policy__item-main">
-            <p class="policy__text">
-              為維護本網站全體使用者之權益，若使用者有下列情形之一，本公司得暫停或終止其購物資格或拒絕其使用本網站服務，且該使用者也不得因此向本公司要求任何形式或內容之賠償或補償：
-            </p>
-            <p class="policy__text">提供錯誤或不實資料進行登錄；</p>
-            <p class="policy__text">
-              未經本人許可而盜刷信用卡或其他盜用金融帳號情形；
-            </p>
-            <p class="policy__text">
-              超過本公司訂定次數未在通知期限內至指定門市取貨或未完成取貨；
-            </p>
-            <p class="policy__text">經本公司認定有惡意解約退貨之情事；</p>
-            <p class="policy__text">對本公司客服部門有騷擾或不當言行；</p>
-            <p class="policy__text">其他違反本網站服務條款或違法之情事。</p>
-          </div>
-        </div>
-
-        <!-- 準據法等 -->
-        <div class="policy__item">
-          <div class="policy__item-title">
-            <p class="policy__text">本條款之效力、解釋、問題諮詢、準據法</p>
-          </div>
-          <div class="policy__item-main">
-            <p class="policy__text">
-              本契約條款中，任何條款之全部或一部分無效時，不影響其他約定之效力。
-            </p>
-            <p class="policy__text">
-              本契約條款如有疑義，將為有利於客戶之解釋。
-            </p>
-            <p class="policy__text">
-              客戶如對服務有相關問題，可透過客服信箱進行諮詢。
-            </p>
-            <p class="policy__text">
-              客戶與本公司之權利義務關係，應依網路規範及中華民國法令解釋及規章、慣例為依據處理。本公司的任何聲明、條款如有未盡完善之處，將以最大誠意，依誠實信用、平等互惠原則，共商解決之道
-            </p>
+          <div class="policy__ctaRight">
+            <button
+              class="policy__btn policy__btn--primary"
+              type="button"
+              @click="goFaq"
+            >
+              前往 FAQ
+            </button>
+            <button
+              class="policy__btn policy__btn--ghost"
+              type="button"
+              @click="goTransaction"
+            >
+              交易說明
+            </button>
           </div>
         </div>
       </div>
-    </Card>
-  </section>
+    </section>
+  </div>
 </template>
 
-<script lang="ts" setup>
-import Card from '@/components/common/MCard.vue';
-import SectionHeader from '@/components/common/SectionHeader.vue';
+<script setup lang="ts">
+import { useRouter } from 'vue-router';
+import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
+
+const router = useRouter();
+
+const goFaq = () => router.push({ name: 'Faq' });
+const goTransaction = () => router.push({ name: 'Transaction' });
+
+const scrollTo = (id: string) => {
+  const el = document.getElementById(id);
+  el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
 </script>
 
-<style lang="scss" scoped>
-.policyPage {
-  max-width: 960px;
-  margin: 0 auto 80px;
-  padding: 24px 16px 64px;
-
-  &__card {
-    /* 如果 MCard 有自己的 padding，就不用再加 */
-    border-radius: 16px;
-  }
-}
-
+<style scoped lang="scss">
 .policy {
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
-  padding: 32px 24px 16px;
-  line-height: 1.9;
-  font-size: 15px;
-  color: #4a4a4a;
+  background: linear-gradient(180deg, #f4e1cc 0%, #f8efe3 40%, #ffffff 100%);
+  min-height: 100vh;
+  position: relative;
+  z-index: 9;
 
-  @media (min-width: 768px) {
-    padding: 40px 40px 24px;
+  &__container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+  }
+
+  /* Hero */
+  &__hero {
+    background: #000;
+    color: #fff;
+    padding: 34px 0 28px;
+  }
+
+  &__heroInner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 24px;
+
+    display: grid;
+    grid-template-columns: 1.12fr 0.88fr;
+    gap: 24px;
+    align-items: stretch;
+  }
+
+  &__badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 26px;
+    padding: 0 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    letter-spacing: 2px;
+    font-weight: 900;
+    color: rgba(229, 166, 87, 0.95);
+    background: rgba(229, 166, 87, 0.12);
+    border: 1px solid rgba(229, 166, 87, 0.35);
+    margin: 0 0 10px;
+  }
+
+  &__title {
+    font-size: 34px;
+    line-height: 1.15;
+    margin: 0 0 10px;
+    font-weight: 1000;
+    letter-spacing: 0.2px;
+  }
+
+  &__subtitle {
+    margin: 0 0 18px;
+    font-size: 15px;
+    line-height: 1.7;
+    color: rgba(255, 255, 255, 0.82);
+    max-width: 640px;
+  }
+
+  &__heroActions {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+  }
+
+  &__btn {
+    height: 52px;
+    padding: 0 18px;
+    border-radius: 999px;
+    font-weight: 900;
+    font-size: 15px;
+    border: 0;
+    cursor: pointer;
+    letter-spacing: 1px;
+
+    &--primary {
+      background: #b2473a;
+      color: #fff;
+    }
+
+    &--ghost {
+      background: transparent;
+      color: rgba(229, 166, 87, 0.95);
+      border: 1px solid rgba(229, 166, 87, 0.55);
+    }
+  }
+
+  &__hint {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    color: rgba(255, 255, 255, 0.78);
+    font-size: 13px;
+    line-height: 1.7;
+    max-width: 640px;
+  }
+
+  &__hintIcon {
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+
+    background: rgba(229, 166, 87, 0.12);
+    border: 1px solid rgba(229, 166, 87, 0.22);
+    color: rgba(229, 166, 87, 0.95);
+    flex: 0 0 auto;
+  }
+
+  &__heroRight {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  &__panel {
+    width: 100%;
+    max-width: 460px;
+    border-radius: 18px;
+    padding: 16px;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.08),
+      rgba(255, 255, 255, 0.04)
+    );
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  &__panelHeader {
+    margin-bottom: 10px;
+  }
+
+  &__panelTitle {
+    margin: 0 0 6px;
+    font-weight: 1000;
+    letter-spacing: 1px;
     font-size: 16px;
   }
 
-  &__text {
+  &__panelDesc {
     margin: 0;
+    font-size: 13px;
+    line-height: 1.7;
+    color: rgba(255, 255, 255, 0.78);
   }
 
-  /* Intro 區塊：淺底 + 左側色條 */
-  &__intro {
-    padding: 20px 20px 20px 18px;
+  &__nav {
+    margin-top: 12px;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  &__chip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 12px;
+    border-radius: 14px;
+    cursor: pointer;
+
+    background: rgba(0, 0, 0, 0.35);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: rgba(255, 255, 255, 0.9);
+
+    font-weight: 1000;
+    letter-spacing: 0.4px;
+    font-size: 14px;
+    text-align: left;
+
+    &:hover {
+      border-color: rgba(229, 166, 87, 0.35);
+    }
+  }
+
+  &__chipIcon {
+    width: 34px;
+    height: 34px;
     border-radius: 12px;
-    background: #faf5ef;
-    border-left: 4px solid #eb9838;
+    display: grid;
+    place-items: center;
+
+    background: rgba(229, 166, 87, 0.12);
+    border: 1px solid rgba(229, 166, 87, 0.22);
+    color: rgba(229, 166, 87, 0.95);
+    flex: 0 0 auto;
+  }
+
+  &__panelFooter {
+    margin-top: 12px;
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+
+  &__miniBtn {
+    height: 40px;
+    padding: 0 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    background: rgba(0, 0, 0, 0.25);
+    color: rgba(255, 255, 255, 0.9);
+    font-weight: 900;
+    cursor: pointer;
+
+    &--gold {
+      background: rgba(229, 166, 87, 0.9);
+      border-color: rgba(229, 166, 87, 0.9);
+      color: #000;
+    }
+  }
+
+  /* Content */
+  &__section {
+    padding: 34px 0 40px;
+  }
+
+  &__header {
+    margin-bottom: 14px;
+  }
+
+  &__h2 {
+    margin: 0 0 8px;
+    font-size: 22px;
+    font-weight: 1000;
+    letter-spacing: 1px;
+    color: #111;
+  }
+
+  &__desc {
+    margin: 0;
+    color: rgba(0, 0, 0, 0.65);
+    line-height: 1.7;
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 14px;
+  }
+
+  &__card {
+    background: rgba(255, 255, 255, 0.72);
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 18px;
+    padding: 16px;
     display: flex;
     flex-direction: column;
     gap: 12px;
   }
 
+  &__cardTop {
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  }
+
+  &__cardBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    height: 28px;
+    padding: 0 10px;
+    border-radius: 999px;
+    background: rgba(178, 71, 58, 0.08);
+    border: 1px solid rgba(178, 71, 58, 0.14);
+    color: rgba(178, 71, 58, 0.95);
+    font-weight: 1000;
+    letter-spacing: 1px;
+    font-size: 12px;
+  }
+
+  &__cardBadgeIcon {
+    width: 22px;
+    height: 22px;
+    border-radius: 10px;
+    display: grid;
+    place-items: center;
+    background: rgba(178, 71, 58, 0.12);
+  }
+
+  &__cardTitle {
+    margin: 10px 0 6px;
+    font-weight: 1000;
+    letter-spacing: 0.2px;
+    font-size: 16px;
+    color: #111;
+  }
+
+  &__cardDesc {
+    margin: 0;
+    line-height: 1.7;
+    color: rgba(0, 0, 0, 0.7);
+    font-size: 14px;
+  }
+
+  &__list {
+    margin: 0;
+    padding-left: 18px;
+    display: grid;
+    gap: 10px;
+    color: rgba(0, 0, 0, 0.72);
+    line-height: 1.85;
+    font-size: 14px;
+  }
+
   &__item {
-    padding-top: 4px;
-    border-top: 1px solid #f0f0f0;
+    padding-left: 2px;
+  }
 
-    &:first-of-type {
-      border-top: none;
-      padding-top: 0;
+  &__callout {
+    margin-top: 12px;
+    border-radius: 16px;
+    padding: 12px 12px;
+    background: rgba(229, 166, 87, 0.12);
+    border: 1px solid rgba(229, 166, 87, 0.25);
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  &__calloutIcon {
+    width: 34px;
+    height: 34px;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    flex: 0 0 auto;
+
+    color: rgba(0, 0, 0, 0.9);
+    background: rgba(229, 166, 87, 0.9);
+    border: 1px solid rgba(229, 166, 87, 0.9);
+  }
+
+  &__calloutText {
+    margin: 0;
+    color: rgba(0, 0, 0, 0.72);
+    line-height: 1.85;
+    font-size: 13px;
+  }
+
+  &__reserve {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+  }
+
+  &__reserveTitle {
+    margin: 0 0 6px;
+    font-weight: 1000;
+    letter-spacing: 0.2px;
+    color: #111;
+  }
+
+  &__reserveText {
+    margin: 0;
+    color: rgba(0, 0, 0, 0.7);
+    line-height: 1.75;
+    font-size: 14px;
+  }
+
+  /* Contact */
+  &__contact {
+    display: grid;
+    gap: 10px;
+  }
+
+  &__contactRow {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 13px;
+    color: rgba(0, 0, 0, 0.65);
+  }
+
+  &__contactKey {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex: 0 0 auto;
+    color: rgba(0, 0, 0, 0.72);
+    font-weight: 900;
+  }
+
+  &__contactVal {
+    text-align: right;
+    line-height: 1.5;
+    color: rgba(0, 0, 0, 0.7);
+    font-weight: 800;
+  }
+
+  /* CTA */
+  &__cta {
+    margin-top: 18px;
+    border-radius: 18px;
+    padding: 18px;
+    background: linear-gradient(135deg, #b2473a, #7a1a12);
+    color: #fff;
+
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  &__ctaTitle {
+    margin: 0 0 4px;
+    font-weight: 1000;
+    letter-spacing: 0.3px;
+    font-size: 18px;
+  }
+
+  &__ctaDesc {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.85);
+    line-height: 1.7;
+    font-size: 14px;
+  }
+
+  &__ctaRight {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  /* Footer */
+  &__footer {
+    padding: 18px 0 24px;
+  }
+
+  &__footerInner {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  &__footerText {
+    margin: 0;
+    color: rgba(0, 0, 0, 0.6);
+    font-size: 13px;
+  }
+
+  &__footerTop {
+    height: 40px;
+    padding: 0 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    background: rgba(255, 255, 255, 0.7);
+    font-weight: 900;
+    cursor: pointer;
+  }
+
+  /* RWD */
+  @media (max-width: 1024px) {
+    &__heroInner {
+      grid-template-columns: 1fr;
     }
 
-    &-title {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      margin-bottom: 12px;
-
-      .policy__text {
-        font-size: 18px;
-        font-weight: 700;
-        letter-spacing: 0.04em;
-        color: #eb9838;
-      }
-
-      /* 小色條 */
-      &::before {
-        content: '';
-        width: 6px;
-        height: 20px;
-        border-radius: 999px;
-        background: linear-gradient(180deg, #eb9838, #e06a35);
-      }
+    &__heroRight {
+      justify-content: flex-start;
     }
 
-    &-main {
-      margin-left: 14px;
-      padding-left: 12px;
-      border-left: 1px dashed #e0e0e0;
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
+    &__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
 
-      @media (min-width: 768px) {
-        gap: 10px;
-      }
+  @media (max-width: 640px) {
+    &__container {
+      padding: 0 16px;
+    }
+
+    &__heroInner {
+      padding: 0 16px;
+    }
+
+    &__title {
+      font-size: 28px;
+    }
+
+    &__grid {
+      grid-template-columns: 1fr;
     }
   }
 }

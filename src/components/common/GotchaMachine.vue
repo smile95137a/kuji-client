@@ -6,7 +6,7 @@
         <div class="balls" ref="ballsRef"></div>
 
         <img class="machine" :src="machineSrc" alt="machine" />
-        <!-- ✅ 超單純：一個長方形把手 -->
+        <!--  超單純：一個長方形把手 -->
         <div class="handle handle--img" type="button" aria-label="Turn handle">
           <img
             class="handle__img"
@@ -56,14 +56,14 @@ import defaultMachineHangleaaSrc from '@/assets/image/aa.png';
 
 import demo1Img from '@/assets/image/demo1.jpg';
 
-// ✅ FontAwesome（你的專案需已註冊 <font-awesome-icon> component）
+//  FontAwesome（你的專案需已註冊 <font-awesome-icon> component）
 import { faHandPointer } from '@fortawesome/free-solid-svg-icons';
 
 gsap.registerPlugin(RoughEase);
 
 type Prize = { image: string; title: string };
 
-// ✅ 方案 B：inline SVG（不外連）
+//  方案 B：inline SVG（不外連）
 const inlineSvgDataUri = (svg: string) =>
   `data:image/svg+xml;utf8,${encodeURIComponent(svg.trim())}`;
 
@@ -99,7 +99,7 @@ const props = withDefaults(
       { image: demo1Img, title: '皮卡丘C賞' },
       { image: demo1Img, title: '皮卡丘D賞' },
     ],
-  }
+  },
 );
 
 const emit = defineEmits<{
@@ -119,7 +119,7 @@ const prize = ref<Prize | null>(null);
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 const SPEED = () => props.speed;
 
-// ✅ 不用 vh/vw：用 px（由視窗大小換算）
+//  不用 vh/vw：用 px（由視窗大小換算）
 const unitPx = () => Math.max(6, window.innerHeight / 100); // 以前的 1vh ≈ innerHeight/100
 const v = (n: number) => Math.round(n * unitPx());
 const cx = () => Math.round(window.innerWidth / 2);
@@ -142,7 +142,7 @@ let isRunning = false;
 let shineTween: gsap.core.Tween | null = null;
 let shinePulseTween: gsap.core.Tween | null = null;
 
-/** ✅ 紅白扭蛋配色（上白下紅） */
+/**  紅白扭蛋配色（上白下紅） */
 const BALL_THEME = { top: '#FFFFFF', bottom: '#E84545', outline: '#7A0E0E' };
 
 const tweak = (hex: string, amt: number) => {
@@ -171,7 +171,7 @@ const confetti = (
     gravity = 0.01,
     size = 10,
     sizeRand = 5,
-  }: any = {}
+  }: any = {},
 ) => {
   const $container = document.createElement('div');
   $container.classList.add('confetti');
@@ -249,7 +249,7 @@ const createBalls = () => {
   const createBall = (
     x: number,
     y: number,
-    rotate = Math.floor(Math.random() * 360)
+    rotate = Math.floor(Math.random() * 360),
   ) => {
     const BALL_SCALE = 0.45;
     const sizePx = Math.round(v(7.6 + Math.random() * 1.2) * BALL_SCALE);
@@ -264,7 +264,7 @@ const createBalls = () => {
     $ball.style.setProperty('--color1', tweak(BALL_THEME.bottom, light));
     $ball.style.setProperty(
       '--outline',
-      tweak(BALL_THEME.outline, Math.floor(light / 2))
+      tweak(BALL_THEME.outline, Math.floor(light / 2)),
     );
 
     $balls!.appendChild($ball);
@@ -422,7 +422,7 @@ const stopJittering = async () => {
       scaleY: 1,
       duration: 0.18,
       ease: 'power1.out',
-    })
+    }),
   );
 
   if ($machine) {
@@ -501,7 +501,7 @@ const pop = () => {
   gsap.fromTo(
     $machine,
     { y: 0 },
-    { y: -8, duration: 0.12, yoyo: true, repeat: 3, ease: 'power1.inOut' }
+    { y: -8, duration: 0.12, yoyo: true, repeat: 3, ease: 'power1.inOut' },
   );
 
   setTimeout(() => resetRound(), 3000 * SPEED());
@@ -742,7 +742,7 @@ const prepare = () => {
 
       $handle!.addEventListener('click', onHandleClick);
       cleanupFns.push(() =>
-        $handle?.removeEventListener('click', onHandleClick)
+        $handle?.removeEventListener('click', onHandleClick),
       );
 
       balls.forEach((ball) => {
@@ -856,7 +856,7 @@ onBeforeUnmount(() => cleanup());
       .machine {
         position: relative;
         z-index: 1;
-        max-height: 640px; /* ✅ 不用 vh */
+        max-height: 640px; /*  不用 vh */
         max-width: min(520px, 100%);
         pointer-events: none;
         filter: drop-shadow(0 18px 34px rgba(0, 0, 0, 0.35));
@@ -870,7 +870,7 @@ onBeforeUnmount(() => cleanup());
         position: absolute;
         border-radius: 16px;
 
-        /* ✅ 炎神：金光高光 + 熔岩橘主色(#E45800) + 深紅陰影 */
+        /*  炎神：金光高光 + 熔岩橘主色(#E45800) + 深紅陰影 */
         background: radial-gradient(
           circle at 28% 26%,
           #ffe3a6 0%,
@@ -915,7 +915,7 @@ onBeforeUnmount(() => cleanup());
       }
 
       .pointer {
-        --pScale: 0.2; /* ✅ 你要的 0.2 */
+        --pScale: 0.2; /*  你要的 0.2 */
 
         position: absolute;
         top: 78%;
@@ -1009,11 +1009,14 @@ onBeforeUnmount(() => cleanup());
     position: absolute;
     overflow: hidden;
 
-    box-shadow: 0 0 0 6px var(--outline), 0 10px 18px rgba(0, 0, 0, 0.25),
+    box-shadow:
+      0 0 0 6px var(--outline),
+      0 10px 18px rgba(0, 0, 0, 0.25),
       inset 0 8px 14px rgba(255, 255, 255, 0.18),
       inset 0 -12px 18px rgba(0, 0, 0, 0.18);
 
-    background: radial-gradient(
+    background:
+      radial-gradient(
         circle at 28% 22%,
         rgba(255, 255, 255, 0.92),
         rgba(255, 255, 255, 0) 38%
@@ -1070,7 +1073,7 @@ onBeforeUnmount(() => cleanup());
   }
 }
 
-/* ✅ 不用 vh：改成 px */
+/*  不用 vh：改成 px */
 @keyframes click {
   0% {
     transform: rotate(-30deg) translateY(0px);
