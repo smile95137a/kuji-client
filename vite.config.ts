@@ -4,7 +4,7 @@ import path from 'path';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: '/kuji/',
+  base: '/client/',
   css: {
     preprocessorOptions: {
       scss: {

@@ -186,7 +186,7 @@ export const routes: Array<RouteRecordRaw> = [
 ];
 
 const router = createRouter({
-  history: createWebHistory('/kuji/'),
+  history: createWebHistory('/client/'),
   routes,
   scrollBehavior(to, from, savedPosition) {
     if (savedPosition) {
