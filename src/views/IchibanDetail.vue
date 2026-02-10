@@ -185,7 +185,10 @@ import IchibanMetaInfo from '@/components/IchibanDetail/IchibanMetaInfo.vue';
 
 import demo1 from '@/assets/image/demo1.jpg';
 
-import { getBrowseLotteryById } from '@/services/lotteryBrowseService';
+import {
+  getBrowseLotteryById,
+  incrementLotteryHotCount,
+} from '@/services/lotteryBrowseService';
 import {
   designatePrizePositions,
   drawLottery,
@@ -810,16 +813,82 @@ const reload = async () => {
     loading.value = false;
   }
 };
+const HOT_LS_PREFIX = 'kuji_hot_v1'; // 想改版本可改 v2
 
-onMounted(async () => {
-  await reload();
-});
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+const getTaipeiDayKey = () => {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = pad2(now.getMonth() + 1);
+  const d = pad2(now.getDate());
+  return `${y}-${m}-${d}`;
+};
+
+const buildHotKey = (lotteryId: string) => {
+  return `${HOT_LS_PREFIX}:${lotteryId}:${getTaipeiDayKey()}`;
+};
+
+const hasHitHotToday = (lotteryId: string) => {
+  try {
+    const key = buildHotKey(lotteryId);
+    return localStorage.getItem(key) === '1';
+  } catch (e) {
+    return false;
+  }
+};
+
+const markHitHotToday = (lotteryId: string) => {
+  try {
+    const key = buildHotKey(lotteryId);
+    localStorage.setItem(key, '1');
+  } catch (e) {
+    // ignore
+  }
+};
+
+const didHot = ref(false);
+
+const hitHotCount = async () => {
+  const id = kujiId.value;
+  if (!id) return;
+
+  if (didHot.value) return;
+
+  if (hasHitHotToday(id)) {
+    didHot.value = true;
+    return;
+  }
+
+  didHot.value = true;
+
+  await executeApi<any>({
+    fn: () => incrementLotteryHotCount(id),
+    showCatchDialog: false,
+    showFailDialog: false,
+    onSuccess: async () => {
+      markHitHotToday(id);
+    },
+    onFail: async () => {
+      didHot.value = false;
+    },
+  });
+};
+
+onMounted(async () => {});
 
 watch(
   () => kujiId.value,
-  async () => {
+  async (id) => {
+    if (!id) return;
+
+    didHot.value = false;
+
+    await hitHotCount();
+
     await reload();
   },
+  { immediate: true },
 );
 
 /* -----------------------------

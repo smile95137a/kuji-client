@@ -30,3 +30,27 @@ export const getBrowseLotteryById = async (
     throw e;
   }
 };
+
+export const getBrowseLotteriesByStore = async (
+  storeId: string,
+): Promise<ApiResponse<any>> => {
+  try {
+    const res = await api.get(`${basePath}/store/${storeId}`);
+    return res.data;
+  } catch (e) {
+    console.error('LotteryBrowse - getBrowseLotteriesByStore error:', e);
+    throw e;
+  }
+};
+
+export const incrementLotteryHotCount = async (
+  id: string,
+): Promise<ApiResponse<any>> => {
+  try {
+    const res = await api.post(`${basePath}/${id}/hot`);
+    return res.data;
+  } catch (e) {
+    console.error('LotteryBrowse - incrementLotteryHotCount error:', e);
+    throw e;
+  }
+};
