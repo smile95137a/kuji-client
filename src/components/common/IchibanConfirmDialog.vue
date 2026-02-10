@@ -101,13 +101,16 @@ onMounted(() => {
    IchibanConfirmDialog (獨立樣式)
 ================================================= */
 .ichiban-confirm-dialog {
-  position: absolute;
+  position: fixed; /* ✅ 改為 fixed，相對於視窗定位 */
   inset: 0;
   z-index: 10000;
 
   display: flex;
   justify-content: center;
   align-items: center;
+
+  /* ✅ 確保在可視區域中央，不受頁面滾動影響 */
+  overflow: auto;
 
   animation: confirm-pop 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 }

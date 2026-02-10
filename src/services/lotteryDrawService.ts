@@ -23,22 +23,51 @@ export const getTickets = async (
   }
 };
 
-/** 前台 - 執行抽獎 POST /lottery/draw/{lotteryId}/draw
- * ticketNumber: null = 隨機抽
- * drawCount: 連抽次數（預設 1）
+/**
+ * 前台 - 執行抽獎 POST /lottery/draw/{lotteryId}/draw
+ *
+ * ⚠️ 新版 API (2026-02-07)：
+ *   - 指定票券：{ count: N, ticket: [uuid1, uuid2, ...] }  （ticket.length === count）
+ *   - 隨機抽獎：{ count: N }                               （不帶 ticket 由後端隨機選）
+ *   - 回傳統一為陣列 data: [...]
+ *
+ * @param lotteryId 商品 ID
+ * @param payload.count   抽獎次數
+ * @param payload.ticket  指定票券 UUID 列表（選填，不傳=隨機）
  */
 export const drawLottery = async (
   lotteryId: string,
-  payload: { ticketNumber?: number | null; drawCount?: number | null }
-): Promise<ApiResponse<any>> => {
+  payload: { count: number; ticket?: string[] }
+): Promise<ApiResponse<any[]>> => {
   try {
-    const res = await api.post(`${basePath}/${lotteryId}/draw`, {
-      ticketNumber: payload.ticketNumber ?? null,
-      drawCount: payload.drawCount ?? 1,
-    });
+    const body: Record<string, any> = { count: payload.count };
+    if (payload.ticket && payload.ticket.length > 0) {
+      body.ticket = payload.ticket;
+    }
+    const res = await api.post(`${basePath}/${lotteryId}/draw`, body);
     return res.data;
   } catch (e) {
     console.error('LotteryDraw - drawLottery error:', e);
+    throw e;
+  }
+};
+
+/**
+ * 前台 - 批次抽獎（指定票券 UUID）POST /lottery/draw/{lotteryId}/draw
+ * ⚠️ ticket 陣列長度必須等於 count，不可包含重複項目
+ */
+export const batchDrawLottery = async (
+  lotteryId: string,
+  payload: { count: number; ticket: string[] }
+): Promise<ApiResponse<any[]>> => {
+  try {
+    const res = await api.post(`${basePath}/${lotteryId}/draw`, {
+      count: payload.count,
+      ticket: payload.ticket,
+    });
+    return res.data;
+  } catch (e) {
+    console.error('LotteryDraw - batchDrawLottery error:', e);
     throw e;
   }
 };

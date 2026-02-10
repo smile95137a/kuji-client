@@ -491,17 +491,25 @@ onMounted(async () => {
   document.fonts?.ready?.then(rafUpdate).catch(() => {});
 
   ro = new ResizeObserver(() => rafUpdate());
-  headerRef.value && ro.observe(headerRef.value);
-  logoRef.value && ro.observe(logoRef.value);
-  primaryBarInnerRef.value && ro.observe(primaryBarInnerRef.value);
-  if (firstPrimaryLinkRef.value) ro.observe(firstPrimaryLinkRef.value);
+  
+  // 安全地觀察元素 - 確保是實際的 DOM 元素
+  if (headerRef.value instanceof Element) ro.observe(headerRef.value);
+  if (logoRef.value instanceof Element) ro.observe(logoRef.value);
+  if (primaryBarInnerRef.value instanceof Element) ro.observe(primaryBarInnerRef.value);
+  if (firstPrimaryLinkRef.value instanceof Element) ro.observe(firstPrimaryLinkRef.value);
 
   rafUpdate();
 });
 
 watch(firstPrimaryLinkRef, async (el) => {
   await nextTick();
-  if (el && ro) ro.observe(el);
+  if (el instanceof Element && ro) {
+    try {
+      ro.observe(el);
+    } catch (e) {
+      console.warn('ResizeObserver - failed to observe element:', e);
+    }
+  }
   rafUpdate();
 });
 

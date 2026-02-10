@@ -1,7 +1,7 @@
 // services/rechargePlanService.ts
 import { api } from './FrontAPI';
 
-const basePath = '/api/recharge-plan';
+const basePath = '/recharge-plan';
 
 interface RequestData {
   [key: string]: any;

@@ -1,7 +1,7 @@
 // services/prizeBoxService.ts
 import { api } from './FrontAPI';
 
-const basePath = '/api/prize-box';
+const basePath = '/prize-box';
 
 interface RequestData {
   [key: string]: any;
@@ -37,11 +37,27 @@ export const getPrizeBoxSummaryByStore = async (
   }
 };
 
-/** 前台 - 出貨（將選定獎品產生訂單） POST /api/prize-box/ship */
+/**
+ * 前台 - 出貨（將選定獎品產生訂單） POST /prize-box/ship
+ *
+ * ⚠️ 2026-02-08 更新：不再使用 addressId，改傳完整配送資訊
+ *
+ * 宅配模式：
+ *   { prizeBoxIds, shippingMethod: 'HOME_DELIVERY', recipientName, recipientPhone, recipientAddress, remark? }
+ *
+ * 超商取貨模式：
+ *   { prizeBoxIds, shippingMethod: 'SEVEN_ELEVEN'|'FAMILY_MART', recipientName, recipientPhone, storeCode, storeName, storeAddress }
+ */
 export const shipPrizes = async (payload: {
   prizeBoxIds: string[];
-  shippingMethodId?: string;
-  receiver?: any;
+  shippingMethod: 'HOME_DELIVERY' | 'SEVEN_ELEVEN' | 'FAMILY_MART';
+  recipientName: string;
+  recipientPhone: string;
+  recipientAddress?: string;
+  storeCode?: string;
+  storeName?: string;
+  storeAddress?: string;
+  remark?: string;
 }): Promise<ApiResponse<any>> => {
   try {
     const res = await api.post(`${basePath}/ship`, payload);

@@ -16,6 +16,7 @@ export interface AuthUser {
 }
 
 export interface AuthResLike {
+  token?: string;
   accessToken?: string;
   refreshToken?: string;
   tokenType?: string; // 可選，不傳就預設 Bearer
@@ -67,7 +68,7 @@ export const useAuthStore = defineStore('auth', () => {
    * ex: authStore.setAuth(res.data)
    */
   const setAuth = (res: AuthResLike) => {
-    const accessToken = res?.accessToken || '';
+    const accessToken = res?.token || res?.accessToken || '';
     const rfToken = res?.refreshToken || '';
     const type = res?.tokenType || 'Bearer';
 

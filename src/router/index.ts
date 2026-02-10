@@ -8,6 +8,8 @@ import NewsDetail from '@/views/NewsDetail.vue';
 import NotFound from '@/views/NotFound.vue';
 import Login from '@/views/Login.vue';
 import Register from '@/views/Register.vue';
+import ForgotPassword from '@/views/ForgotPassword.vue';
+import ResetPassword from '@/views/ResetPassword.vue';
 import Policy from '@/views/Policy.vue';
 import Privacy from '@/views/Privacy.vue';
 import IchibanList from '@/views/IchibanList.vue';
@@ -27,6 +29,16 @@ import TransactionHistory from '@/views/member/TransactionHistory.vue';
 import Notifications from '@/views/member/Notifications.vue';
 import ProfileEdit from '@/views/member/ProfileEdit.vue';
 import PrizeBox from '@/views/member/PrizeBox.vue';
+import AddressBook from '@/views/member/AddressBook.vue';
+import OrderList from '@/views/member/OrderList.vue';
+
+// 新增專區頁面
+import GachaList from '@/views/GachaList.vue';
+import ScratchCardList from '@/views/ScratchCardList.vue';
+import StoreLotteries from '@/views/StoreLotteries.vue';
+
+// Dialog 測試頁面
+import DialogTestPage from '@/views/DialogTestPage.vue';
 
 export const routes: Array<RouteRecordRaw> = [
   {
@@ -77,6 +89,16 @@ export const routes: Array<RouteRecordRaw> = [
         name: 'Register',
       },
       {
+        component: ForgotPassword,
+        path: 'forgot-password',
+        name: 'ForgotPassword',
+      },
+      {
+        component: ResetPassword,
+        path: 'reset-password',
+        name: 'ResetPassword',
+      },
+      {
         component: Policy,
         path: 'policy',
         name: 'Policy',
@@ -85,6 +107,13 @@ export const routes: Array<RouteRecordRaw> = [
         component: Privacy,
         path: 'privacy',
         name: 'Privacy',
+      },
+
+      // ✅ Dialog 測試頁面（開發用）
+      {
+        component: DialogTestPage,
+        path: 'dialog-test',
+        name: 'DialogTestPage',
       },
 
       {
@@ -122,6 +151,28 @@ export const routes: Array<RouteRecordRaw> = [
         name: 'IchibanDetail',
         component: IchibanDetail,
       },
+
+      // 店家商品頁
+      {
+        path: 'store/:storeId',
+        name: 'StoreLotteries',
+        component: StoreLotteries,
+      },
+
+      // 扭蛋專區
+      {
+        path: 'gacha',
+        name: 'GachaList',
+        component: GachaList,
+      },
+
+      // 刮刮樂專區
+      {
+        path: 'scratch',
+        name: 'ScratchCardList',
+        component: ScratchCardList,
+      },
+
       {
         path: 'member-center',
         name: 'MemberCenter',
@@ -163,6 +214,18 @@ export const routes: Array<RouteRecordRaw> = [
             path: 'prize-box',
             name: 'PrizeBox',
             component: PrizeBox,
+            meta: { requiresAuth: true },
+          },
+          {
+            path: 'address-book',
+            name: 'AddressBook',
+            component: AddressBook,
+            meta: { requiresAuth: true },
+          },
+          {
+            path: 'orders',
+            name: 'OrderList',
+            component: OrderList,
             meta: { requiresAuth: true },
           },
           {

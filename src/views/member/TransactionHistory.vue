@@ -32,10 +32,12 @@
             <label class="transactionHistory__label">類型</label>
             <select class="transactionHistory__input" v-model="type">
               <option value="">全部</option>
-              <option value="ORDER">購買</option>
-              <option value="ICHIBAN">一番賞</option>
-              <option value="REFUND">退款</option>
-              <option value="FEE">手續費</option>
+              <option value="LOTTERY_DRAW">抽獎消費</option>
+              <option value="PRIZE_RECYCLE">回收獎品</option>
+              <option value="RECHARGE">儲值</option>
+              <option value="ADMIN_ADJUSTMENT">系統調整</option>
+              <option value="REFERRAL_BONUS">推薦獎勵</option>
+              <option value="SYSTEM_REWARD">系統獎勵</option>
             </select>
           </div>
 
@@ -299,19 +301,21 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, onMounted } from 'vue';
 import BasePagination from '@/components/common/BasePagination.vue';
+import { getMyWalletTransactions } from '@/services/walletService';
 
-type TxType = 'ORDER' | 'ICHIBAN' | 'REFUND' | 'FEE';
-type TxStatus = 'SUCCESS' | 'PENDING' | 'FAILED' | 'CANCELED';
+type TxType = 'LOTTERY_DRAW' | 'PRIZE_RECYCLE' | 'RECHARGE' | 'ADMIN_ADJUSTMENT' | 'REFERRAL_BONUS' | 'SYSTEM_REWARD' | string;
+type TxStatus = 'SUCCESS' | 'PENDING' | 'FAILED' | 'CANCELED' | string;
 
 type TransactionRow = {
   id: string;
-  createdAt: string; // YYYY-MM-DD
-  txNo: string; // 交易號
-  orderNo?: string; // 訂單號（可空）
+  createdAt: string;
+  txNo: string;
+  orderNo?: string;
   type: TxType;
-  amount: number; // 正=扣款 or 加值? 這裡用正負表示收支（你可依後端定義調整）
+  amount: number;
+  balanceAfter?: number;
   status: TxStatus;
   description: string;
 };
@@ -325,95 +329,53 @@ const type = ref<TxType | ''>('');
 const status = ref<TxStatus | ''>('');
 const keyword = ref('');
 
-const COUNT = 78;
+const loading = ref(false);
+const rows = ref<TransactionRow[]>([]);
 
-const pad = (n: number, len = 4) => String(n).padStart(len, '0');
-const toYMD = (d: Date) => {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+const formatDate = (iso?: string | null) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-const buildMockRows = (count: number): TransactionRow[] => {
-  const base = new Date();
-  const list: TransactionRow[] = [];
+const loadTransactions = async () => {
+  loading.value = true;
+  try {
+    const condition: any = {};
+    if (type.value) condition.transactionType = type.value;
+    if (dateFrom.value) condition.startDate = `${dateFrom.value}T00:00:00`;
+    if (dateTo.value) condition.endDate = `${dateTo.value}T23:59:59`;
 
-  const typePool: TxType[] = [
-    'ORDER',
-    'ORDER',
-    'ORDER',
-    'ICHIBAN',
-    'REFUND',
-    'FEE',
-  ];
-  const statusPool: TxStatus[] = [
-    'SUCCESS',
-    'SUCCESS',
-    'SUCCESS',
-    'PENDING',
-    'FAILED',
-    'CANCELED',
-  ];
-
-  const orderAmounts = [120, 180, 250, 399, 520, 799, 999, 1290];
-  const feeAmounts = [-10, -15, -20];
-  const refundAmounts = [-120, -180, -399, -520];
-  const ichibanAmounts = [90, 150, 200, 300];
-
-  for (let i = 0; i < count; i++) {
-    const d = new Date(base);
-    d.setDate(base.getDate() - i);
-
-    const createdAt = toYMD(d);
-    const txNo = `TX${createdAt}${pad(i + 1, 4)}`;
-
-    const t = typePool[Math.floor(Math.random() * typePool.length)];
-    const s = statusPool[Math.floor(Math.random() * statusPool.length)];
-
-    let amount = 0;
-    let orderNo: string | undefined = undefined;
-    let description = '';
-
-    if (t === 'ORDER') {
-      amount = orderAmounts[Math.floor(Math.random() * orderAmounts.length)];
-      orderNo = `ORD${createdAt}${pad(i + 1, 4)}`;
-      description = '商城購買商品扣款';
-    } else if (t === 'ICHIBAN') {
-      amount =
-        ichibanAmounts[Math.floor(Math.random() * ichibanAmounts.length)];
-      orderNo = `ICH${createdAt}${pad(i + 1, 4)}`;
-      description = '一番賞抽取消費';
-    } else if (t === 'REFUND') {
-      amount = refundAmounts[Math.floor(Math.random() * refundAmounts.length)];
-      orderNo = `ORD${createdAt}${pad(i + 1, 4)}`;
-      description = '訂單退款';
-    } else {
-      amount = feeAmounts[Math.floor(Math.random() * feeAmounts.length)];
-      description = '支付手續費';
-    }
-
-    // 如果非 SUCCESS，讓描述更像真的
-    if (s === 'PENDING') description += '（處理中）';
-    if (s === 'FAILED') description += '（失敗）';
-    if (s === 'CANCELED') description += '（已取消）';
-
-    list.push({
-      id: String(i + 1),
-      createdAt,
-      txNo,
-      orderNo,
-      type: t,
-      amount,
-      status: s,
-      description,
+    const res = await getMyWalletTransactions({
+      condition,
+      sortBy: 'created_at',
+      sortOrder: 'DESC',
     });
-  }
 
-  return list;
+    if (res.success && Array.isArray(res.data)) {
+      rows.value = res.data.map((t: any) => ({
+        id: String(t.id || ''),
+        createdAt: formatDate(t.createdAt),
+        txNo: t.id || '',
+        orderNo: t.relatedId || t.orderId || t.orderNo || undefined,
+        type: t.transactionType || 'LOTTERY_DRAW',
+        amount: Number(t.amount ?? 0),
+        balanceAfter: t.balanceAfter ? Number(t.balanceAfter) : undefined,
+        status: 'SUCCESS', // 錢包交易通常都是成功的
+        description: t.description || '',
+      }));
+    }
+  } catch (e) {
+    console.error('TransactionHistory - loadTransactions error:', e);
+  } finally {
+    loading.value = false;
+  }
 };
 
-const rows = ref<TransactionRow[]>(buildMockRows(COUNT));
+onMounted(() => {
+  loadTransactions();
+});
 
 const filteredRows = computed(() => {
   const from = dateFrom.value ? new Date(dateFrom.value).getTime() : null;
@@ -463,8 +425,9 @@ watch(totalPages, (tp) => {
 });
 
 const onSearch = () => {
-  // 目前是前端 computed 篩選，所以查詢按鈕不需要做事
-  // 接 API 後可在這裡打 API 更新 rows
+  // 使用日期和類型篩選重新呼叫 API
+  page.value = 1;
+  loadTransactions();
 };
 
 const onReset = () => {
@@ -474,13 +437,17 @@ const onReset = () => {
   status.value = '';
   keyword.value = '';
   page.value = 1;
+  loadTransactions();
 };
 
 const typeLabel = (t: TxType) => {
-  if (t === 'ORDER') return '購買';
-  if (t === 'ICHIBAN') return '一番賞';
-  if (t === 'REFUND') return '退款';
-  return '手續費';
+  if (t === 'LOTTERY_DRAW') return '抽獎消費';
+  if (t === 'PRIZE_RECYCLE') return '回收獎品';
+  if (t === 'RECHARGE') return '儲值';
+  if (t === 'ADMIN_ADJUSTMENT') return '系統調整';
+  if (t === 'REFERRAL_BONUS') return '推薦獎勵';
+  if (t === 'SYSTEM_REWARD') return '系統獎勵';
+  return t; // 回傳原始值作為備用
 };
 
 const statusLabel = (s: TxStatus) => {
@@ -748,12 +715,24 @@ const openDetail = (row: TransactionRow) => {
     border: 1px solid rgba(0, 0, 0, 0.12);
 
     &.is-success {
+      background: #e8f5e9;
+      color: #4caf50;
+      border-color: #4caf50;
     }
     &.is-pending {
+      background: #fff8e1;
+      color: #f59e0b;
+      border-color: #f59e0b;
     }
     &.is-failed {
+      background: #fce4ec;
+      color: #e53935;
+      border-color: #e53935;
     }
     &.is-canceled {
+      background: #f5f5f5;
+      color: #9e9e9e;
+      border-color: #bdbdbd;
     }
   }
 

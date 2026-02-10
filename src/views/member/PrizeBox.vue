@@ -17,9 +17,8 @@
             <select class="prizeBox__input" v-model="status">
               <option value="">全部</option>
               <option value="IN_BOX">在盒中</option>
-              <option value="SHIPPING">出貨中</option>
-              <option value="DELIVERED">已送達</option>
-              <option value="REDEEMED">已兌換</option>
+              <option value="SHIPPED">已出貨</option>
+              <option value="RECYCLED">已回收</option>
             </select>
           </div>
 
@@ -78,7 +77,15 @@
             :disabled="checkedIds.size === 0"
             @click="batchShip"
           >
-            批次出貨（示範）
+            批次出貨
+          </button>
+          <button
+            class="prizeBox__btn prizeBox__btn--ghost"
+            type="button"
+            :disabled="checkedIds.size === 0"
+            @click="recycleSelected"
+          >
+            批次回收
           </button>
         </div>
       </div>
@@ -251,9 +258,17 @@
               class="prizeBox__btn"
               type="button"
               :disabled="selected.status !== 'IN_BOX'"
-              @click="shipOne(selected)"
+              @click="openShipDialog([selected.id])"
             >
-              申請出貨（示範）
+              申請出貨
+            </button>
+            <button
+              v-if="selected.canRecycle && selected.status === 'IN_BOX'"
+              class="prizeBox__btn prizeBox__btn--ghost"
+              type="button"
+              @click="recycleSingle(selected)"
+            >
+              回收 (+{{ selected.recycleBonus }} 紅利)
             </button>
             <button
               class="prizeBox__btn prizeBox__btn--ghost"
@@ -263,31 +278,143 @@
               關閉
             </button>
           </div>
-
-          <p class="prizeBox__tip">
-            ※ 這是示範畫面：出貨會把狀態改成「出貨中」，你接 API
-            後把邏輯替換即可。
-          </p>
         </div>
+      </div>
+    </div>
+
+    <!-- Shipping Dialog -->
+    <div
+      v-if="shipDialogOpen"
+      class="prizeBox__overlay"
+      @click.self="shipDialogOpen = false"
+    >
+      <div class="prizeBox__dialog" style="max-width: 560px;">
+        <div class="prizeBox__dialogHeader">
+          <p class="prizeBox__dialogTitle">申請出貨</p>
+          <button
+            class="prizeBox__dialogClose"
+            type="button"
+            @click="shipDialogOpen = false"
+          >
+            ✕
+          </button>
+        </div>
+
+        <form class="prizeBox__dialogBody" @submit.prevent="submitShip" style="display: flex; flex-direction: column; gap: 14px;">
+          <p style="margin: 0; font-size: 14px; color: #666;">
+            已選擇 <b>{{ shipPrizeBoxIds.length }}</b> 件獎品
+          </p>
+
+          <!-- 配送方式 -->
+          <div>
+            <label class="prizeBox__label">配送方式 *</label>
+            <select class="prizeBox__input" v-model="shipForm.shippingMethod" required>
+              <option value="HOME_DELIVERY">宅配到府</option>
+              <option value="SEVEN_ELEVEN">7-11 超商取貨</option>
+              <option value="FAMILY_MART">全家超商取貨</option>
+            </select>
+          </div>
+
+          <!-- 地址選擇 (有地址的話) -->
+          <div v-if="savedAddresses.length > 0">
+            <label class="prizeBox__label">選擇已存地址</label>
+            <select class="prizeBox__input" @change="onSelectAddress($event)">
+              <option value="">手動輸入</option>
+              <option
+                v-for="addr in savedAddresses"
+                :key="addr.id"
+                :value="addr.id"
+              >
+                {{ addr.isDefault ? '⭐ ' : '' }}{{ addr.recipientName }} - {{ addr.city }}{{ addr.district }}{{ addr.address }}
+              </option>
+            </select>
+          </div>
+
+          <!-- 收件人資訊 -->
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+            <div>
+              <label class="prizeBox__label">收件人 *</label>
+              <input class="prizeBox__input" type="text" v-model="shipForm.recipientName" placeholder="收件人姓名" required />
+            </div>
+            <div>
+              <label class="prizeBox__label">聯絡電話 *</label>
+              <input class="prizeBox__input" type="tel" v-model="shipForm.recipientPhone" placeholder="聯絡電話" required />
+            </div>
+          </div>
+
+          <!-- 宅配地址 -->
+          <div v-if="shipForm.shippingMethod === 'HOME_DELIVERY'">
+            <label class="prizeBox__label">收件地址 *</label>
+            <input class="prizeBox__input" type="text" v-model="shipForm.recipientAddress" placeholder="完整收件地址" required />
+          </div>
+
+          <!-- 超商資訊 -->
+          <template v-if="shipForm.shippingMethod === 'SEVEN_ELEVEN' || shipForm.shippingMethod === 'FAMILY_MART'">
+            <div>
+              <label class="prizeBox__label">門市代號 *</label>
+              <input class="prizeBox__input" type="text" v-model="shipForm.storeCode" placeholder="超商門市代號" required />
+            </div>
+            <div>
+              <label class="prizeBox__label">門市名稱 *</label>
+              <input class="prizeBox__input" type="text" v-model="shipForm.storeName" placeholder="超商門市名稱" required />
+            </div>
+            <div>
+              <label class="prizeBox__label">門市地址 *</label>
+              <input class="prizeBox__input" type="text" v-model="shipForm.storeAddress" placeholder="超商門市地址" required />
+            </div>
+          </template>
+
+          <!-- 備註 -->
+          <div>
+            <label class="prizeBox__label">備註</label>
+            <input class="prizeBox__input" type="text" v-model="shipForm.remark" placeholder="配送備註（選填）" />
+          </div>
+
+          <div style="display: flex; justify-content: flex-end; gap: 10px; padding-top: 8px;">
+            <button
+              type="button"
+              class="prizeBox__btn prizeBox__btn--ghost"
+              @click="shipDialogOpen = false"
+            >
+              取消
+            </button>
+            <button type="submit" class="prizeBox__btn" :disabled="shipSubmitting">
+              {{ shipSubmitting ? '送出中...' : '確認出貨' }}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref, reactive, watch, onMounted } from 'vue';
 import BasePagination from '@/components/common/BasePagination.vue';
+import { getMyPrizeBox, shipPrizes, recyclePrizes } from '@/services/prizeBoxService';
+import { getUserAddresses } from '@/services/userAddressService';
+import { executeApi } from '@/utils/executeApiUtils';
+import { useOverlayStore } from '@/stores/overlay';
+import { ichibanInfoDialog } from '@/utils/dialog/ichibanInfoDialog';
+import { ichibanConfirmDialog } from '@/utils/dialog/ichibanConfirmDialog';
 
-type PrizeStatus = 'IN_BOX' | 'SHIPPING' | 'DELIVERED' | 'REDEEMED';
+const overlay = useOverlayStore();
+
+type PrizeStatus = 'IN_BOX' | 'SHIPPED' | 'RECYCLED';
 
 type PrizeRow = {
   id: string;
-  createdAt: string; // YYYY-MM-DD
+  createdAt: string;
   prizeNo: string;
   name: string;
   series: string;
   status: PrizeStatus;
   image: string;
+  lotteryTitle?: string;
+  storeName?: string;
+  canRecycle?: boolean;
+  recycleBonus?: number;
+  prizeLevel?: string;
 };
 
 const pageSize = 10;
@@ -298,15 +425,8 @@ const series = ref('');
 const keyword = ref('');
 const onlyUnshipped = ref(false);
 
-const COUNT = 78;
-
-const pad = (n: number, len = 4) => String(n).padStart(len, '0');
-const toYMD = (d: Date) => {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-};
+const loading = ref(false);
+const rows = ref<PrizeRow[]>([]);
 
 const placeholderImg =
   'data:image/svg+xml;charset=UTF-8,' +
@@ -318,63 +438,52 @@ const placeholderImg =
   </svg>
 `);
 
-const seriesOptions = ref<string[]>([
-  '航海王',
-  '咒術迴戰',
-  '鬼滅之刃',
-  '寶可夢',
-  '三麗鷗',
-  '鋼彈',
-]);
+const seriesOptions = ref<string[]>([]);
 
-const buildMockRows = (count: number): PrizeRow[] => {
-  const base = new Date();
-  const list: PrizeRow[] = [];
-
-  const statusPool: PrizeStatus[] = [
-    'IN_BOX',
-    'IN_BOX',
-    'IN_BOX',
-    'SHIPPING',
-    'DELIVERED',
-    'REDEEMED',
-  ];
-
-  const namePool = [
-    'A賞 大型公仔',
-    'B賞 立體模型',
-    'C賞 毛巾',
-    'D賞 徽章套組',
-    'E賞 壓克力立牌',
-    'F賞 文件夾組',
-    '最後賞 特別版公仔',
-  ];
-
-  for (let i = 0; i < count; i++) {
-    const d = new Date(base);
-    d.setDate(base.getDate() - i);
-
-    const createdAt = toYMD(d);
-    const prizeNo = `PZ${createdAt}${pad(i + 1, 4)}`;
-    const s = seriesOptions.value[i % seriesOptions.value.length];
-    const st = statusPool[Math.floor(Math.random() * statusPool.length)];
-    const nm = namePool[i % namePool.length];
-
-    list.push({
-      id: String(i + 1),
-      createdAt,
-      prizeNo,
-      name: `${nm} #${(i % 30) + 1}`,
-      series: s,
-      status: st,
-      image: placeholderImg,
-    });
-  }
-
-  return list;
+const formatDate = (iso?: string | null) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-const rows = ref<PrizeRow[]>(buildMockRows(COUNT));
+const loadPrizeBox = async () => {
+  loading.value = true;
+  try {
+    const res = await getMyPrizeBox();
+    if (res.success && Array.isArray(res.data)) {
+      rows.value = res.data.map((p: any) => ({
+        id: String(p.id || ''),
+        createdAt: formatDate(p.wonAt || p.createdAt),
+        prizeNo: p.id || '',
+        name: p.prizeName || '未命名獎品',
+        series: p.lotteryTitle || '',
+        status: (p.status || 'IN_BOX') as PrizeStatus,
+        image: p.prizeImageUrl || placeholderImg,
+        lotteryTitle: p.lotteryTitle || '',
+        storeName: p.storeName || '',
+        canRecycle: p.canRecycle ?? false,
+        recycleBonus: p.recycleBonus ?? 0,
+        prizeLevel: p.prizeLevel || '',
+      }));
+
+      // 動態取得系列選項
+      const seriesSet = new Set<string>();
+      rows.value.forEach((r) => {
+        if (r.series) seriesSet.add(r.series);
+      });
+      seriesOptions.value = Array.from(seriesSet);
+    }
+  } catch (e) {
+    console.error('PrizeBox - loadPrizeBox error:', e);
+  } finally {
+    loading.value = false;
+  }
+};
+
+onMounted(() => {
+  loadPrizeBox();
+});
 
 const filteredRows = computed(() => {
   const kw = keyword.value.toLowerCase();
@@ -416,7 +525,7 @@ watch(totalPages, (tp) => {
 });
 
 const onSearch = () => {
-  // 前端 computed 篩選，按鈕可留著之後接 API
+  page.value = 1;
 };
 
 const onReset = () => {
@@ -430,16 +539,15 @@ const onReset = () => {
 
 const statusLabel = (s: PrizeStatus) => {
   if (s === 'IN_BOX') return '在盒中';
-  if (s === 'SHIPPING') return '出貨中';
-  if (s === 'DELIVERED') return '已送達';
-  return '已兌換';
+  if (s === 'SHIPPED') return '已出貨';
+  if (s === 'RECYCLED') return '已回收';
+  return s;
 };
 
 const badgeClass = (s: PrizeStatus) => ({
   'is-inbox': s === 'IN_BOX',
-  'is-shipping': s === 'SHIPPING',
-  'is-delivered': s === 'DELIVERED',
-  'is-redeemed': s === 'REDEEMED',
+  'is-shipped': s === 'SHIPPED',
+  'is-recycled': s === 'RECYCLED',
 });
 
 /** 勾選 */
@@ -475,20 +583,214 @@ const openDetail = (row: PrizeRow) => {
   detailOpen.value = true;
 };
 
-/** 示範：出貨 */
-const shipOne = (row: PrizeRow) => {
-  if (row.status !== 'IN_BOX') return;
-  row.status = 'SHIPPING';
+/** 出貨 Dialog 相關狀態 */
+const shipDialogOpen = ref(false);
+const shipPrizeBoxIds = ref<string[]>([]);
+const shipSubmitting = ref(false);
+const savedAddresses = ref<any[]>([]);
+
+const shipForm = reactive({
+  shippingMethod: 'HOME_DELIVERY' as 'HOME_DELIVERY' | 'SEVEN_ELEVEN' | 'FAMILY_MART',
+  recipientName: '',
+  recipientPhone: '',
+  recipientAddress: '',
+  storeCode: '',
+  storeName: '',
+  storeAddress: '',
+  remark: '',
+});
+
+const resetShipForm = () => {
+  shipForm.shippingMethod = 'HOME_DELIVERY';
+  shipForm.recipientName = '';
+  shipForm.recipientPhone = '';
+  shipForm.recipientAddress = '';
+  shipForm.storeCode = '';
+  shipForm.storeName = '';
+  shipForm.storeAddress = '';
+  shipForm.remark = '';
 };
 
-const batchShip = () => {
-  const ids = checkedIds.value;
-  rows.value.forEach((r) => {
-    if (ids.has(r.id) && r.status === 'IN_BOX') {
-      r.status = 'SHIPPING';
+/** 載入已儲存的收件地址 */
+const loadSavedAddresses = async () => {
+  try {
+    const addrRes = await getUserAddresses();
+    if (addrRes.success && Array.isArray(addrRes.data)) {
+      savedAddresses.value = addrRes.data;
     }
+  } catch (e) {
+    console.error('loadSavedAddresses error:', e);
+  }
+};
+
+/** 從已儲存地址帶入表單 */
+const onSelectAddress = (event: Event) => {
+  const target = event.target as HTMLSelectElement;
+  const addrId = target.value;
+  if (!addrId) return;
+  const addr = savedAddresses.value.find((a: any) => String(a.id) === addrId);
+  if (!addr) return;
+  shipForm.recipientName = addr.recipientName || '';
+  shipForm.recipientPhone = addr.recipientPhone || '';
+  shipForm.recipientAddress = [addr.city, addr.district, addr.address].filter(Boolean).join('');
+};
+
+/** 開啟出貨 Dialog（單一或批次） */
+const openShipDialog = async (ids: string[]) => {
+  const eligibleIds = ids.filter((id) => {
+    const row = rows.value.find((r) => r.id === id);
+    return row && row.status === 'IN_BOX';
   });
-  checkedIds.value = new Set();
+
+  if (eligibleIds.length === 0) {
+    overlay.open();
+    await ichibanInfoDialog({ title: '提示', content: '請選擇可出貨的獎品' });
+    overlay.close();
+    return;
+  }
+
+  resetShipForm();
+  shipPrizeBoxIds.value = eligibleIds;
+  await loadSavedAddresses();
+  shipDialogOpen.value = true;
+};
+
+/** 提交出貨申請 */
+const submitShip = async () => {
+  // 驗證必填欄位
+  if (!shipForm.recipientName.trim() || !shipForm.recipientPhone.trim()) {
+    overlay.open();
+    await ichibanInfoDialog({ title: '提示', content: '請填寫收件人姓名及電話' });
+    overlay.close();
+    return;
+  }
+  if (shipForm.shippingMethod === 'HOME_DELIVERY' && !shipForm.recipientAddress.trim()) {
+    overlay.open();
+    await ichibanInfoDialog({ title: '提示', content: '請填寫收件地址' });
+    overlay.close();
+    return;
+  }
+  if (shipForm.shippingMethod !== 'HOME_DELIVERY' && !shipForm.storeCode.trim()) {
+    overlay.open();
+    await ichibanInfoDialog({ title: '提示', content: '請填寫取貨門市資訊' });
+    overlay.close();
+    return;
+  }
+
+  shipSubmitting.value = true;
+  try {
+    const payload: any = {
+      prizeBoxIds: shipPrizeBoxIds.value,
+      shippingMethod: shipForm.shippingMethod,
+      recipientName: shipForm.recipientName.trim(),
+      recipientPhone: shipForm.recipientPhone.trim(),
+      remark: shipForm.remark.trim() || undefined,
+    };
+
+    if (shipForm.shippingMethod === 'HOME_DELIVERY') {
+      payload.recipientAddress = shipForm.recipientAddress.trim();
+    } else {
+      payload.storeCode = shipForm.storeCode.trim();
+      payload.storeName = shipForm.storeName.trim();
+      payload.storeAddress = shipForm.storeAddress.trim();
+    }
+
+    await executeApi({
+      fn: () => shipPrizes(payload),
+      successTitle: '出貨申請成功',
+      showSuccessDialog: true,
+      showCatchDialog: true,
+      onSuccess: async () => {
+        shipDialogOpen.value = false;
+        detailOpen.value = false;
+        checkedIds.value = new Set();
+        await loadPrizeBox();
+      },
+    });
+  } catch (e) {
+    console.error('submitShip error:', e);
+  } finally {
+    shipSubmitting.value = false;
+  }
+};
+
+/** 批次出貨（從勾選） */
+const batchShip = () => {
+  const ids = Array.from(checkedIds.value);
+  openShipDialog(ids);
+};
+
+/** 單一回收 */
+const recycleSingle = async (row: PrizeRow) => {
+  if (row.status !== 'IN_BOX' || !row.canRecycle) {
+    overlay.open();
+    await ichibanInfoDialog({ title: '提示', content: '此獎品無法回收' });
+    overlay.close();
+    return;
+  }
+
+  overlay.open();
+  const confirmed = await ichibanConfirmDialog({
+    title: '確認回收',
+    content: `回收「${row.name}」可獲得 ${row.recycleBonus || 0} 紅利，確定要回收嗎？`,
+    confirmText: '確認回收',
+    cancelText: '取消',
+  });
+  overlay.close();
+
+  if (!confirmed) return;
+
+  await executeApi({
+    fn: () => recyclePrizes({ prizeBoxIds: [row.id] }),
+    successTitle: '回收成功',
+    successMessage: `已回收獎品，獲得 ${row.recycleBonus || 0} 紅利`,
+    showSuccessDialog: true,
+    showCatchDialog: true,
+    onSuccess: async () => {
+      detailOpen.value = false;
+      await loadPrizeBox();
+    },
+  });
+};
+
+/** 回收功能 */
+const recycleSelected = async () => {
+  const ids = Array.from(checkedIds.value);
+  const eligibleRows = ids
+    .map((id) => rows.value.find((r) => r.id === id))
+    .filter((r) => r && r.status === 'IN_BOX' && r.canRecycle);
+
+  if (eligibleRows.length === 0) {
+    overlay.open();
+    await ichibanInfoDialog({ title: '提示', content: '請選擇可回收的獎品' });
+    overlay.close();
+    return;
+  }
+
+  const totalBonus = eligibleRows.reduce((sum, r) => sum + (r?.recycleBonus || 0), 0);
+
+  overlay.open();
+  const confirmed = await ichibanConfirmDialog({
+    title: '確認回收',
+    content: `將回收 ${eligibleRows.length} 件獎品，可獲得 ${totalBonus} 紅利`,
+    confirmText: '確認回收',
+    cancelText: '取消',
+  });
+  overlay.close();
+
+  if (!confirmed) return;
+
+  await executeApi({
+    fn: () => recyclePrizes({ prizeBoxIds: eligibleRows.map((r) => r!.id) }),
+    successTitle: '回收成功',
+    successMessage: `已回收 ${eligibleRows.length} 件獎品，獲得 ${totalBonus} 紅利`,
+    showSuccessDialog: true,
+    showCatchDialog: true,
+    onSuccess: async () => {
+      checkedIds.value = new Set();
+      await loadPrizeBox();
+    },
+  });
 };
 </script>
 
@@ -700,12 +1002,19 @@ const batchShip = () => {
     font-weight: 900;
 
     &.is-inbox {
+      background: #fff8e1;
+      color: #f59e0b;
+      border-color: #f59e0b;
     }
-    &.is-shipping {
+    &.is-shipped {
+      background: #e8f5e9;
+      color: #4caf50;
+      border-color: #4caf50;
     }
-    &.is-delivered {
-    }
-    &.is-redeemed {
+    &.is-recycled {
+      background: #f3e5f5;
+      color: #9c27b0;
+      border-color: #9c27b0;
     }
   }
 

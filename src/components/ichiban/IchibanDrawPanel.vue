@@ -1,11 +1,13 @@
 <!-- src/components/ichiban/IchibanDrawPanel.vue -->
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 
 const props = defineProps<{
   isOpen: boolean;
   remaining: number;
   activeCards: number[];
+  pricePerDraw?: number;  // 每抽價格
+  multiDrawPrice?: number; // 10連抽價格（可選）
 }>();
 
 const emit = defineEmits<{
@@ -17,6 +19,26 @@ const emit = defineEmits<{
 const showRandom = ref(false);
 const customQuantity = ref(1);
 
+// 計算選中籤位需要的金幣/銀幣
+const selectedCount = computed(() => props.activeCards.length);
+
+const unitPrice = computed(() => props.pricePerDraw || 0);
+
+// 金幣花費（使用正常價格）
+const goldCost = computed(() => {
+  return selectedCount.value * unitPrice.value;
+});
+
+// 銀幣花費（假設 1:1，但也可以另外設定比例）
+const silverCost = computed(() => {
+  return selectedCount.value * unitPrice.value;
+});
+
+// 隨機抽的花費預覽
+const randomCost = computed(() => {
+  return customQuantity.value * unitPrice.value;
+});
+
 const toggleRandom = () => {
   showRandom.value = !showRandom.value;
 };
@@ -27,6 +49,15 @@ const submitCustomRandom = () => {
 
 const submitQuickRandom = (n: number) => {
   emit('randomSelect', n);
+};
+
+// 快速選擇的花費計算
+const getQuickRandomCost = (n: number) => {
+  // 10 連可能有優惠價
+  if (n === 10 && props.multiDrawPrice) {
+    return props.multiDrawPrice;
+  }
+  return n * unitPrice.value;
 };
 </script>
 
@@ -43,6 +74,7 @@ const submitQuickRandom = (n: number) => {
             <input
               type="number"
               min="1"
+              :max="remaining"
               v-model.number="customQuantity"
               class="ichibanDrawPanel__random-input"
             />
@@ -50,7 +82,7 @@ const submitQuickRandom = (n: number) => {
               class="ichibanDrawPanel__random-label"
               @click="submitCustomRandom"
             >
-              自選隨機
+              自選隨機 ({{ randomCost.toLocaleString() }}元)
             </button>
           </div>
 
@@ -59,9 +91,10 @@ const submitQuickRandom = (n: number) => {
               v-for="n in [1, 3, 5, 10]"
               :key="n"
               class="ichibanDrawPanel__random-item"
+              :disabled="n > remaining"
               @click="submitQuickRandom(n)"
             >
-              {{ n }}
+              {{ n }}抽<br/><small>{{ getQuickRandomCost(n).toLocaleString() }}元</small>
             </button>
           </div>
         </div>
@@ -100,17 +133,17 @@ const submitQuickRandom = (n: number) => {
         </span>
         <span>
           連續次數
-          <span class="number">{{ activeCards.length }}</span>
+          <span class="number">{{ selectedCount }}</span>
           抽
         </span>
         <span>
           共花費
-          <span class="number">0</span>
+          <span class="number">{{ goldCost.toLocaleString() }}</span>
           金幣
         </span>
         <span>
           共花費
-          <span class="number">0</span>
+          <span class="number">{{ silverCost.toLocaleString() }}</span>
           銀幣
         </span>
       </div>

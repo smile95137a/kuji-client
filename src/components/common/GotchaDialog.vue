@@ -136,11 +136,13 @@ const cancel = () => {
 .dialog__backdrop {
   position: absolute;
   inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 0;
 }
 
 .dialog__panel {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   width: min(360px, 90vw);
   border-radius: 16px;
   background: radial-gradient(circle at top left, #ffffff, #f3f4ff);

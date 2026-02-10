@@ -6,15 +6,15 @@ import IchibanKujiCard from '@/components/IchibanKujiCard.vue';
 import BasePagination from '@/components/common/BasePagination.vue';
 import demo1 from '@/assets/image/demo1.jpg';
 
-import { queryBrowseLotteries } from '@/services/lotteryBrowseService';
+import { queryBrowseLotteries, incrementHotCount } from '@/services/lotteryBrowseService';
 
 type CategoryValue =
   | 'all'
-  | 'ichiban'
-  | 'figure'
-  | 'prize'
-  | 'gacha'
-  | 'box'
+  | 'OFFICIAL_ICHIBAN'
+  | 'CUSTOM_GACHA'
+  | 'PRIZE_CAPSULE'
+  | 'SCRATCH_CARD'
+  | 'CARD_DRAW'
   | 'others';
 
 type SortValue = 'latest' | 'hot' | 'priceAsc' | 'priceDesc';
@@ -40,11 +40,11 @@ const router = useRouter();
 
 const categories = [
   { label: '全部', value: 'all' as CategoryValue },
-  { label: '一番賞', value: 'ichiban' as CategoryValue },
-  { label: '景品 / 公仔', value: 'figure' as CategoryValue },
-  { label: '獎品組', value: 'prize' as CategoryValue },
-  { label: '扭蛋', value: 'gacha' as CategoryValue },
-  { label: '盒玩', value: 'box' as CategoryValue },
+  { label: '一番賞', value: 'OFFICIAL_ICHIBAN' as CategoryValue },
+  { label: '自製賞', value: 'CUSTOM_GACHA' as CategoryValue },
+  { label: '扭蛋', value: 'PRIZE_CAPSULE' as CategoryValue },
+  { label: '刮刮樂', value: 'SCRATCH_CARD' as CategoryValue },
+  { label: '卡牌', value: 'CARD_DRAW' as CategoryValue },
   { label: '其他', value: 'others' as CategoryValue },
 ];
 
@@ -85,33 +85,38 @@ const toCategoryValue = (
 ): CategoryValue => {
   const c = String(category ?? '').toUpperCase();
 
-  // 你提供的 res：OFFICIAL_ICHIBAN => ichiban
-  if (c === 'OFFICIAL_ICHIBAN') return 'ichiban';
+  // 直接對應 API 回傳的分類
+  if (c === 'OFFICIAL_ICHIBAN') return 'OFFICIAL_ICHIBAN';
+  if (c === 'CUSTOM_GACHA') return 'CUSTOM_GACHA';
+  if (c === 'PRIZE_CAPSULE') return 'PRIZE_CAPSULE';
+  if (c === 'SCRATCH_CARD') return 'SCRATCH_CARD';
+  if (c === 'CARD_DRAW') return 'CARD_DRAW';
 
-  // 其他未對應先丟 others（你之後有新增分類再補）
+  // 其他未對應的分類
   return 'others';
 };
 
 const toKujiItem = (x: any): KujiItem => {
-  const id = String(x?.id ?? '');
-  const title = String(x?.title ?? '未命名商品');
-  const bannerSrc = String(x?.imageUrl ?? '') || demo1;
+  const data = x?.lottery ?? x; // support nested response
 
-  // ✅ 卡片顯示 remaining：先用 remainingDraws（抽數剩餘）
-  // 如果你想顯示「獎品剩餘」就改成 remainingPrizes
-  const remaining = Number(x?.remainingDraws ?? x?.remainingPrizes ?? 0) || 0;
+  const id = String(data?.id ?? '');
+  const title = String(data?.title ?? '未命名商品');
+  const bannerSrc = String(data?.mainImageUrl ?? data?.imageUrl ?? '') || demo1;
 
-  // ✅ 價格：優先 currentPrice，沒有就 pricePerDraw
-  const basePrice = Number(x?.currentPrice ?? x?.pricePerDraw ?? 0) || 0;
+  const remaining = Number(
+    data?.remainingDraws ?? data?.remainingPrizes ?? 0,
+  ) || 0;
 
-  const category = toCategoryValue(x?.category, x?.subCategory);
+  const basePrice = Number(
+    data?.currentPrice ?? data?.pricePerDraw ?? 0,
+  ) || 0;
 
-  // ✅ tagText：用 categoryName 或 storeName
-  const tagText = String(x?.categoryName ?? x?.storeName ?? 'HOT');
+  const category = toCategoryValue(data?.category, data?.subCategory);
 
-  // ✅ timeText：用活動區間
-  const start = formatDate(x?.startTime);
-  const end = formatDate(x?.endTime);
+  const tagText = String(data?.categoryName ?? data?.storeName ?? 'HOT');
+
+  const start = formatDate(data?.startTime);
+  const end = formatDate(data?.endTime);
   const timeText =
     start && end
       ? `${start} - ${end}`
@@ -131,10 +136,10 @@ const toKujiItem = (x: any): KujiItem => {
     category,
     basePrice,
 
-    orderNum: x?.orderNum ?? undefined,
-    scheduledAt: x?.scheduledAt ?? undefined,
-    createdAt: x?.createdAt ?? undefined,
-    endTime: x?.endTime ?? undefined,
+    orderNum: data?.orderNum ?? undefined,
+    scheduledAt: data?.scheduledAt ?? undefined,
+    createdAt: data?.createdAt ?? undefined,
+    endTime: data?.endTime ?? undefined,
   };
 };
 
@@ -210,8 +215,12 @@ watch([currentCategory, currentSort], () => {
 /* ------------------------------
  * nav
  * ------------------------------ */
-const goDetail = (id: string) => {
-  router.push({ name: 'IchibanDetail', params: { id } });
+const goDetail = async (id: string) => {
+  try {
+    incrementHotCount(id).catch((err) => console.warn('incrementHotCount failed', err));
+  } finally {
+    router.push({ name: 'IchibanDetail', params: { id } });
+  }
 };
 
 onMounted(async () => {

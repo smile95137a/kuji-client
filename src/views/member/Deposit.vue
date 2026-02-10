@@ -2,57 +2,76 @@
   <section class="deposit">
     <header class="deposit__header">
       <h1 class="deposit__title">儲值</h1>
-      <p class="deposit__subtitle">選擇儲值金額並完成付款</p>
+      <p class="deposit__subtitle">選擇儲值方案並完成付款</p>
     </header>
 
     <!-- 餘額卡片 -->
     <div class="deposit__card">
       <div class="deposit__balance">
-        <p class="deposit__balance-label">目前餘額</p>
-        <p class="deposit__balance-value">{{ balance.toLocaleString() }}</p>
+        <p class="deposit__balance-label">目前金幣餘額</p>
+        <p class="deposit__balance-value">{{ goldCoins.toLocaleString() }}</p>
+      </div>
+      <div class="deposit__balance" style="margin-top: 8px;">
+        <p class="deposit__balance-label">紅利餘額</p>
+        <p class="deposit__balance-value" style="font-size: 18px; color: #9c27b0;">{{ bonusCoins.toLocaleString() }}</p>
       </div>
       <p class="deposit__hint">儲值完成後會立即更新至錢包</p>
     </div>
 
-    <!-- 表單 -->
-    <form class="deposit__card" @submit.prevent="onSubmit">
-      <!-- 快速選金額 -->
+    <!-- 載入中 -->
+    <div v-if="loadingPlans" class="deposit__card">
+      <p style="text-align: center; padding: 20px; opacity: 0.7;">載入儲值方案中...</p>
+    </div>
+
+    <!-- 儲值方案列表 -->
+    <div v-else class="deposit__card">
       <div class="deposit__section">
-        <p class="deposit__section-title">選擇儲值金額</p>
+        <p class="deposit__section-title">選擇儲值方案</p>
 
-        <div class="deposit__amount-grid">
-          <button
-            v-for="amt in quickAmounts"
-            :key="amt"
-            type="button"
-            class="deposit__amount-btn"
-            :class="{ 'is-active': values.amount === amt }"
-            @click="setAmount(amt)"
+        <div class="deposit__plan-grid">
+          <div
+            v-for="plan in rechargePlans"
+            :key="plan.id"
+            class="deposit__plan-card"
+            :class="{ 'is-active': selectedPlanId === plan.id }"
+            @click="selectPlan(plan)"
           >
-            NT$ {{ amt.toLocaleString() }}
-          </button>
+            <div class="deposit__plan-badge" v-if="plan.bonus > 0">
+              送 {{ plan.bonus }}
+            </div>
+            <p class="deposit__plan-amount">NT$ {{ plan.amount.toLocaleString() }}</p>
+            <p class="deposit__plan-name">{{ plan.name }}</p>
+            <p class="deposit__plan-desc" v-if="plan.description">{{ plan.description }}</p>
+            <p class="deposit__plan-total">
+              <span style="font-size: 12px; opacity: 0.7;">實得金幣：</span>
+              <b>{{ plan.totalValue.toLocaleString() }}</b>
+            </p>
+          </div>
         </div>
 
-        <!-- 自訂金額 -->
-        <div class="deposit__field">
-          <label class="deposit__label">或自訂金額</label>
-          <input
-            class="deposit__input"
-            type="number"
-            inputmode="numeric"
-            min="1"
-            placeholder="輸入儲值金額（NT$）"
-            v-model.number="amount"
-          />
-          <p v-if="errors.amount" class="deposit__error">{{ errors.amount }}</p>
-        </div>
+        <p v-if="rechargePlans.length === 0" class="deposit__empty">
+          目前沒有可用的儲值方案
+        </p>
       </div>
 
       <!-- 付款方式 -->
-      <div class="deposit__section">
+      <div class="deposit__section" v-if="selectedPlanId">
         <p class="deposit__section-title">付款方式</p>
 
         <div class="deposit__pay-grid">
+          <label
+            class="deposit__pay-item"
+            :class="{ 'is-active': paymentMethod === 'ECPAY' }"
+          >
+            <input
+              class="deposit__radio"
+              type="radio"
+              value="ECPAY"
+              v-model="paymentMethod"
+            />
+            <span class="deposit__pay-text">綠界支付</span>
+          </label>
+
           <label
             class="deposit__pay-item"
             :class="{ 'is-active': paymentMethod === 'CREDIT_CARD' }"
@@ -68,99 +87,188 @@
 
           <label
             class="deposit__pay-item"
-            :class="{ 'is-active': paymentMethod === 'ATM' }"
+            :class="{ 'is-active': paymentMethod === 'OPAY' }"
           >
             <input
               class="deposit__radio"
               type="radio"
-              value="ATM"
+              value="OPAY"
               v-model="paymentMethod"
             />
-            <span class="deposit__pay-text">ATM 轉帳</span>
-          </label>
-
-          <label
-            class="deposit__pay-item"
-            :class="{ 'is-active': paymentMethod === 'CVS' }"
-          >
-            <input
-              class="deposit__radio"
-              type="radio"
-              value="CVS"
-              v-model="paymentMethod"
-            />
-            <span class="deposit__pay-text">超商代碼</span>
+            <span class="deposit__pay-text">歐付寶</span>
           </label>
         </div>
-
-        <p v-if="errors.paymentMethod" class="deposit__error">
-          {{ errors.paymentMethod }}
-        </p>
       </div>
 
       <!-- 確認區 -->
-      <div class="deposit__footer">
+      <div class="deposit__footer" v-if="selectedPlanId">
         <div class="deposit__summary">
           <p class="deposit__summary-label">本次儲值</p>
           <p class="deposit__summary-value">
-            NT$ {{ (values.amount || 0).toLocaleString() }}
+            NT$ {{ selectedPlan?.amount.toLocaleString() || 0 }}
           </p>
         </div>
 
-        <button class="deposit__submit" type="submit">確認儲值</button>
+        <div class="deposit__summary" v-if="selectedPlan && selectedPlan.bonus > 0">
+          <p class="deposit__summary-label">贈送紅利</p>
+          <p class="deposit__summary-value" style="color: #9c27b0;">
+            + {{ selectedPlan.bonus.toLocaleString() }}
+          </p>
+        </div>
+
+        <button 
+          class="deposit__submit" 
+          type="button"
+          @click="onSubmit"
+          :disabled="submitting"
+        >
+          {{ submitting ? '處理中...' : '確認儲值' }}
+        </button>
 
         <p class="deposit__tip">點擊「確認儲值」代表你同意付款條款與相關規範</p>
       </div>
-    </form>
+    </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
-import { useForm } from 'vee-validate';
-import * as yup from 'yup';
+import { computed, ref, onMounted } from 'vue';
+import { getActiveRechargePlans } from '@/services/rechargePlanService';
+import { createRecharge } from '@/services/rechargeService';
+import { getMyWallet } from '@/services/walletService';
+import { executeApi } from '@/utils/executeApiUtils';
+import { useOverlayStore } from '@/stores/overlay';
+import { ichibanInfoDialog } from '@/utils/dialog/ichibanInfoDialog';
+import { ichibanConfirmDialog } from '@/utils/dialog/ichibanConfirmDialog';
 
-type PayMethod = 'CREDIT_CARD' | 'ATM' | 'CVS';
+type PayMethod = 'ECPAY' | 'OPAY' | 'CREDIT_CARD';
 
-const balance = ref(1280); // TODO: 換成你的 wallet store / API
-
-const quickAmounts = [200, 500, 1000, 2000, 5000];
-
-const schema = yup.object({
-  amount: yup
-    .number()
-    .typeError('請輸入儲值金額')
-    .required('請選擇或輸入儲值金額')
-    .min(1, '金額需大於 0'),
-  paymentMethod: yup
-    .mixed<PayMethod>()
-    .oneOf(['CREDIT_CARD', 'ATM', 'CVS'], '請選擇付款方式')
-    .required('請選擇付款方式'),
-});
-
-const { errors, values, defineField, handleSubmit, setFieldValue } = useForm({
-  validationSchema: schema,
-  initialValues: {
-    amount: 0,
-    paymentMethod: 'CREDIT_CARD' as PayMethod,
-  },
-});
-
-const [amount] = defineField('amount');
-const [paymentMethod] = defineField('paymentMethod');
-
-const setAmount = (amt: number) => {
-  setFieldValue('amount', amt);
+type RechargePlan = {
+  id: string;
+  name: string;
+  amount: number;
+  bonus: number;
+  totalValue: number;
+  description?: string;
+  status: string;
 };
 
-const onSubmit = handleSubmit(async (form) => {
-  // TODO: 這裡接你的儲值 API / submitPaymentForm
-  // 例如：await createDepositOrder(form)
-  console.log('deposit submit:', form);
+const overlay = useOverlayStore();
 
-  // Demo: 成功後更新餘額
-  balance.value += form.amount;
+const goldCoins = ref(0);
+const bonusCoins = ref(0);
+const loadingPlans = ref(false);
+const submitting = ref(false);
+const rechargePlans = ref<RechargePlan[]>([]);
+const selectedPlanId = ref<string>('');
+const paymentMethod = ref<PayMethod>('ECPAY');
+
+const selectedPlan = computed(() => 
+  rechargePlans.value.find(p => p.id === selectedPlanId.value)
+);
+
+/** 載入錢包餘額 */
+const loadWallet = async () => {
+  try {
+    const res = await getMyWallet();
+    if (res.success && res.data) {
+      goldCoins.value = Number(res.data.goldCoins ?? 0);
+      bonusCoins.value = Number(res.data.bonusCoins ?? 0);
+    }
+  } catch (e) {
+    console.error('Deposit - loadWallet error:', e);
+  }
+};
+
+/** 載入儲值方案 */
+const loadRechargePlans = async () => {
+  loadingPlans.value = true;
+  try {
+    const res = await getActiveRechargePlans();
+    if (res.success && Array.isArray(res.data)) {
+      rechargePlans.value = res.data.map((p: any) => ({
+        id: p.id || '',
+        name: p.name || '',
+        amount: Number(p.amount ?? 0),
+        bonus: Number(p.bonus ?? 0),
+        totalValue: Number(p.totalValue ?? p.amount ?? 0),
+        description: p.description || '',
+        status: p.status || 'ACTIVE',
+      }));
+    }
+  } catch (e) {
+    console.error('Deposit - loadRechargePlans error:', e);
+  } finally {
+    loadingPlans.value = false;
+  }
+};
+
+onMounted(() => {
+  loadWallet();
+  loadRechargePlans();
 });
+
+/** 選擇方案 */
+const selectPlan = (plan: RechargePlan) => {
+  selectedPlanId.value = plan.id;
+};
+
+/** 提交儲值 */
+const onSubmit = async () => {
+  if (!selectedPlanId.value) {
+    overlay.open();
+    await ichibanInfoDialog({ title: '提示', content: '請選擇儲值方案' });
+    overlay.close();
+    return;
+  }
+
+  const plan = selectedPlan.value;
+  if (!plan) return;
+
+  // 確認對話框
+  overlay.open();
+  const confirmed = await ichibanConfirmDialog({
+    title: '確認儲值',
+    content: `即將儲值 NT$ ${plan.amount.toLocaleString()}${
+      plan.bonus > 0 ? `（含贈送紅利 ${plan.bonus}）` : ''
+    }，確定要繼續嗎？`,
+    confirmText: '確認',
+    cancelText: '取消',
+  });
+  overlay.close();
+
+  if (!confirmed) return;
+
+  submitting.value = true;
+
+  await executeApi({
+    fn: () => createRecharge({
+      planId: selectedPlanId.value,
+      paymentMethod: paymentMethod.value,
+    }),
+    successTitle: '儲值請求已建立',
+    showSuccessDialog: false,
+    showCatchDialog: true,
+    onSuccess: async (data) => {
+      // TODO: 跳轉至支付頁面
+      // 實際應用中，後端應該返回支付 URL 或支付表單
+      console.log('Recharge record created:', data);
+      
+      overlay.open();
+      await ichibanInfoDialog({
+        title: '請求已建立',
+        content: `儲值記錄 ID: ${data.id}\n\n請前往支付頁面完成付款。`,
+      });
+      overlay.close();
+
+      // Demo: 假設支付成功，重新載入餘額
+      // 實際應用中應該導向支付網關，完成後再回調
+      await loadWallet();
+    },
+  });
+
+  submitting.value = false;
+};
 </script>
 
 <style scoped lang="scss">
@@ -217,6 +325,91 @@ const onSubmit = handleSubmit(async (form) => {
   &__section-title {
     margin: 0 0 10px;
     font-weight: 700;
+  }
+
+  &__plan-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+
+    @media (max-width: 768px) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    @media (max-width: 520px) {
+      grid-template-columns: repeat(1, minmax(0, 1fr));
+    }
+  }
+
+  &__plan-card {
+    border: 2px solid rgba(0, 0, 0, 0.12);
+    border-radius: 16px;
+    padding: 16px;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    background: #fff;
+
+    &:hover {
+      border-color: rgba(0, 0, 0, 0.25);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    &.is-active {
+      border-color: #f59e0b;
+      border-width: 3px;
+      background: #fffbeb;
+    }
+  }
+
+  &__plan-badge {
+    position: absolute;
+    top: -8px;
+    right: 12px;
+    background: linear-gradient(135deg, #f59e0b, #f97316);
+    color: #fff;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 900;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4);
+  }
+
+  &__plan-amount {
+    margin: 0 0 6px;
+    font-size: 28px;
+    font-weight: 900;
+    color: #111;
+  }
+
+  &__plan-name {
+    margin: 0 0 4px;
+    font-weight: 700;
+    font-size: 15px;
+  }
+
+  &__plan-desc {
+    margin: 0 0 8px;
+    font-size: 13px;
+    opacity: 0.7;
+  }
+
+  &__plan-total {
+    margin: 8px 0 0;
+    padding-top: 8px;
+    border-top: 1px solid rgba(0, 0, 0, 0.08);
+    font-size: 14px;
+
+    b {
+      color: #f59e0b;
+      font-size: 16px;
+    }
+  }
+
+  &__empty {
+    text-align: center;
+    padding: 40px 20px;
+    opacity: 0.6;
   }
 
   &__amount-grid {

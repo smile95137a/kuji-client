@@ -2,7 +2,13 @@
   <section class="banner-section">
     <div class="swiper" ref="swiperEl">
       <div class="swiper-wrapper">
-        <div v-for="banner in banners" :key="banner.id" class="swiper-slide">
+        <div 
+          v-for="banner in banners" 
+          :key="banner.id" 
+          class="swiper-slide"
+          @click="handleBannerClick(banner)"
+          style="cursor: pointer;"
+        >
           <!-- 圖片，用 object-fit -->
           <div class="banner-image-wrapper">
             <img
@@ -76,6 +82,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { useRouter } from 'vue-router';
 import Swiper from 'swiper';
 import {
   EffectCoverflow,
@@ -91,16 +98,42 @@ import 'swiper/css/effect-coverflow';
 import { getCarouselBanners } from '@/services/bannerService';
 import { executeApi } from '@/utils/executeApiUtils';
 
+const router = useRouter();
+
 type BannerItem = {
   id: string;
   storeId: string;
   storeName: string;
   title: string;
   imageUrl: string;
+  linkUrl: string;
   orderNum: number | null;
 };
 
 const banners = ref<BannerItem[]>([]);
+
+// 點擊 Banner 跳轉到店家商品頁或連結
+const handleBannerClick = (banner: BannerItem) => {
+  // 優先使用 storeId 導航到店家商品頁
+  if (banner.storeId) {
+    router.push({
+      name: 'StoreLotteries',
+      params: { storeId: banner.storeId },
+      query: { name: banner.storeName },
+    });
+    return;
+  }
+  // 其次使用 linkUrl（後端可能提供的連結）
+  if (banner.linkUrl) {
+    // 判斷是否為內部連結
+    if (banner.linkUrl.startsWith('/') || banner.linkUrl.startsWith('#')) {
+      router.push(banner.linkUrl);
+    } else {
+      window.open(banner.linkUrl, '_blank');
+    }
+    return;
+  }
+};
 
 const swiperEl = ref<HTMLDivElement | null>(null);
 const prevBtnEl = ref<HTMLButtonElement | null>(null);
@@ -179,6 +212,7 @@ const loadBanners = async () => {
           storeName: String(b?.storeName ?? ''),
           title: String(b?.title ?? ''),
           imageUrl: String(b?.imageUrl ?? ''),
+          linkUrl: String(b?.linkUrl ?? ''),
           orderNum: typeof b?.orderNum === 'number' ? b.orderNum : null,
         }))
         .filter((b: any) => !!b.id && !!b.imageUrl);

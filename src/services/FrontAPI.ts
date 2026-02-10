@@ -88,7 +88,7 @@ api.interceptors.response.use(
 
     try {
       const refreshRes = await axios.post(
-        `${import.meta.env.VITE_BASE_API_URL}/api/admin/auth/refresh-token`,
+        `${import.meta.env.VITE_BASE_API_URL}/api/auth/refresh`,
         { refreshToken: rt },
         { headers: { 'Content-Type': 'application/json' } }
       );
@@ -98,18 +98,16 @@ api.interceptors.response.use(
         throw new Error(payload?.error?.message || 'refresh failed');
       }
 
-      const newAccessToken = payload?.data?.accessToken;
+      const newAccessToken = payload?.data?.token ?? payload?.data?.accessToken;
       const newRefreshToken = payload?.data?.refreshToken;
       const newTokenType = payload?.data?.tokenType || 'Bearer';
-      const newExpiresIn = payload?.data?.expiresIn ?? 0;
 
       if (!newAccessToken) throw new Error('no accessToken');
 
-      // 更新 localStorage
-      saveState('token', newAccessToken);
-      if (newRefreshToken) saveState('refreshToken', newRefreshToken);
-      saveState('tokenType', newTokenType);
-      saveState('expiresIn', newExpiresIn);
+      // 更新 localStorage（使用正確的 key）
+      saveState('kujiToken', newAccessToken);
+      if (newRefreshToken) saveState('refreshKujiToken', newRefreshToken);
+      saveState('kujiTokenType', newTokenType);
 
       resolveQueue(newAccessToken);
 

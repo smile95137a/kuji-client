@@ -1,7 +1,7 @@
 // services/walletService.ts
 import { api } from './FrontAPI';
 
-const basePath = '/api/wallet';
+const basePath = '/wallet';
 
 interface RequestData {
   [key: string]: any;

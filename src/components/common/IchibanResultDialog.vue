@@ -1,60 +1,66 @@
 <template>
-  <div class="ichiban-dialog" @click="emitCancel">
-    <!-- panel -->
-    <div class="ichiban-dialog__panel">
-      <!-- LOGO -->
-      <div class="ichiban-dialog__logo">
-        <img :src="weblogo" alt="ichiban kuji" />
-      </div>
-
-      <!-- frame -->
-      <div class="ichiban-dialog__frame">
-        <!-- header -->
-        <div class="ichiban-dialog__header">
-          <span class="header-text">一番くじ ichiban kuji 一番賞</span>
-          <span class="header-text">一番くじ ichiban kuji 一番賞</span>
+  <div class="ichiban-dialog-wrapper">
+    <!-- 背景覆蓋層 -->
+    <div class="ichiban-dialog-backdrop" @click="emitCancel" />
+    
+    <!-- 對話框內容 -->
+    <div class="ichiban-dialog" @click.stop="emitCancel">
+      <!-- panel -->
+      <div class="ichiban-dialog__panel">
+        <!-- LOGO -->
+        <div class="ichiban-dialog__logo">
+          <img :src="weblogo" alt="ichiban kuji" />
         </div>
 
-        <!-- content -->
-        <div class="ichiban-dialog__content">
-          <!-- stats -->
-          <div class="ichiban-dialog__stats">
-            <div class="stat">
-              <span class="label">目前剩餘</span>
-              <span class="value">{{ remain }}</span>
-              <span class="unit">抽</span>
-            </div>
-            <div class="stat">
-              <span class="label">連續次數</span>
-              <span class="value">{{ count }}</span>
-              <span class="unit">抽</span>
-            </div>
-            <div class="stat stat--price">
-              <span class="label">共花費</span>
-              <span class="value">{{ totalPrice }}</span>
-            </div>
+        <!-- frame -->
+        <div class="ichiban-dialog__frame">
+          <!-- header -->
+          <div class="ichiban-dialog__header">
+            <span class="header-text">一番くじ ichiban kuji 一番賞</span>
+            <span class="header-text">一番くじ ichiban kuji 一番賞</span>
           </div>
 
-          <div class="ichiban-dialog__divider-title">
-            <span>抽中賞品</span>
-          </div>
-
-          <!-- grid -->
-          <div class="ichiban-dialog__grid">
-            <div v-for="item in items" :key="item.id" class="prize">
-              <div class="prize__image">
-                <img :src="item.image" />
+          <!-- content -->
+          <div class="ichiban-dialog__content">
+            <!-- stats -->
+            <div class="ichiban-dialog__stats">
+              <div class="stat">
+                <span class="label">目前剩餘</span>
+                <span class="value">{{ remain }}</span>
+                <span class="unit">抽</span>
               </div>
-              <p class="prize__name">{{ item.name }}</p>
+              <div class="stat">
+                <span class="label">連續次數</span>
+                <span class="value">{{ count }}</span>
+                <span class="unit">抽</span>
+              </div>
+              <div class="stat stat--price">
+                <span class="label">共花費</span>
+                <span class="value">{{ totalPrice }}</span>
+              </div>
             </div>
-          </div>
 
-          <div class="ichiban-dialog__divider" />
+            <div class="ichiban-dialog__divider-title">
+              <span>抽中賞品</span>
+            </div>
 
-          <!-- actions -->
-          <div class="ichiban-dialog__actions">
-            <button class="btn btn--ghost" @click="emitCancel">取消</button>
-            <button class="btn btn--primary" @click="emitConfirm">確認</button>
+            <!-- grid -->
+            <div class="ichiban-dialog__grid">
+              <div v-for="item in items" :key="item.id" class="prize">
+                <div class="prize__image">
+                  <img :src="item.image" />
+                </div>
+                <p class="prize__name">{{ item.name }}</p>
+              </div>
+            </div>
+
+            <div class="ichiban-dialog__divider" />
+
+            <!-- actions -->
+            <div class="ichiban-dialog__actions">
+              <button class="btn btn--ghost" @click="emitCancel">取消</button>
+              <button class="btn btn--primary" @click="emitConfirm">確認</button>
+            </div>
           </div>
         </div>
       </div>
@@ -90,7 +96,37 @@ const emitCancel = () => emit('cancel');
 /* =================================================
    Dialog entrance animation
 ================================================= */
+
+/* 背景層 */
+.ichiban-dialog-wrapper {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.ichiban-dialog-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 1;
+  animation: fade-in 0.3s ease-in-out forwards;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
 .ichiban-dialog {
+  position: relative;
+  z-index: 2;
   animation: dialog-pop 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -115,9 +151,9 @@ const emitCancel = () => emit('cancel');
    Base layout
 ================================================= */
 .ichiban-dialog {
-  position: absolute;
-  inset: 0;
-  z-index: 10000;
+  position: relative;
+  z-index: 2;
+  animation: dialog-pop 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
   display: flex;
   justify-content: center;
   align-items: center;

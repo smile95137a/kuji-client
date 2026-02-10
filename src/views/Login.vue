@@ -95,7 +95,8 @@ import * as yup from 'yup';
 import { executeApi } from '@/utils/executeApiUtils';
 import { saveState } from '@/utils/Localstorage';
 import { useAuthStore } from '@/stores/useAuthStore';
-import { login } from '@/services/AuthService';
+import { login, loginWithGoogle } from '@/services/AuthService';
+import { ichibanInfoDialog } from '@/utils/dialog/ichibanInfoDialog';
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -117,9 +118,9 @@ const [email] = defineField('email');
 const [password] = defineField('password');
 
 const persistAuth = (data: any) => {
-  const accessToken = data?.accessToken;
-  const refreshToken = data?.refreshToken;
-  const user = data?.user;
+  const accessToken = data ? data.accessToken : undefined;
+  const refreshToken = data ? data.refreshToken : undefined;
+  const user = data ? data.user : undefined;
 
   if (accessToken) saveState('kujiToken', accessToken);
   if (refreshToken) saveState('refreshKujiToken', refreshToken);
@@ -169,8 +170,103 @@ const forwardRegistration = () => {
   router.push('/register');
 };
 
+/**
+ * Google OAuth 登入
+ * 使用 Google Identity Services (GIS) API
+ * 請在 `index.html` 中加入 Google Identity Services SDK（範例：載入 https://accounts.google.com/gsi/client）
+ * 並在 .env 設定 VITE_GOOGLE_CLIENT_ID
+ */
 const handleOauthLogin = async (provider: string) => {
-  console.log('oauth login provider:', provider);
+  if (provider !== 'google') {
+    console.warn('Unsupported OAuth provider:', provider);
+    return;
+  }
+
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+  if (!clientId) {
+    await ichibanInfoDialog({
+      title: '設定錯誤',
+      content: 'Google 登入尚未設定，請聯繫管理員。',
+    });
+    return;
+  }
+
+  // 檢查 Google Identity Services 是否載入
+  if (typeof (window as any).google === 'undefined') {
+    await ichibanInfoDialog({
+      title: '載入失敗',
+      content: 'Google 登入服務載入失敗，請重新整理頁面後再試。',
+    });
+    return;
+  }
+
+  try {
+    // 使用 Google Identity Services 的 One Tap 或按鈕登入
+    const google = (window as any).google;
+
+    google.accounts.id.initialize({
+      client_id: clientId,
+      callback: handleGoogleCallback,
+      auto_select: false,
+    });
+
+    // 觸發 Google 登入流程
+    google.accounts.id.prompt((notification: any) => {
+      if (notification.isNotDisplayed()) {
+        // One Tap 無法顯示，嘗試使用 OAuth2 彈出視窗
+        const oauth2Client = google.accounts.oauth2.initTokenClient({
+          client_id: clientId,
+          scope: 'email profile openid',
+          callback: async (response: any) => {
+            if (response.access_token) {
+              // 使用 access_token 取得 ID token（需要額外 API）
+              // 或直接發送 access_token 給後端驗證
+              await handleGoogleCallback({ credential: response.access_token });
+            }
+          },
+        });
+        oauth2Client.requestAccessToken();
+      }
+    });
+  } catch (error) {
+    console.error('Google OAuth error:', error);
+    await ichibanInfoDialog({
+      title: '登入失敗',
+      content: 'Google 登入發生錯誤，請稍後再試。',
+    });
+  }
+};
+
+/**
+ * Google 登入回調處理
+ */
+const handleGoogleCallback = async (response: { credential: string }) => {
+  if (!response.credential) {
+    await ichibanInfoDialog({
+      title: '登入失敗',
+      content: '無法取得 Google 憑證，請重新嘗試。',
+    });
+    return;
+  }
+
+  await executeApi({
+    fn: async () => {
+      return await loginWithGoogle({
+        idToken: response.credential,
+      });
+    },
+    successTitle: '登入成功',
+    successMessage: '歡迎回來！',
+    errorTitle: '登入失敗',
+    errorMessage: 'Google 帳號登入失敗，請重新嘗試或使用其他方式登入。',
+    showFailDialog: true,
+    showSuccessDialog: true,
+    onSuccess: async (data: any) => {
+      persistAuth(data);
+      await router.push('/');
+    },
+  });
 };
 
 const handleForgotPassword = async () => {
@@ -178,4 +274,6 @@ const handleForgotPassword = async () => {
 };
 </script>
 
-<style scoped></style>
+<style scoped>
+/* Add your scoped styles here or leave it empty */
+</style>

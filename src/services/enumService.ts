@@ -1,7 +1,7 @@
 // services/enumService.ts
 import { api } from './FrontAPI';
 
-const basePath = '/enums';
+const basePath = '/enum';
 
 interface RequestData {
   [key: string]: any;

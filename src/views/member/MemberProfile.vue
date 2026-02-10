@@ -63,7 +63,6 @@
     </div>
 
     <!-- 快捷入口 -->
-    <!-- 快捷入口 -->
     <div class="memberProfile__card">
       <p class="memberProfile__sectionTitle">快捷功能</p>
 
@@ -100,7 +99,6 @@
           通知訊息
         </button>
 
-        <!-- ✅ 新增：賞品盒 -->
         <button
           class="memberProfile__shortcut"
           type="button"
@@ -108,20 +106,36 @@
         >
           賞品盒
         </button>
-      </div>
 
-      <p class="memberProfile__tip">
-        ※ 這裡先用假資料，你接 profile API 後把 user 換掉即可
-      </p>
+        <button
+          class="memberProfile__shortcut"
+          type="button"
+          @click="goName('AddressBook')"
+        >
+          收件地址
+        </button>
+
+        <button
+          class="memberProfile__shortcut"
+          type="button"
+          @click="goName('OrderList')"
+        >
+          我的訂單
+        </button>
+      </div>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { reactive } from 'vue';
+import { reactive, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
+import { getMyProfile } from '@/services/userService';
+import { getMyWallet } from '@/services/walletService';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 const router = useRouter();
+const authStore = useAuthStore();
 
 const fallbackAvatar =
   'data:image/svg+xml;charset=UTF-8,' +
@@ -134,16 +148,75 @@ const fallbackAvatar =
 `);
 
 const user = reactive({
-  name: '王小明',
-  nickname: 'KujiMaster',
-  email: 'demo@kuji.com',
-  phone: '0912-345-678',
-  lineId: 'kuji_demo',
+  name: '',
+  nickname: '',
+  email: '',
+  phone: '',
+  lineId: '',
   avatarUrl: '',
   level: '一般會員',
-  balance: 1280,
-  createdAt: '2025-11-01',
-  lastLoginAt: '2026-01-12',
+  balance: 0,
+  bonus: 0,
+  createdAt: '',
+  lastLoginAt: '',
+});
+
+const formatDate = (iso?: string | null) => {
+  if (!iso) return '-';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '-';
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
+const loadUserData = async () => {
+  try {
+    const profileRes = await getMyProfile();
+    if (profileRes.success && profileRes.data) {
+      const p = profileRes.data;
+      user.name = p.name || p.nickname || '';
+      user.nickname = p.nickname || '';
+      user.email = p.email || '';
+      user.phone = p.phoneNumber || p.phone || '';
+      user.lineId = p.lineId || '';
+      user.avatarUrl = p.avatarUrl || '';
+      user.createdAt = formatDate(p.createdAt);
+      user.lastLoginAt = formatDate(p.lastLoginAt);
+    } else {
+      // 使用 authStore 的資料作為 fallback
+      const storeUser = authStore.user;
+      if (storeUser) {
+        user.name = storeUser.nickname || '';
+        user.nickname = storeUser.nickname || '';
+        user.email = storeUser.email || '';
+        user.phone = storeUser.phoneNumber || '';
+      }
+    }
+  } catch (e) {
+    console.error('MemberProfile - loadUserData error:', e);
+    // fallback to authStore
+    const storeUser = authStore.user;
+    if (storeUser) {
+      user.name = storeUser.nickname || '';
+      user.nickname = storeUser.nickname || '';
+      user.email = storeUser.email || '';
+      user.phone = storeUser.phoneNumber || '';
+    }
+  }
+
+  // 取得錢包資訊
+  try {
+    const walletRes = await getMyWallet();
+    if (walletRes.success && walletRes.data) {
+      user.balance = Number(walletRes.data.goldCoins ?? 0);
+      user.bonus = Number(walletRes.data.bonusCoins ?? 0);
+    }
+  } catch (e) {
+    console.error('MemberProfile - loadWallet error:', e);
+  }
+};
+
+onMounted(() => {
+  loadUserData();
 });
 
 const goEdit = () => {

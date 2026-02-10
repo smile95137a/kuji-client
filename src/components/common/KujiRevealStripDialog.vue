@@ -128,6 +128,11 @@ onUnmounted(() => {});
   inset: 0;
   z-index: 99999;
 
+  /* ✅ 使用 flex 置中，而不是依賴 margin */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
   &__backdrop {
     position: absolute;
     inset: 0;
@@ -138,7 +143,7 @@ onUnmounted(() => {});
     z-index: 1;
 
     width: 360px;
-    margin: 18vh auto;
+    max-width: 90vw; /* ✅ 響應式 */
     padding: 18px 16px 16px;
 
     border-radius: 16px;

@@ -561,6 +561,8 @@ $back-glow: rgba($brand, 0.55);
   padding: 24px 24px calc(110px + env(safe-area-inset-bottom));
   box-sizing: border-box;
 
+  background: rgba(0, 0, 0, 0.6);
+
   -webkit-overflow-scrolling: touch;
 
   @media (max-width: 420px) {

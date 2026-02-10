@@ -112,6 +112,11 @@ type LotteryItem = {
   storeName?: string;
 
   title?: string;
+  
+  // 圖片（支援多種格式）
+  bannerSrc?: string;
+  imageUrl?: string;
+  mainImageUrl?: string;
 
   category?: string;
   categoryName?: string;
@@ -122,18 +127,24 @@ type LotteryItem = {
 
   scheduledAt?: string; // 2026-01-20T10:24:00
   endTime?: string;
+  createdAt?: string;
 
   totalDraws?: number;
   maxDraws?: number;
   remainingDraws?: number;
+  remaining?: number;
+  remainingUnit?: string;
 
   totalPrizes?: number;
   remainingPrizes?: number;
+  
+  // 舊格式支援
+  prices?: PriceItem[];
+  timeText?: string;
+  tagText?: string;
 
   status?: string;
   statusName?: string;
-
-  imageUrl?: string;
 };
 
 const props = defineProps<{
@@ -150,12 +161,16 @@ const resolvedTitle = computed(() => props.item?.title || '未命名商品');
 const resolvedAlt = computed(() => props.item?.title || 'kuji');
 
 const resolvedBannerSrc = computed(() => {
-  const url = String(props.item?.imageUrl ?? '').trim();
+  // 支援新舊格式：mainImageUrl > bannerSrc > imageUrl
+  const url = String(
+    props.item?.mainImageUrl ?? props.item?.bannerSrc ?? props.item?.imageUrl ?? ''
+  ).trim();
   return url ? url : demo1;
 });
 
 const resolvedRemaining = computed(() => {
   const n =
+    props.item?.remaining ??
     props.item?.remainingDraws ??
     props.item?.remainingPrizes ??
     props.item?.maxDraws ??
@@ -163,12 +178,17 @@ const resolvedRemaining = computed(() => {
   return Number(n) || 0;
 });
 
+const resolvedMaxDraws = computed(() => {
+  return Number(props.item?.maxDraws ?? 0) || 0;
+});
+
 const resolvedStatusText = computed(() => {
   return props.item?.statusName || '開抽中';
 });
 
 const resolvedTagText = computed(() => {
-  // 你要顯示品牌/分類/店家都可以，這邊優先店家，再來分類名
+  // 優先使用 tagText（舊格式），再來是店家名
+  if (props.item?.tagText) return props.item.tagText;
   return props.item?.storeName || props.item?.categoryName || 'KUJI';
 });
 
@@ -183,7 +203,10 @@ const formatDate = (iso?: string) => {
 };
 
 const resolvedTimeText = computed(() => {
-  const start = formatDate(props.item?.scheduledAt);
+  // 優先使用 timeText（舊格式）
+  if (props.item?.timeText) return props.item.timeText;
+  
+  const start = formatDate(props.item?.scheduledAt ?? props.item?.createdAt);
   const end = formatDate(props.item?.endTime);
 
   if (start && end) return `${start} - ${end}`;
@@ -193,11 +216,15 @@ const resolvedTimeText = computed(() => {
 });
 
 const resolvedPrices = computed<PriceItem[]>(() => {
+  // 優先使用 prices（舊格式）
+  if (props.item?.prices && props.item.prices.length > 0) {
+    return props.item.prices;
+  }
+
   const base =
     Number(props.item?.currentPrice ?? props.item?.pricePerDraw ?? 0) || 0;
 
-  // ✅ 你可以把這裡改成你想要的顯示方式
-  // 我先做「單抽 / 十連」最直覺
+  // 顯示「單抽 / 十連」
   return [
     { label: '單抽', amount: base || 0, unit: '抽' },
     { label: '十連', amount: (base || 0) * 10, unit: '抽' },

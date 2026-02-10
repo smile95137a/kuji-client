@@ -28,10 +28,9 @@
             <label class="depositHistory__label">狀態</label>
             <select class="depositHistory__input" v-model="status">
               <option value="">全部</option>
-              <option value="PAID">已付款</option>
+              <option value="COMPLETED">已完成</option>
               <option value="PENDING">待付款</option>
               <option value="FAILED">失敗</option>
-              <option value="CANCELED">已取消</option>
             </select>
           </div>
 
@@ -152,19 +151,23 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, onMounted } from 'vue';
 import BasePagination from '@/components/common/BasePagination.vue';
+import { getMyRechargeHistory } from '@/services/rechargeService';
 
-type PayMethod = 'CREDIT_CARD' | 'ATM' | 'CVS';
-type Status = 'PAID' | 'PENDING' | 'FAILED' | 'CANCELED';
+type PayMethod = 'ECPAY' | 'OPAY' | 'CREDIT_CARD' | string;
+type Status = 'PENDING' | 'COMPLETED' | 'FAILED' | string;
 
 type DepositHistoryRow = {
   id: string;
-  createdAt: string; // YYYY-MM-DD
+  createdAt: string; // YYYY-MM-DD HH:mm
   orderNo: string;
   amount: number;
+  goldCoins: number;
+  bonusCoins: number;
   payMethod: PayMethod;
   status: Status;
+  paidAt?: string;
 };
 
 const pageSize = 8;
@@ -175,56 +178,52 @@ const dateTo = ref('');
 const status = ref<Status | ''>('');
 const keyword = ref('');
 
-/** ✅ Mock：用迴圈產生 70+ 筆資料 */
-const COUNT = 75;
+const loading = ref(false);
+const rows = ref<DepositHistoryRow[]>([]);
 
-const payMethods: PayMethod[] = ['CREDIT_CARD', 'ATM', 'CVS'];
-const amounts = [200, 500, 1000, 2000, 3000, 5000];
-
-const pad = (n: number, len = 4) => String(n).padStart(len, '0');
-
-const toYMD = (d: Date) => {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+const formatDate = (iso?: string | null) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-const buildMockRows = (count: number): DepositHistoryRow[] => {
-  const base = new Date();
-  const list: DepositHistoryRow[] = [];
+const formatDateTime = (iso?: string | null) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')} ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+};
 
-  for (let i = 0; i < count; i++) {
-    const d = new Date(base);
-    d.setDate(base.getDate() - i); // 每筆往前一天
+const loadDepositHistory = async () => {
+  loading.value = true;
+  try {
+    // 使用新的儲值記錄 API
+    const res = await getMyRechargeHistory(1, 100); // 先載入全部，前端過濾
 
-    const createdAt = toYMD(d);
-    const orderNo = `DEP${createdAt}${pad(i + 1, 4)}`;
-
-    // 狀態分布：已付款多一點
-    const statusPool: Status[] = [
-      'PAID',
-      'PAID',
-      'PAID',
-      'PENDING',
-      'FAILED',
-      'CANCELED',
-    ];
-
-    list.push({
-      id: String(i + 1),
-      createdAt,
-      orderNo,
-      amount: amounts[Math.floor(Math.random() * amounts.length)],
-      payMethod: payMethods[Math.floor(Math.random() * payMethods.length)],
-      status: statusPool[Math.floor(Math.random() * statusPool.length)],
-    });
+    if (res.success && Array.isArray(res.data)) {
+      rows.value = res.data.map((r: any) => ({
+        id: String(r.id || ''),
+        createdAt: formatDateTime(r.createdAt),
+        orderNo: r.id || '', // 儲值記錄 ID 作為訂單號
+        amount: Number(r.amount ?? 0),
+        goldCoins: Number(r.goldCoins ?? 0),
+        bonusCoins: Number(r.bonusCoins ?? 0),
+        payMethod: r.paymentMethod || 'ECPAY',
+        status: r.paymentStatus || 'PENDING',
+        paidAt: r.paidAt ? formatDateTime(r.paidAt) : undefined,
+      }));
+    }
+  } catch (e) {
+    console.error('DepositHistory - loadDepositHistory error:', e);
+  } finally {
+    loading.value = false;
   }
-
-  return list;
 };
 
-const rows = ref<DepositHistoryRow[]>(buildMockRows(COUNT));
+onMounted(() => {
+  loadDepositHistory();
+});
 
 const filteredRows = computed(() => {
   const from = dateFrom.value ? new Date(dateFrom.value).getTime() : null;
@@ -267,8 +266,8 @@ watch(totalPages, (tp) => {
 });
 
 const onSearch = () => {
-  // 目前是前端 computed 篩選，所以查詢按鈕不需要做事
-  // 之後接 API 的話，就在這邊打 API 更新 rows
+  page.value = 1;
+  loadDepositHistory();
 };
 
 const onReset = () => {
@@ -277,26 +276,27 @@ const onReset = () => {
   status.value = '';
   keyword.value = '';
   page.value = 1;
+  loadDepositHistory();
 };
 
 const payLabel = (m: PayMethod) => {
+  if (m === 'ECPAY') return '綠界支付';
+  if (m === 'OPAY') return '歐付寶';
   if (m === 'CREDIT_CARD') return '信用卡';
-  if (m === 'ATM') return 'ATM 轉帳';
-  return '超商代碼';
+  return m; // 回傳原始值作為備用
 };
 
 const statusLabel = (s: Status) => {
-  if (s === 'PAID') return '已付款';
+  if (s === 'COMPLETED') return '已完成';
   if (s === 'PENDING') return '待付款';
   if (s === 'FAILED') return '失敗';
-  return '已取消';
+  return s; // 回傳原始值作為備用
 };
 
 const badgeClass = (s: Status) => ({
-  'is-paid': s === 'PAID',
+  'is-paid': s === 'COMPLETED',
   'is-pending': s === 'PENDING',
   'is-failed': s === 'FAILED',
-  'is-canceled': s === 'CANCELED',
 });
 </script>
 

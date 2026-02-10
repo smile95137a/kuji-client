@@ -40,29 +40,36 @@
         </div>
       </header>
 
-      <section class="blindbox__grid">
-        <IchibanKujiCard
-          v-for="item in pagedList"
-          :key="item.id"
-          class="ichibanList__card"
-          :item="item"
-          @click="goDetail(item.id)"
-        />
-      </section>
+      <!-- Loading / Error -->
+      <div v-if="loading" class="blindbox__loading">載入中...</div>
+      <div v-else-if="errorMsg" class="blindbox__error">{{ errorMsg }}</div>
 
-      <div class="blindbox__pagination">
-        <BasePagination
-          v-model:page="page"
-          :total-pages="totalPages"
-          :max-visible="5"
-        />
-      </div>
+      <template v-else>
+        <section class="blindbox__grid">
+          <IchibanKujiCard
+            v-for="item in pagedList"
+            :key="item.id"
+            class="ichibanList__card"
+            :item="item"
+            @click="goDetail(item.id)"
+          />
+        </section>
+
+        <div class="blindbox__pagination">
+          <BasePagination
+            v-model:page="page"
+            :total-pages="totalPages"
+            :max-visible="5"
+          />
+        </div>
+      </template>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 
 import IchibanKujiCard from '@/components/IchibanKujiCard.vue';
 import MSelect from '@/components/common/MSelect.vue';
@@ -70,6 +77,11 @@ import MSearch from '@/components/common/MSearch.vue';
 import BasePagination from '@/components/common/BasePagination.vue';
 
 import blindboxbg from '@/assets/image/blindboxbg.png';
+import demo1 from '@/assets/image/demo1.jpg';
+
+import { queryBrowseLotteries, incrementHotCount } from '@/services/lotteryBrowseService';
+
+const router = useRouter();
 
 type PriceItem = { label: string; amount: number; unit: string };
 type KujiItem = {
@@ -92,52 +104,109 @@ const seriesOptions = [
 ];
 
 const statusOptions = [
-  { label: '開抽中', value: 'open' },
-  { label: '已結束', value: 'close' },
+  { label: '開抽中', value: 'ON_SHELF' },
+  { label: '已結束', value: 'SOLD_OUT' },
 ];
 
 const filterSeries = ref('');
 const filterStatus = ref('');
 const keyword = ref('');
 
-const list: KujiItem[] = [
-  {
-    id: 'kuji-001',
-    bannerSrc: '/images/kuji-banner.png',
-    title:
-      '一番賞 哥吉拉 MACHINE CHRONICLE 抽先公開！收錄23公分 SOFVICS 機械哥吉拉軟膠',
-    remaining: 100,
+const loading = ref(false);
+const errorMsg = ref('');
+const list = ref<KujiItem[]>([]);
+
+const formatDate = (iso?: string | null) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const now = new Date();
+  const diff = now.getTime() - d.getTime();
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+  if (days < 1) return '今天';
+  if (days < 7) return `${days}天前`;
+  if (days < 30) return `${Math.floor(days / 7)}週前`;
+  return `${Math.floor(days / 30)}個月前`;
+};
+
+const toKujiItem = (x: any): KujiItem => {
+  const data = x?.lottery ?? x; // support nested response { lottery, prizes }
+
+  const id = String(data?.id ?? '');
+  const title = String(data?.title ?? '未命名商品');
+  const bannerSrc = String(data?.mainImageUrl ?? data?.imageUrl ?? '') || demo1;
+  const remaining = Number(data?.remainingDraws ?? data?.remainingPrizes ?? 0);
+  const maxDraws = Number(data?.maxDraws ?? 0);
+  const currentPrice = Number(data?.currentPrice ?? data?.pricePerDraw ?? 0);
+
+  // 分類標籤
+  let categoryLabel = '';
+  switch (data?.category) {
+    case 'OFFICIAL_ICHIBAN':
+      categoryLabel = '一番賞';
+      break;
+    case 'CUSTOM_GACHA':
+      categoryLabel = '自製賞';
+      break;
+    case 'PRIZE_CAPSULE':
+      categoryLabel = '扭蛋';
+      break;
+    case 'SCRATCH_CARD':
+      categoryLabel = '刮刮樂';
+      break;
+    case 'CARD_DRAW':
+      categoryLabel = '卡牌';
+      break;
+    default:
+      categoryLabel = data?.categoryName || '商品';
+  }
+
+  return {
+    id,
+    bannerSrc,
+    title,
+    remaining: Number(remaining) || 0,
     remainingUnit: '抽',
     prices: [
-      { label: '金幣', amount: 250, unit: '抽' },
-      { label: '銀幣', amount: 1250, unit: '抽' },
-    ],
-    timeText: '一週前',
-    tagText: '動感光波',
-    series: 'gundam',
-    status: 'open',
-  },
-  ...Array.from({ length: 11 }).map((_, i) => ({
-    id: `kuji-${i + 2}`.padStart(7, '0'),
-    bannerSrc: '/images/kuji-banner.png',
-    title:
-      '一番賞 哥吉拉 MACHINE CHRONICLE 抽先公開！收錄23公分 SOFVICS 機械哥吉拉軟膠',
-    remaining: 100 - i * 3,
-    remainingUnit: '抽',
-    prices: [
-      { label: '金幣', amount: 250, unit: '抽' },
-      { label: '銀幣', amount: 1250, unit: '抽' },
-    ],
-    timeText: '一週前',
-    tagText: '動感光波',
-    series: i % 2 === 0 ? 'gundam' : 'op',
-    status: i % 3 === 0 ? 'open' : 'close',
-  })),
-];
+      { label: '每抽', amount: currentPrice, unit: '元' },
+      { label: `剩餘 ${remaining}/${maxDraws}`, amount: 0, unit: '' },
+    ].filter((p) => p.label),
+    timeText: formatDate(data?.createdAt ?? data?.scheduledAt),
+    tagText: `${categoryLabel} | ${data?.storeName || '官方'}`,
+    series: data?.subCategory || '',
+    status: data?.status || 'ON_SHELF',
+  };
+};
+
+const loadData = async () => {
+  loading.value = true;
+  errorMsg.value = '';
+  try {
+    const res = await queryBrowseLotteries({
+      condition: {
+        title: keyword.value.trim() || undefined,
+        status: filterStatus.value || undefined,
+      },
+      sortBy: 'created_at',
+      sortOrder: 'DESC',
+    });
+    if (res.success && Array.isArray(res.data)) {
+      list.value = res.data.map(toKujiItem);
+    } else {
+      list.value = [];
+    }
+  } catch (e) {
+    console.error('BlindBoxListView - loadData error:', e);
+    errorMsg.value = '載入失敗，請稍後再試';
+    list.value = [];
+  } finally {
+    loading.value = false;
+  }
+};
 
 const filteredList = computed(() => {
   const kw = keyword.value.trim().toLowerCase();
-  return list.filter((x) => {
+  return list.value.filter((x) => {
     const okSeries = !filterSeries.value || x.series === filterSeries.value;
     const okStatus = !filterStatus.value || x.status === filterStatus.value;
     const okKw = !kw || x.title.toLowerCase().includes(kw);
@@ -159,10 +228,16 @@ const pagedList = computed(() => {
 
 const onSearch = () => {
   page.value = 1;
+  loadData();
 };
 
-const goDetail = (id: string) => {
-  console.log('go detail:', id);
+const goDetail = async (id: string) => {
+  try {
+    // fire-and-forget increment hot count (don't block navigation)
+    incrementHotCount(id).catch((err) => console.warn('incrementHotCount failed', err));
+  } finally {
+    router.push({ name: 'IchibanDetail', params: { id } });
+  }
 };
 
 watch([filterSeries, filterStatus], () => {
@@ -172,6 +247,10 @@ watch([filterSeries, filterStatus], () => {
 /* ✅ 防呆：篩完後總頁數變小，避免 page 超出 */
 watch(totalPages, (tp) => {
   if (page.value > tp) page.value = tp;
+});
+
+onMounted(() => {
+  loadData();
 });
 </script>
 

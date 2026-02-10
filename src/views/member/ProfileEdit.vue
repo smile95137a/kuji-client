@@ -55,17 +55,6 @@
       <!-- Fields -->
       <div class="profileEdit__grid">
         <div class="profileEdit__field">
-          <label class="profileEdit__label">姓名</label>
-          <input
-            class="profileEdit__input"
-            type="text"
-            v-model="name"
-            placeholder="輸入姓名"
-          />
-          <p v-if="errors.name" class="profileEdit__error">{{ errors.name }}</p>
-        </div>
-
-        <div class="profileEdit__field">
           <label class="profileEdit__label">暱稱</label>
           <input
             class="profileEdit__input"
@@ -138,23 +127,24 @@
         >
           取消
         </button>
-        <button class="profileEdit__btn" type="submit">儲存</button>
+        <button class="profileEdit__btn" type="submit" :disabled="loading">
+          {{ loading ? '儲存中...' : '儲存' }}
+        </button>
       </div>
-
-      <p class="profileEdit__tip">
-        ※ 目前示範版：送出會 console.log，你接 API 後把 onSubmit 內容替換掉即可
-      </p>
     </form>
   </section>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useForm } from 'vee-validate';
 import * as yup from 'yup';
+import { getMyProfile, updateMyProfile, uploadAvatar, uploadAndUpdateAvatar } from '@/services/userService';
+import { ichibanInfoDialog } from '@/utils/dialog/ichibanInfoDialog';
 
 const router = useRouter();
+const loading = ref(false);
 
 const fallbackAvatar =
   'data:image/svg+xml;charset=UTF-8,' +
@@ -167,7 +157,6 @@ const fallbackAvatar =
 `);
 
 const schema = yup.object({
-  name: yup.string().required('請輸入姓名').max(30, '姓名不可超過 30 字'),
   nickname: yup.string().nullable().max(30, '暱稱不可超過 30 字'),
   email: yup.string().required('請輸入 Email').email('Email 格式不正確'),
   phone: yup.string().required('請輸入手機').max(30, '手機不可過長'),
@@ -175,47 +164,94 @@ const schema = yup.object({
   note: yup.string().nullable().max(200, '備註不可超過 200 字'),
 });
 
-const { errors, defineField, handleSubmit, setFieldValue } = useForm({
+const { errors, defineField, handleSubmit, setFieldValue, resetForm } = useForm({
   validationSchema: schema,
   initialValues: {
-    name: '王小明',
-    nickname: 'KujiMaster',
-    email: 'demo@kuji.com',
-    phone: '0912-345-678',
-    lineId: 'kuji_demo',
+    nickname: '',
+    email: '',
+    phone: '',
+    lineId: '',
     note: '',
   },
 });
 
-const [name] = defineField('name');
 const [nickname] = defineField('nickname');
 const [email] = defineField('email');
 const [phone] = defineField('phone');
 const [lineId] = defineField('lineId');
 const [note] = defineField('note');
 
+/** 載入使用者資料 */
+const loadProfile = async () => {
+  loading.value = true;
+  try {
+    const res = await getMyProfile();
+    if (res.success && res.data) {
+      const user = res.data;
+      resetForm({
+        values: {
+          nickname: user.nickname || user.displayName || '',
+          email: user.email || '',
+          phone: user.phoneNumber || user.phone || user.mobile || '',
+          lineId: user.lineId || '',
+          note: user.note || user.remark || '',
+        },
+      });
+      // 如果有頭像 URL 就設定
+      if (user.avatarUrl || user.avatar) {
+        avatarPreview.value = user.avatarUrl || user.avatar;
+      }
+    }
+  } catch (e) {
+    console.error('ProfileEdit - loadProfile error:', e);
+  } finally {
+    loading.value = false;
+  }
+};
+
+onMounted(() => {
+  loadProfile();
+});
+
 /** Avatar upload */
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const avatarPreview = ref(''); // 顯示用（Base64 或 objectURL）
 const avatarFile = ref<File | null>(null);
+const avatarUrl = ref(''); // S3 上的圖片 URL
+const avatarUploading = ref(false);
 
 const openFilePicker = () => {
   fileInputRef.value?.click();
 };
 
-const onPickFile = (e: Event) => {
+const onPickFile = async (e: Event) => {
   const input = e.target as HTMLInputElement;
   const file = input.files?.[0] || null;
   if (!file) return;
 
   avatarFile.value = file;
+  // 先用 objectURL 顯示預覽
   avatarPreview.value = URL.createObjectURL(file);
 
-  // 若你之後要直接送 Base64：可以在這裡讀 FileReader 後 setFieldValue('avatarBase64', xxx)
+  // 自動上傳到 /user/avatar，取得 imageUrl
+  try {
+    avatarUploading.value = true;
+    const res = await uploadAvatar(file);
+    if (res && res.success && res.data?.imageUrl) {
+      avatarUrl.value = String(res.data.imageUrl);
+      avatarPreview.value = avatarUrl.value; // 顯示正式 URL
+    }
+  } catch (err) {
+    console.error('avatar upload error', err);
+    await ichibanInfoDialog({ title: '上傳失敗', content: '頭像上傳失敗，請稍後再試' });
+  } finally {
+    avatarUploading.value = false;
+  }
 };
 
 const clearAvatar = () => {
   avatarFile.value = null;
+  avatarUrl.value = '';
   avatarPreview.value = '';
   if (fileInputRef.value) fileInputRef.value.value = '';
 };
@@ -225,15 +261,36 @@ const goBack = () => {
 };
 
 const onSubmit = handleSubmit(async (form) => {
-  const payload = {
-    ...form,
-    avatarFile: avatarFile.value, // 你接 API 時可用 FormData
-  };
+  loading.value = true;
+  try {
+    const payload: any = {
+      nickname: form.nickname,
+      email: form.email,
+      phoneNumber: form.phone, // backend expects phoneNumber
+      lineId: form.lineId,
+      note: form.note,
+    };
 
-  console.log('ProfileEdit submit:', payload);
+    // 如果有上傳過 avatarUrl，包含到更新 payload
+    if (avatarUrl.value) {
+      payload.avatar = avatarUrl.value;
+    }
 
-  // Demo：儲存後回上一頁
-  router.push({ name: 'MemberProfile' });
+    // 目前先用 JSON 格式
+    const res = await updateMyProfile(payload);
+
+    if (res.success) {
+      await ichibanInfoDialog({ title: '成功', content: '個人資料已更新！' });
+      router.push({ name: 'MemberProfile' });
+    } else {
+      await ichibanInfoDialog({ title: '失敗', content: res.message || '更新失敗，請稍後再試' });
+    }
+  } catch (e: any) {
+    console.error('ProfileEdit - onSubmit error:', e);
+    await ichibanInfoDialog({ title: '錯誤', content: e?.message || '更新失敗，請稍後再試' });
+  } finally {
+    loading.value = false;
+  }
 });
 </script>
 
@@ -305,9 +362,6 @@ const onSubmit = handleSubmit(async (form) => {
     white-space: nowrap;
   }
 
-  &__avatarMeta {
-  }
-
   &__avatarTitle {
     margin: 0 0 4px;
     font-weight: 900;
@@ -343,9 +397,6 @@ const onSubmit = handleSubmit(async (form) => {
     @media (max-width: 640px) {
       grid-template-columns: repeat(1, minmax(0, 1fr));
     }
-  }
-
-  &__field {
   }
 
   &__field--full {

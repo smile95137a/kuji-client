@@ -227,11 +227,12 @@ const handleCancel = () => {
   justify-content: center;
 }
 
-/* ✅ 透明遮罩，只負責擋點擊 */
+/* ✅ 暗色背景遮罩 */
 .scDialog__backdrop {
   position: absolute;
   inset: 0;
-  background-color: transparent;
+  background-color: rgba(0, 0, 0, 0.6);
+  z-index: 0;
 }
 
 /* Panel */
