@@ -88,7 +88,6 @@
                   </KujiButton>
 
                   <KujiButton
-                    v-if="showStatus"
                     class="ichibanDetail__cta ichibanDetail__cta--secondary"
                     variant="secondary"
                     block
@@ -138,11 +137,7 @@
       </section>
 
       <!-- 抽況 -->
-      <section
-        class="ichibanDetail__status"
-        ref="statusSectionRef"
-        v-if="showStatus"
-      >
+      <section class="ichibanDetail__status" ref="statusSectionRef">
         <h2 class="ichibanDetail__status-title">檢視抽況</h2>
 
         <RemainingCounter
@@ -191,12 +186,16 @@ import IchibanMetaInfo from '@/components/IchibanDetail/IchibanMetaInfo.vue';
 import demo1 from '@/assets/image/demo1.jpg';
 
 import { getBrowseLotteryById } from '@/services/lotteryBrowseService';
-import { drawLottery } from '@/services/lotteryDrawService';
+import {
+  designatePrizePositions,
+  drawLottery,
+} from '@/services/lotteryDrawService';
 import { executeApi } from '@/utils/executeApiUtils';
 import { useOverlayStore } from '@/stores/overlay';
 import { ichibanInfoDialog } from '@/utils/dialog/ichibanInfoDialog';
 import { gachaTearDialog } from '@/utils/dialog/kujiRevealStripDialog';
 import { ichibanResultDialog } from '@/utils/dialog/ichibanResultDialog';
+import { scratchCardDialog } from '@/utils/dialog/scratchCardDialog';
 
 const overlay = useOverlayStore();
 
@@ -288,10 +287,7 @@ const periodText = computed(() => {
 /* -----------------------------
  * playMode / tags
  * ----------------------------- */
-const showStatus = computed(() => {
-  const m = String(detail.value?.playMode ?? '').toUpperCase();
-  return m !== 'SCRATCH_MODE';
-});
+
 const isScratchMode = computed(() => {
   const m = String(detail.value?.playMode ?? '').toUpperCase();
   return m === 'SCRATCH_MODE';
@@ -561,10 +557,6 @@ const handleDraw = async () => {
   isDrawPanelOpen.value = true;
 };
 const handlePrimaryAction = async () => {
-  if (isScratchMode.value) {
-    await handleScratch();
-    return;
-  }
   await handleDraw(); // LOTTERY_MODE
 };
 
@@ -605,8 +597,6 @@ const handleExchange = async (payload: {
   type: 'gold' | 'silver';
   tickets: string[]; // UUID list
 }) => {
-  console.log(payload);
-
   const ok = await ensureCanDraw();
   if (!ok) return;
 
@@ -649,54 +639,147 @@ const handleExchange = async (payload: {
   const safeTickets = tickets.slice(0, safeRemaining);
   const safeCount = safeTickets.length;
 
-  await executeApi({
-    fn: () =>
-      drawLottery(kujiId.value, {
-        count: safeCount,
-        ticket: safeTickets,
-      }),
-    onSuccess: async (data: any) => {
-      closeDrawPanel();
-      overlay.open();
+  if (isScratchMode.value) {
+    const prizeNumbers = safeTickets
+      .map((id) => Number(ticketNoById.value[id] ?? 0))
+      .filter((n) => Number.isFinite(n) && n > 0);
 
-      try {
-        const tearResult = await gachaTearDialog({ pulls: data });
-        if (!tearResult) return;
-
-        const drawnCount = Array.isArray(data) ? data.length : 0;
-        const unitPrice = Number(displayPrice.value ?? 0) || 0;
-        const totalPrice = unitPrice * drawnCount;
-        const beforeRemain = Math.max(
-          0,
-          Number(
-            detail.value?.remainingPrizes ??
-              availableTicketIds.value.length ??
-              0,
-          ) || 0,
-        );
-
-        const remain = Math.max(0, beforeRemain - drawnCount);
-
-        await ichibanResultDialog({
-          remain,
-          count: drawnCount,
-          totalPrice,
-          items: data,
-        });
-      } finally {
-        overlay.close();
-      }
-
-      await reload();
-    },
-
-    onFail: async () => {
+    if (prizeNumbers.length !== safeTickets.length) {
       await ichibanInfoDialog({
-        title: '抽獎失敗',
-        content: '請稍後再試',
+        title: '提示訊息',
+        content: '票券資料不完整，請重新載入後再試一次',
       });
-    },
-  });
+      return;
+    }
+
+    // 1) 先指定位置（刮刮樂）
+    await executeApi({
+      fn: () => designatePrizePositions(kujiId.value, { prizeNumbers }),
+      errorTitle: '刮刮樂初始化失敗',
+      errorMessage: '指定大獎位置失敗，請稍後再試。',
+      onSuccess: async (data) => {
+        // drawRes 期望是 array
+        const list = data;
+
+        if (!list.length) {
+          await ichibanInfoDialog({
+            title: '提示訊息',
+            content: '未取得刮刮樂結果，請稍後再試',
+          });
+          return;
+        }
+
+        closeDrawPanel();
+        overlay.open();
+
+        // summary vars
+        let finished = 0;
+        let completed = 0;
+        let canceledAt: number | null = null;
+
+        // grade counts
+        const gradeCounts: Record<string, number> = {};
+        const getGrade = (p: any) =>
+          String(p?.grade ?? p?.prizeLevel ?? p?.level ?? '-');
+        for (const p of list) {
+          const g = getGrade(p);
+          gradeCounts[g] = gradeCounts[g] ?? 0;
+        }
+
+        try {
+          for (let i = 0; i < list.length; i++) {
+            const drawNo = i + 1;
+            const prize = list[i];
+
+            const grade = getGrade(prize);
+            const name = String(
+              prize?.name ?? prize?.prizeName ?? prize?.title ?? '未命名獎品',
+            );
+            const imageSrc = String(
+              prize?.imageSrc ?? prize?.imageUrl ?? prize?.prizeImageUrl ?? '',
+            );
+
+            const ok = await scratchCardDialog({
+              title: `STARDO（第 ${drawNo} 張｜${grade}）`,
+              imageSrc,
+              idleText: `第 ${drawNo} 張，刮開看看抽到什麼？`,
+              revealText: `第 ${drawNo} 張：${grade}・${name}`,
+              threshold: 45,
+              grade,
+            });
+
+            finished++;
+
+            if (!ok) {
+              canceledAt = drawNo;
+              break;
+            }
+
+            completed++;
+            gradeCounts[grade] = (gradeCounts[grade] ?? 0) + 1;
+          }
+
+          await ichibanInfoDialog({
+            title: '刮刮樂完成',
+            content: `完成 ${completed}/${finished}`,
+          });
+        } finally {
+          overlay.close();
+        }
+
+        await reload();
+      },
+    });
+  } else {
+    await executeApi({
+      fn: () =>
+        drawLottery(kujiId.value, {
+          count: safeCount,
+          ticket: safeTickets,
+        }),
+      onSuccess: async (data: any) => {
+        closeDrawPanel();
+        overlay.open();
+
+        try {
+          const tearResult = await gachaTearDialog({ pulls: data });
+          if (!tearResult) return;
+
+          const drawnCount = Array.isArray(data) ? data.length : 0;
+          const unitPrice = Number(displayPrice.value ?? 0) || 0;
+          const totalPrice = unitPrice * drawnCount;
+          const beforeRemain = Math.max(
+            0,
+            Number(
+              detail.value?.remainingPrizes ??
+                availableTicketIds.value.length ??
+                0,
+            ) || 0,
+          );
+
+          const remain = Math.max(0, beforeRemain - drawnCount);
+
+          await ichibanResultDialog({
+            remain,
+            count: drawnCount,
+            totalPrice,
+            items: data,
+          });
+        } finally {
+          overlay.close();
+        }
+
+        await reload();
+      },
+
+      onFail: async () => {
+        await ichibanInfoDialog({
+          title: '抽獎失敗',
+          content: '請稍後再試',
+        });
+      },
+    });
+  }
 };
 
 /* -----------------------------
