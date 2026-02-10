@@ -74,19 +74,11 @@ import {
 } from 'vue';
 import { gsap } from 'gsap';
 
-/* ===== props ===== */
-interface DialogItem {
-  id: string;
-  name: string;
-  image: string;
-  grade?: any;
-}
-
 const props = defineProps<{
   remain: number;
   count: number;
   totalPrice: number;
-  items: DialogItem[];
+  items: any[];
 }>();
 
 const emit = defineEmits<{
@@ -105,11 +97,11 @@ interface PrizeCard {
 
 const cards = computed<PrizeCard[]>(() =>
   props.items.map((item, index) => ({
-    id: item.id ?? index,
-    type: item.grade === 'A' ? 'big' : 'small',
-    tag: `${item.grade}賞`,
-    name: item.name,
-    image: item.image,
+    id: item.prizeId,
+    type: item.prizeLevel === 'A' ? 'big' : 'small',
+    tag: `${item.prizeLevel}賞`,
+    name: item.prizeName,
+    image: item.prizeImageUrl,
   })),
 );
 

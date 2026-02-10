@@ -199,6 +199,7 @@ import { ichibanInfoDialog } from '@/utils/dialog/ichibanInfoDialog';
 import { gachaTearDialog } from '@/utils/dialog/kujiRevealStripDialog';
 import { ichibanResultDialog } from '@/utils/dialog/ichibanResultDialog';
 import { scratchCardDialog } from '@/utils/dialog/scratchCardDialog';
+import { ichibanResultCardDialog } from '@/utils/dialog/ichibanResultCardDialog';
 
 const overlay = useOverlayStore();
 
@@ -641,6 +642,55 @@ const handleExchange = async (payload: {
 
   const safeTickets = tickets.slice(0, safeRemaining);
   const safeCount = safeTickets.length;
+
+  if (String(detail.value?.category ?? '').toUpperCase() === 'TRADING_CARD') {
+    await executeApi({
+      fn: () =>
+        drawLottery(kujiId.value, {
+          count: safeCount,
+          ticket: safeTickets,
+        }),
+      onSuccess: async (data: any) => {
+        closeDrawPanel();
+        overlay.open();
+
+        try {
+          const drawnCount = Array.isArray(data) ? data.length : 0;
+          const unitPrice = Number(displayPrice.value ?? 0) || 0;
+          const totalPrice = unitPrice * drawnCount;
+          const beforeRemain = Math.max(
+            0,
+            Number(
+              detail.value?.remainingPrizes ??
+                availableTicketIds.value.length ??
+                0,
+            ) || 0,
+          );
+
+          const remain = Math.max(0, beforeRemain - drawnCount);
+
+          const again = await ichibanResultCardDialog({
+            remain,
+            count: data.length,
+            totalPrice,
+            items: data,
+          });
+        } finally {
+          overlay.close();
+        }
+
+        await reload();
+      },
+
+      onFail: async () => {
+        await ichibanInfoDialog({
+          title: '抽獎失敗',
+          content: '請稍後再試',
+        });
+      },
+    });
+    return;
+  }
 
   if (isScratchMode.value) {
     const prizeNumbers = safeTickets
