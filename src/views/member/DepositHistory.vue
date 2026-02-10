@@ -15,20 +15,24 @@
             <input
               class="depositHistory__input"
               type="date"
-              v-model="dateFrom"
+              v-model="createdAtStart"
             />
           </div>
 
           <div class="depositHistory__field">
             <label class="depositHistory__label">結束日期</label>
-            <input class="depositHistory__input" type="date" v-model="dateTo" />
+            <input
+              class="depositHistory__input"
+              type="date"
+              v-model="createdAtEnd"
+            />
           </div>
 
           <div class="depositHistory__field">
             <label class="depositHistory__label">狀態</label>
-            <select class="depositHistory__input" v-model="status">
+            <select class="depositHistory__input" v-model="paymentStatus">
               <option value="">全部</option>
-              <option value="PAID">已付款</option>
+              <option value="COMPLETED">已完成</option>
               <option value="PENDING">待付款</option>
               <option value="FAILED">失敗</option>
               <option value="CANCELED">已取消</option>
@@ -36,12 +40,12 @@
           </div>
 
           <div class="depositHistory__field">
-            <label class="depositHistory__label">訂單號</label>
+            <label class="depositHistory__label">交易號</label>
             <input
               class="depositHistory__input"
               type="text"
-              placeholder="輸入訂單號關鍵字"
-              v-model.trim="keyword"
+              placeholder="輸入交易號關鍵字"
+              v-model.trim="transactionId"
             />
           </div>
         </div>
@@ -72,31 +76,39 @@
         <table class="depositHistory__table">
           <thead>
             <tr>
-              <th>日期</th>
-              <th>訂單號</th>
+              <th>建立時間</th>
+              <th>交易號</th>
               <th>金額</th>
+              <th>代幣</th>
+              <th>紅利</th>
               <th>付款方式</th>
               <th>狀態</th>
+              <th>付款時間</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="row in pageRows" :key="row.id">
-              <td>{{ row.createdAt }}</td>
-              <td class="depositHistory__mono">{{ row.orderNo }}</td>
+              <td>{{ formatDateTime(row.createdAt) }}</td>
+              <td class="depositHistory__mono">
+                {{ row.transactionId || '-' }}
+              </td>
               <td>NT$ {{ row.amount.toLocaleString() }}</td>
-              <td>{{ payLabel(row.payMethod) }}</td>
+              <td>{{ row.goldCoins.toLocaleString() }}</td>
+              <td>{{ row.bonusCoins.toLocaleString() }}</td>
+              <td>{{ payLabel(row.paymentMethod) }}</td>
               <td>
                 <span
                   class="depositHistory__badge"
-                  :class="badgeClass(row.status)"
+                  :class="badgeClass(row.paymentStatus)"
                 >
-                  {{ statusLabel(row.status) }}
+                  {{ statusLabel(row.paymentStatus) }}
                 </span>
               </td>
+              <td>{{ row.paidAt ? formatDateTime(row.paidAt) : '-' }}</td>
             </tr>
 
             <tr v-if="pageRows.length === 0">
-              <td class="depositHistory__empty" colspan="5">查無資料</td>
+              <td class="depositHistory__empty" colspan="8">查無資料</td>
             </tr>
           </tbody>
         </table>
@@ -106,29 +118,57 @@
       <div class="depositHistory__cards">
         <div v-for="row in pageRows" :key="row.id" class="depositHistory__item">
           <div class="depositHistory__itemTop">
-            <span class="depositHistory__badge" :class="badgeClass(row.status)">
-              {{ statusLabel(row.status) }}
+            <span
+              class="depositHistory__badge"
+              :class="badgeClass(row.paymentStatus)"
+            >
+              {{ statusLabel(row.paymentStatus) }}
             </span>
-            <span class="depositHistory__date">{{ row.createdAt }}</span>
+            <span class="depositHistory__date">
+              {{ formatDateTime(row.createdAt) }}
+            </span>
           </div>
 
           <div class="depositHistory__itemBody">
             <p class="depositHistory__row">
-              <span class="depositHistory__k">訂單號</span>
+              <span class="depositHistory__k">交易號</span>
               <span class="depositHistory__v depositHistory__mono">{{
-                row.orderNo
+                row.transactionId || '-'
               }}</span>
             </p>
+
             <p class="depositHistory__row">
               <span class="depositHistory__k">金額</span>
               <span class="depositHistory__v"
                 >NT$ {{ row.amount.toLocaleString() }}</span
               >
             </p>
+
+            <p class="depositHistory__row">
+              <span class="depositHistory__k">代幣</span>
+              <span class="depositHistory__v">{{
+                row.goldCoins.toLocaleString()
+              }}</span>
+            </p>
+
+            <p class="depositHistory__row">
+              <span class="depositHistory__k">紅利</span>
+              <span class="depositHistory__v">{{
+                row.bonusCoins.toLocaleString()
+              }}</span>
+            </p>
+
             <p class="depositHistory__row">
               <span class="depositHistory__k">付款方式</span>
               <span class="depositHistory__v">{{
-                payLabel(row.payMethod)
+                payLabel(row.paymentMethod)
+              }}</span>
+            </p>
+
+            <p class="depositHistory__row">
+              <span class="depositHistory__k">付款時間</span>
+              <span class="depositHistory__v">{{
+                row.paidAt ? formatDateTime(row.paidAt) : '-'
               }}</span>
             </p>
           </div>
@@ -152,93 +192,62 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import BasePagination from '@/components/common/BasePagination.vue';
+import { getMyRechargeHistory } from '@/services/rechargeService';
+import { executeApi } from '@/utils/executeApiUtils';
 
 type PayMethod = 'CREDIT_CARD' | 'ATM' | 'CVS';
-type Status = 'PAID' | 'PENDING' | 'FAILED' | 'CANCELED';
+type PaymentStatus = 'COMPLETED' | 'PENDING' | 'FAILED' | 'CANCELED';
 
 type DepositHistoryRow = {
   id: string;
-  createdAt: string; // YYYY-MM-DD
-  orderNo: string;
+  planId: string;
+
   amount: number;
-  payMethod: PayMethod;
-  status: Status;
+  goldCoins: number;
+  bonusCoins: number;
+
+  paymentMethod: PayMethod;
+  paymentStatus: PaymentStatus;
+
+  transactionId: string;
+  createdAt: string; // ISO
+  paidAt?: string; // ISO
 };
 
 const pageSize = 8;
 const page = ref(1);
 
-const dateFrom = ref('');
-const dateTo = ref('');
-const status = ref<Status | ''>('');
-const keyword = ref('');
+// filters
+const createdAtStart = ref('');
+const createdAtEnd = ref('');
+const paymentStatus = ref<PaymentStatus | ''>('');
+const transactionId = ref('');
 
-/**  Mock：用迴圈產生 70+ 筆資料 */
-const COUNT = 75;
-
-const payMethods: PayMethod[] = ['CREDIT_CARD', 'ATM', 'CVS'];
-const amounts = [200, 500, 1000, 2000, 3000, 5000];
-
-const pad = (n: number, len = 4) => String(n).padStart(len, '0');
-
-const toYMD = (d: Date) => {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-};
-
-const buildMockRows = (count: number): DepositHistoryRow[] => {
-  const base = new Date();
-  const list: DepositHistoryRow[] = [];
-
-  for (let i = 0; i < count; i++) {
-    const d = new Date(base);
-    d.setDate(base.getDate() - i); // 每筆往前一天
-
-    const createdAt = toYMD(d);
-    const orderNo = `DEP${createdAt}${pad(i + 1, 4)}`;
-
-    // 狀態分布：已付款多一點
-    const statusPool: Status[] = [
-      'PAID',
-      'PAID',
-      'PAID',
-      'PENDING',
-      'FAILED',
-      'CANCELED',
-    ];
-
-    list.push({
-      id: String(i + 1),
-      createdAt,
-      orderNo,
-      amount: amounts[Math.floor(Math.random() * amounts.length)],
-      payMethod: payMethods[Math.floor(Math.random() * payMethods.length)],
-      status: statusPool[Math.floor(Math.random() * statusPool.length)],
-    });
-  }
-
-  return list;
-};
-
-const rows = ref<DepositHistoryRow[]>(buildMockRows(COUNT));
+// data
+const rows = ref<DepositHistoryRow[]>([]);
 
 const filteredRows = computed(() => {
-  const from = dateFrom.value ? new Date(dateFrom.value).getTime() : null;
-  const to = dateTo.value ? new Date(dateTo.value).getTime() : null;
+  const from = createdAtStart.value
+    ? new Date(createdAtStart.value).getTime()
+    : null;
+  const to = createdAtEnd.value ? new Date(createdAtEnd.value).getTime() : null;
+
+  const kw = transactionId.value.trim().toLowerCase();
 
   return rows.value
     .filter((r) => {
-      const t = new Date(r.createdAt).getTime();
+      const t = r.createdAt ? new Date(r.createdAt).getTime() : 0;
 
       const okFrom = from == null ? true : t >= from;
       const okTo = to == null ? true : t <= to;
-      const okStatus = status.value ? r.status === status.value : true;
-      const okKeyword = keyword.value
-        ? r.orderNo.toLowerCase().includes(keyword.value.toLowerCase())
+      const okStatus = paymentStatus.value
+        ? r.paymentStatus === paymentStatus.value
+        : true;
+
+      const okKeyword = kw
+        ? (r.transactionId || '').toLowerCase().includes(kw)
         : true;
 
       return okFrom && okTo && okStatus && okKeyword;
@@ -255,28 +264,62 @@ const pageRows = computed(() => {
   return filteredRows.value.slice(start, start + pageSize);
 });
 
-// 條件變動時回第一頁
-watch([dateFrom, dateTo, status, keyword], () => {
+watch([createdAtStart, createdAtEnd, paymentStatus, transactionId], () => {
   page.value = 1;
 });
 
-// totalPages 變動時，確保 page 不超界
 watch(totalPages, (tp) => {
   if (page.value > tp) page.value = tp;
   if (page.value < 1) page.value = 1;
 });
 
-const onSearch = () => {
-  // 目前是前端 computed 篩選，所以查詢按鈕不需要做事
-  // 之後接 API 的話，就在這邊打 API 更新 rows
+const normalizeRechargeHistory = (raw: any): DepositHistoryRow[] => {
+  const data = raw?.data?.data ?? raw?.data ?? raw;
+  const list = Array.isArray(data)
+    ? data
+    : Array.isArray(data?.list)
+      ? data.list
+      : [];
+
+  return list.map((o: any, idx: number) => ({
+    id: String(o.id ?? idx),
+    planId: String(o.planId ?? ''),
+
+    amount: Number(o.amount ?? 0) || 0,
+    goldCoins: Number(o.goldCoins ?? 0) || 0,
+    bonusCoins: Number(o.bonusCoins ?? 0) || 0,
+
+    paymentMethod: (o.paymentMethod ?? 'CREDIT_CARD') as PayMethod,
+    paymentStatus: (o.paymentStatus ?? 'PENDING') as PaymentStatus,
+
+    transactionId: String(o.transactionId ?? ''),
+    createdAt: String(o.createdAt ?? ''),
+    paidAt: o.paidAt ? String(o.paidAt) : undefined,
+  }));
 };
 
-const onReset = () => {
-  dateFrom.value = '';
-  dateTo.value = '';
-  status.value = '';
-  keyword.value = '';
+const loadHistory = async () => {
+  await executeApi<any>({
+    // 你後端：GET /recharge/history?page=&size=
+    fn: () => getMyRechargeHistory({ page: 1, size: 1000 } as any),
+    onSuccess: (raw) => {
+      rows.value = normalizeRechargeHistory(raw);
+    },
+  });
+};
+
+const onSearch = async () => {
   page.value = 1;
+  await loadHistory();
+};
+
+const onReset = async () => {
+  createdAtStart.value = '';
+  createdAtEnd.value = '';
+  paymentStatus.value = '';
+  transactionId.value = '';
+  page.value = 1;
+  await loadHistory();
 };
 
 const payLabel = (m: PayMethod) => {
@@ -285,19 +328,34 @@ const payLabel = (m: PayMethod) => {
   return '超商代碼';
 };
 
-const statusLabel = (s: Status) => {
-  if (s === 'PAID') return '已付款';
+const statusLabel = (s: PaymentStatus) => {
+  if (s === 'COMPLETED') return '已完成';
   if (s === 'PENDING') return '待付款';
   if (s === 'FAILED') return '失敗';
   return '已取消';
 };
 
-const badgeClass = (s: Status) => ({
-  'is-paid': s === 'PAID',
+const badgeClass = (s: PaymentStatus) => ({
+  'is-paid': s === 'COMPLETED',
   'is-pending': s === 'PENDING',
   'is-failed': s === 'FAILED',
   'is-canceled': s === 'CANCELED',
 });
+
+const formatDateTime = (iso: string) => {
+  if (!iso) return '-';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mm = String(d.getMinutes()).padStart(2, '0');
+  return `${y}-${m}-${day} ${hh}:${mm}`;
+};
+
+onMounted(loadHistory);
 </script>
 
 <style scoped lang="scss">

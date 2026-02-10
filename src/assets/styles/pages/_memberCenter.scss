@@ -7,10 +7,10 @@
   background: linear-gradient(180deg, #f6e6d6 0%, #fff 65%);
 
   &__container {
-    max-width: 1220px;
+    max-width: 1240px;
     margin: 0 auto;
     display: grid;
-    grid-template-columns: 220px 1fr;
+    grid-template-columns: 240px 1fr;
     gap: 22px;
     align-items: start;
   }
@@ -28,7 +28,7 @@
   &__menu {
     display: flex;
     flex-direction: column;
-    padding: 0; /*  設計圖貼齊 */
+    padding: 0;
   }
 
   &__menuItem {
@@ -43,12 +43,11 @@
     gap: 16px;
 
     padding: 18px;
-    min-height: 68px; /*  每列大一點像設計圖 */
+    min-height: 68px;
 
     color: #111;
     text-align: left;
 
-    /*  分隔線（預設橘色） */
     &::after {
       content: '';
       position: absolute;
@@ -64,12 +63,10 @@
       display: none;
     }
 
-    /*  hover 微微亮，不要灰底 */
     &:hover {
       background: rgba(229, 166, 87, 0.06);
     }
 
-    /*  Active：字變紅、線變紅、icon 變紅 */
     &.is-active {
       color: #b03829;
 
@@ -141,7 +138,7 @@
     max-width: 760px;
 
     &--two {
-      grid-template-columns: 220px 220px;
+      grid-template-columns: 240px 240px;
     }
   }
 
@@ -202,13 +199,13 @@
 
   &__walletItem--gold {
     .memberCenter__walletBar {
-      background: #e3c6a2; /* 米金底 */
+      background: #e3c6a2;
     }
   }
 
   &__walletItem--bonus {
     .memberCenter__walletBar {
-      background: #ff9c9c; /* 設計圖偏粉紅底 */
+      background: #ff9c9c;
     }
   }
 
@@ -223,39 +220,75 @@
   }
 
   /* -------------------------
-   * RWD
+   * RWD（強化版：橫向 tabs + sticky + scroll-snap）
    * ------------------------- */
   @media (max-width: 1024px) {
     &__container {
       grid-template-columns: 1fr;
     }
 
+    /* sticky bar */
     &__side {
       position: sticky;
       top: 12px;
-      z-index: 2;
+      z-index: 20;
+
+      border-radius: 14px;
+      overflow: hidden;
     }
 
+    /* 橫向可滑 tab */
     &__menu {
       flex-direction: row;
+      align-items: stretch;
       overflow-x: auto;
-      padding: 8px 8px;
-      gap: 8px;
-    }
+      overflow-y: hidden;
 
-    &__menuItem {
-      min-height: auto;
-      padding: 12px 14px;
-      border-radius: 12px;
+      gap: 10px;
+      padding: 10px;
 
-      &::after {
-        display: none !important;
+      /* 手機滑動順 + snap */
+      -webkit-overflow-scrolling: touch;
+      scroll-snap-type: x mandatory;
+
+      /* 隱藏 scrollbar */
+      scrollbar-width: none;
+      &::-webkit-scrollbar {
+        display: none;
       }
     }
 
-    &__menuText {
-      font-size: 16px;
-      letter-spacing: 0.5px;
+    &__menuItem {
+      flex: 0 0 auto;
+      min-height: 48px;
+      padding: 10px 12px;
+      border-radius: 12px;
+
+      gap: 10px;
+
+      /* 每個 tab 的寬度控制（避免太窄/太寬） */
+      min-width: 132px;
+
+      /* snap */
+      scroll-snap-align: start;
+
+      /* 桌機那條分隔線不需要 */
+      &::after {
+        display: none !important;
+      }
+
+      /* tab 背景 */
+      background: rgba(229, 166, 87, 0.06);
+
+      &:hover {
+        background: rgba(229, 166, 87, 0.1);
+      }
+
+      /* Active：改成 tab 底線/外框更像設計稿 */
+      &.is-active {
+        background: rgba(176, 56, 41, 0.08);
+        outline: 1px solid rgba(176, 56, 41, 0.25);
+      }
     }
 
     &__menuIcon {
@@ -265,11 +298,29 @@
       font-size: 18px;
       filter: none;
     }
+
+    &__menuText {
+      font-size: 15px;
+      letter-spacing: 0.5px;
+
+      /* 避免文字爆版 */
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* 內容卡片間距微調 */
+    &__card {
+      padding: 18px 16px 20px;
+    }
   }
 
   @media (max-width: 640px) {
+    padding: 18px 12px 50px;
+
     &__card {
       padding: 16px 14px 18px;
+      border-radius: 16px;
     }
 
     &__headline {
@@ -279,10 +330,44 @@
     &__walletRow--two {
       grid-template-columns: 1fr;
       max-width: 420px;
+      gap: 18px;
+    }
+
+    /* 讓 icon 不會壓到內容（手機縮小左邊溢出） */
+    &__walletIcon {
+      left: -18px;
+      width: 64px;
+      height: 64px;
+    }
+
+    &__walletBar {
+      height: 70px;
+      padding: 16px 16px 16px 22px;
     }
 
     &__walletAmount {
-      font-size: 30px;
+      font-size: 26px;
+    }
+
+    /* menu tabs 更緊湊 */
+    &__menu {
+      gap: 8px;
+      padding: 8px;
+    }
+
+    &__menuItem {
+      min-width: 120px;
+      padding: 10px 10px;
+    }
+  }
+
+  @media (max-width: 420px) {
+    /* 超小螢幕再壓一點 */
+    &__menuItem {
+      min-width: 108px;
+    }
+    &__menuText {
+      font-size: 14px;
     }
   }
 }

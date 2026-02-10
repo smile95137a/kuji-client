@@ -1,15 +1,17 @@
 <template>
-  <aside class="memberCenter__side">
-    <nav class="memberCenter__menu">
+  <aside class="memberCenter__side" aria-label="會員中心選單">
+    <nav class="memberCenter__menu" role="tablist">
       <button
         v-for="item in menu"
         :key="item.name"
         class="memberCenter__menuItem"
         :class="{ 'is-active': isActive(item) }"
         type="button"
+        role="tab"
+        :aria-selected="isActive(item)"
         @click="go(item.name)"
       >
-        <span class="memberCenter__menuIcon">
+        <span class="memberCenter__menuIcon" aria-hidden="true">
           <font-awesome-icon :icon="item.icon" />
         </span>
         <span class="memberCenter__menuText">{{ item.label }}</span>
@@ -23,17 +25,13 @@ import { computed } from 'vue';
 import { useRouter } from 'vue-router';
 
 type MenuItem = {
-  name: string; // route name
+  name: string;
   label: string;
-  icon: [string, string]; // font-awesome icon tuple
-  activeAliases?: string[]; // 例如 MemberProfile 也算 ProfileEdit active
+  icon: [string, string];
+  activeAliases?: string[];
 };
 
-const props = defineProps<{
-  /** 目前 route.name（父層傳入 String(route.name||'')） */
-  activeName: string;
-}>();
-
+const props = defineProps<{ activeName: string }>();
 const router = useRouter();
 
 const menu = computed<MenuItem[]>(() => [
@@ -42,6 +40,12 @@ const menu = computed<MenuItem[]>(() => [
     label: '會員資料修改',
     icon: ['fas', 'user'],
     activeAliases: ['ProfileEdit'],
+  },
+  {
+    name: 'OrderHistory',
+    label: '訂單紀錄',
+    icon: ['fas', 'file-invoice'],
+    activeAliases: ['OrderDetail'],
   },
   {
     name: 'TransactionHistory',

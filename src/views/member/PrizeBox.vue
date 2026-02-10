@@ -3,9 +3,7 @@
   <section class="prizeBox">
     <header class="prizeBox__header">
       <h1 class="prizeBox__title">賞品盒</h1>
-      <p class="prizeBox__subtitle">
-        管理你抽到的獎品：查看、出貨、兌換或轉贈（示範版）
-      </p>
+      <p class="prizeBox__subtitle">管理你抽到的獎品：查看、出貨、兌換或轉贈</p>
     </header>
 
     <!-- 篩選 -->
@@ -16,7 +14,7 @@
             <label class="prizeBox__label">狀態</label>
             <select class="prizeBox__input" v-model="status">
               <option value="">全部</option>
-              <option value="IN_BOX">在盒中</option>
+              <option value="IN_BOX">在賞品盒中</option>
               <option value="SHIPPING">出貨中</option>
               <option value="DELIVERED">已送達</option>
               <option value="REDEEMED">已兌換</option>
@@ -24,11 +22,11 @@
           </div>
 
           <div class="prizeBox__field">
-            <label class="prizeBox__label">系列</label>
-            <select class="prizeBox__input" v-model="series">
+            <label class="prizeBox__label">系列 / 抽獎</label>
+            <select class="prizeBox__input" v-model="lotteryTitle">
               <option value="">全部</option>
-              <option v-for="s in seriesOptions" :key="s" :value="s">
-                {{ s }}
+              <option v-for="t in lotteryTitleOptions" :key="t" :value="t">
+                {{ t }}
               </option>
             </select>
           </div>
@@ -38,7 +36,7 @@
             <input
               class="prizeBox__input"
               type="text"
-              placeholder="搜尋獎品名稱/編號"
+              placeholder="搜尋獎品名稱/門市/活動名稱"
               v-model.trim="keyword"
             />
           </div>
@@ -46,7 +44,7 @@
           <div class="prizeBox__field prizeBox__field--check">
             <label class="prizeBox__check">
               <input type="checkbox" v-model="onlyUnshipped" />
-              <span>只看未出貨</span>
+              <span>只看未出貨（在盒中）</span>
             </label>
           </div>
         </div>
@@ -56,10 +54,13 @@
             class="prizeBox__btn prizeBox__btn--ghost"
             type="button"
             @click="onReset"
+            :disabled="loading"
           >
             重設
           </button>
-          <button class="prizeBox__btn" type="submit">查詢</button>
+          <button class="prizeBox__btn" type="submit" :disabled="loading">
+            {{ loading ? '查詢中…' : '查詢' }}
+          </button>
         </div>
       </form>
     </div>
@@ -75,10 +76,19 @@
           <button
             class="prizeBox__btn prizeBox__btn--ghost"
             type="button"
-            :disabled="checkedIds.size === 0"
+            :disabled="loading || checkedIds.size === 0"
             @click="batchShip"
           >
-            批次出貨（示範）
+            批次出貨
+          </button>
+
+          <button
+            class="prizeBox__btn prizeBox__btn--ghost"
+            type="button"
+            :disabled="loading || checkedIds.size === 0"
+            @click="batchRecycle"
+          >
+            批次回收
           </button>
         </div>
       </div>
@@ -98,42 +108,63 @@
                 />
               </th>
               <th>獎品</th>
-              <th>系列</th>
+              <th>商品</th>
+              <th>門市</th>
               <th>取得時間</th>
               <th>狀態</th>
-              <th></th>
+              <th style="text-align: right">操作</th>
             </tr>
           </thead>
+
           <tbody>
             <tr v-for="row in pageRows" :key="row.id">
               <td>
                 <input
                   type="checkbox"
                   :checked="checkedIds.has(row.id)"
+                  :disabled="row.status !== 'IN_BOX'"
                   @change="
                     toggleOne(
                       row.id,
-                      ($event.target as HTMLInputElement).checked
+                      ($event.target as HTMLInputElement).checked,
                     )
                   "
                 />
               </td>
+
+              <!-- prize -->
               <td>
                 <div class="prizeBox__prizeCell">
-                  <img class="prizeBox__thumb" :src="row.image" alt="thumb" />
+                  <img
+                    class="prizeBox__thumb"
+                    :src="row.prizeImageUrl"
+                    alt="thumb"
+                  />
                   <div class="prizeBox__prizeMeta">
-                    <p class="prizeBox__prizeName">{{ row.name }}</p>
-                    <p class="prizeBox__prizeId">{{ row.prizeNo }}</p>
+                    <p class="prizeBox__prizeName">
+                      {{ row.prizeName }}
+                      <span v-if="row.prizeLevel" class="prizeBox__mini">
+                        （{{ row.prizeLevel }}賞）
+                      </span>
+                    </p>
+
+                    <p v-if="row.isRecyclable" class="prizeBox__mini">
+                      可回收：+{{ row.recycleBonus }} 紅利
+                    </p>
                   </div>
                 </div>
               </td>
-              <td>{{ row.series }}</td>
-              <td>{{ row.createdAt }}</td>
+
+              <td>{{ row.lotteryTitle || '-' }}</td>
+              <td>{{ row.storeName || '-' }}</td>
+              <td>{{ formatDate(row.createdAt) }}</td>
+
               <td>
-                <span class="prizeBox__badge" :class="badgeClass(row.status)">{{
-                  statusLabel(row.status)
-                }}</span>
+                <span class="prizeBox__badge" :class="badgeClass(row.status)">
+                  {{ row.statusName || statusLabel(row.status) }}
+                </span>
               </td>
+
               <td class="prizeBox__right">
                 <button
                   class="prizeBox__link"
@@ -145,8 +176,11 @@
               </td>
             </tr>
 
-            <tr v-if="pageRows.length === 0">
-              <td class="prizeBox__empty" colspan="6">查無資料</td>
+            <tr v-if="!loading && pageRows.length === 0">
+              <td class="prizeBox__empty" colspan="7">查無資料</td>
+            </tr>
+            <tr v-if="loading">
+              <td class="prizeBox__empty" colspan="7">載入中…</td>
             </tr>
           </tbody>
         </table>
@@ -160,6 +194,7 @@
               <input
                 type="checkbox"
                 :checked="checkedIds.has(row.id)"
+                :disabled="row.status !== 'IN_BOX'"
                 @change="
                   toggleOne(row.id, ($event.target as HTMLInputElement).checked)
                 "
@@ -167,18 +202,33 @@
               <span>選取</span>
             </label>
 
-            <span class="prizeBox__badge" :class="badgeClass(row.status)">{{
-              statusLabel(row.status)
-            }}</span>
+            <span class="prizeBox__badge" :class="badgeClass(row.status)">
+              {{ row.statusName || statusLabel(row.status) }}
+            </span>
           </div>
 
           <div class="prizeBox__itemBody">
-            <img class="prizeBox__thumb" :src="row.image" alt="thumb" />
+            <img class="prizeBox__thumb" :src="row.prizeImageUrl" alt="thumb" />
+
             <div class="prizeBox__prizeMeta">
-              <p class="prizeBox__prizeName">{{ row.name }}</p>
-              <p class="prizeBox__prizeId">{{ row.prizeNo }}</p>
-              <p class="prizeBox__mini">系列：{{ row.series }}</p>
-              <p class="prizeBox__mini">取得：{{ row.createdAt }}</p>
+              <p class="prizeBox__prizeName">
+                {{ row.prizeName }}
+                <span v-if="row.prizeLevel" class="prizeBox__mini">
+                  （{{ row.prizeLevel }}賞）
+                </span>
+              </p>
+
+              <p class="prizeBox__prizeId">{{ row.id }}</p>
+
+              <p class="prizeBox__mini">活動：{{ row.lotteryTitle || '-' }}</p>
+              <p class="prizeBox__mini">門市：{{ row.storeName || '-' }}</p>
+              <p class="prizeBox__mini">
+                取得：{{ formatDate(row.createdAt) }}
+              </p>
+
+              <p v-if="row.isRecyclable" class="prizeBox__mini">
+                可回收：+{{ row.recycleBonus }} 紅利
+              </p>
             </div>
           </div>
 
@@ -191,9 +241,13 @@
           </button>
         </div>
 
-        <div v-if="pageRows.length === 0" class="prizeBox__emptyCard">
+        <div
+          v-if="!loading && pageRows.length === 0"
+          class="prizeBox__emptyCard"
+        >
           查無資料
         </div>
+        <div v-if="loading" class="prizeBox__emptyCard">載入中…</div>
       </div>
 
       <!-- 分頁 -->
@@ -226,20 +280,43 @@
 
         <div v-if="selected" class="prizeBox__dialogBody">
           <div class="prizeBox__detailTop">
-            <img class="prizeBox__detailImg" :src="selected.image" alt="img" />
+            <img
+              class="prizeBox__detailImg"
+              :src="selected.prizeImageUrl"
+              alt="img"
+            />
             <div class="prizeBox__detailMeta">
-              <p class="prizeBox__detailName">{{ selected.name }}</p>
-              <p class="prizeBox__detailId">{{ selected.prizeNo }}</p>
-              <p class="prizeBox__mini">系列：{{ selected.series }}</p>
-              <p class="prizeBox__mini">取得時間：{{ selected.createdAt }}</p>
+              <p class="prizeBox__detailName">
+                {{ selected.prizeName }}
+                <span v-if="selected.prizeLevel" class="prizeBox__mini">
+                  （{{ selected.prizeLevel }}賞）
+                </span>
+              </p>
+
+              <p class="prizeBox__detailId">{{ selected.id }}</p>
+
+              <p class="prizeBox__mini">
+                活動：{{ selected.lotteryTitle || '-' }}
+              </p>
+              <p class="prizeBox__mini">
+                門市：{{ selected.storeName || '-' }}
+              </p>
+              <p class="prizeBox__mini">
+                取得時間：{{ formatDate(selected.createdAt) }}
+              </p>
+
               <p class="prizeBox__mini">
                 狀態：
                 <span
                   class="prizeBox__badge"
                   :class="badgeClass(selected.status)"
                 >
-                  {{ statusLabel(selected.status) }}
+                  {{ selected.statusName || statusLabel(selected.status) }}
                 </span>
+              </p>
+
+              <p v-if="selected.isRecyclable" class="prizeBox__mini">
+                可回收：+{{ selected.recycleBonus }} 紅利
               </p>
             </div>
           </div>
@@ -250,11 +327,25 @@
             <button
               class="prizeBox__btn"
               type="button"
-              :disabled="selected.status !== 'IN_BOX'"
+              :disabled="loading || selected.status !== 'IN_BOX'"
               @click="shipOne(selected)"
             >
-              申請出貨（示範）
+              申請出貨
             </button>
+
+            <button
+              class="prizeBox__btn prizeBox__btn--ghost"
+              type="button"
+              :disabled="
+                loading ||
+                !selected.isRecyclable ||
+                selected.status !== 'IN_BOX'
+              "
+              @click="recycleOne(selected)"
+            >
+              回收換紅利
+            </button>
+
             <button
               class="prizeBox__btn prizeBox__btn--ghost"
               type="button"
@@ -263,11 +354,6 @@
               關閉
             </button>
           </div>
-
-          <p class="prizeBox__tip">
-            ※ 這是示範畫面：出貨會把狀態改成「出貨中」，你接 API
-            後把邏輯替換即可。
-          </p>
         </div>
       </div>
     </div>
@@ -275,129 +361,70 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, onMounted, ref, watch } from 'vue';
 import BasePagination from '@/components/common/BasePagination.vue';
 
-type PrizeStatus = 'IN_BOX' | 'SHIPPING' | 'DELIVERED' | 'REDEEMED';
+import {
+  getMyPrizeBox,
+  shipPrizeBoxItems,
+  recyclePrizeBoxItems,
+} from '@/services/prizeBoxService';
 
-type PrizeRow = {
-  id: string;
-  createdAt: string; // YYYY-MM-DD
-  prizeNo: string;
-  name: string;
-  series: string;
-  status: PrizeStatus;
-  image: string;
-};
+import { executeApi } from '@/utils/executeApiUtils';
+import { useMemberWalletStore } from '@/stores/memberWallet';
+
+const walletStore = useMemberWalletStore();
+
+type PrizeStatus = 'IN_BOX' | 'SHIPPING' | 'DELIVERED' | 'REDEEMED';
 
 const pageSize = 10;
 const page = ref(1);
 
+// 篩選條件（UI）
 const status = ref<PrizeStatus | ''>('');
-const series = ref('');
+const lotteryTitle = ref('');
 const keyword = ref('');
 const onlyUnshipped = ref(false);
 
-const COUNT = 78;
+const rows = ref<any[]>([]);
+const loading = ref(false);
 
-const pad = (n: number, len = 4) => String(n).padStart(len, '0');
-const toYMD = (d: Date) => {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
-};
+/** 動態 options（從 API 反推） */
+const lotteryTitleOptions = computed(() => {
+  const set = new Set<string>();
+  rows.value.forEach((r) => {
+    if (r.lotteryTitle) set.add(r.lotteryTitle);
+  });
+  return Array.from(set);
+});
 
-const placeholderImg =
-  'data:image/svg+xml;charset=UTF-8,' +
-  encodeURIComponent(`
-  <svg xmlns="http://www.w3.org/2000/svg" width="240" height="240">
-    <rect width="100%" height="100%" fill="#f2f2f2"/>
-    <rect x="36" y="36" width="168" height="168" rx="18" fill="#e2e2e2"/>
-    <text x="50%" y="54%" text-anchor="middle" font-family="Arial" font-size="18" fill="#8a8a8a">Prize</text>
-  </svg>
-`);
-
-const seriesOptions = ref<string[]>([
-  '航海王',
-  '咒術迴戰',
-  '鬼滅之刃',
-  '寶可夢',
-  '三麗鷗',
-  '鋼彈',
-]);
-
-const buildMockRows = (count: number): PrizeRow[] => {
-  const base = new Date();
-  const list: PrizeRow[] = [];
-
-  const statusPool: PrizeStatus[] = [
-    'IN_BOX',
-    'IN_BOX',
-    'IN_BOX',
-    'SHIPPING',
-    'DELIVERED',
-    'REDEEMED',
-  ];
-
-  const namePool = [
-    'A賞 大型公仔',
-    'B賞 立體模型',
-    'C賞 毛巾',
-    'D賞 徽章套組',
-    'E賞 壓克力立牌',
-    'F賞 文件夾組',
-    '最後賞 特別版公仔',
-  ];
-
-  for (let i = 0; i < count; i++) {
-    const d = new Date(base);
-    d.setDate(base.getDate() - i);
-
-    const createdAt = toYMD(d);
-    const prizeNo = `PZ${createdAt}${pad(i + 1, 4)}`;
-    const s = seriesOptions.value[i % seriesOptions.value.length];
-    const st = statusPool[Math.floor(Math.random() * statusPool.length)];
-    const nm = namePool[i % namePool.length];
-
-    list.push({
-      id: String(i + 1),
-      createdAt,
-      prizeNo,
-      name: `${nm} #${(i % 30) + 1}`,
-      series: s,
-      status: st,
-      image: placeholderImg,
-    });
-  }
-
-  return list;
-};
-
-const rows = ref<PrizeRow[]>(buildMockRows(COUNT));
-
+/** 你 API 回來就是完整 list，前端再做篩選 */
 const filteredRows = computed(() => {
-  const kw = keyword.value.toLowerCase();
+  const kw = keyword.value.trim().toLowerCase();
 
   return rows.value
     .filter((r) => {
       const okStatus = status.value ? r.status === status.value : true;
-      const okSeries = series.value ? r.series === series.value : true;
+      const okLottery = lotteryTitle.value
+        ? r.lotteryTitle === lotteryTitle.value
+        : true;
+
       const okKw = kw
-        ? r.name.toLowerCase().includes(kw) ||
-          r.prizeNo.toLowerCase().includes(kw)
+        ? (r.prizeName || '').toLowerCase().includes(kw) ||
+          (r.lotteryTitle || '').toLowerCase().includes(kw) ||
+          (r.storeName || '').toLowerCase().includes(kw)
         : true;
 
       const okUnshipped = onlyUnshipped.value ? r.status === 'IN_BOX' : true;
 
-      return okStatus && okSeries && okKw && okUnshipped;
+      return okStatus && okLottery && okKw && okUnshipped;
     })
     .slice()
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 });
 
 const totalPages = computed(() =>
-  Math.max(1, Math.ceil(filteredRows.value.length / pageSize))
+  Math.max(1, Math.ceil(filteredRows.value.length / pageSize)),
 );
 
 const pageRows = computed(() => {
@@ -405,9 +432,9 @@ const pageRows = computed(() => {
   return filteredRows.value.slice(start, start + pageSize);
 });
 
-watch([status, series, keyword, onlyUnshipped], () => {
+watch([status, lotteryTitle, keyword, onlyUnshipped], () => {
   page.value = 1;
-  checkedIds.value = new Set(); // 清掉勾選
+  checkedIds.value = new Set();
 });
 
 watch(totalPages, (tp) => {
@@ -415,21 +442,124 @@ watch(totalPages, (tp) => {
   if (page.value < 1) page.value = 1;
 });
 
-const onSearch = () => {
-  // 前端 computed 篩選，按鈕可留著之後接 API
+/** ========== API ========== */
+const mapRow = (p: any) => ({
+  id: String(p.id ?? ''),
+  userId: String(p.userId ?? ''),
+
+  lotteryId: String(p.lotteryId ?? ''),
+  lotteryTitle: String(p.lotteryTitle ?? ''),
+
+  prizeId: String(p.prizeId ?? ''),
+  prizeName: String(p.prizeName ?? ''),
+  prizeLevel: String(p.prizeLevel ?? ''),
+  prizeImageUrl: String(p.prizeImageUrl ?? ''),
+
+  storeId: String(p.storeId ?? ''),
+  storeName: String(p.storeName ?? ''),
+
+  status: (p.status ?? 'IN_BOX') as PrizeStatus,
+  statusName: String(p.statusName ?? ''),
+
+  isRecyclable: Boolean(p.isRecyclable ?? false),
+  recycleBonus: Number(p.recycleBonus ?? 0) || 0,
+
+  createdAt: String(p.createdAt ?? ''),
+});
+
+const loadPrizeBox = async () => {
+  loading.value = true;
+
+  await executeApi<any>({
+    fn: () => getMyPrizeBox(),
+    onSuccess: (raw) => {
+      const data = raw?.data?.data ?? raw?.data ?? raw;
+      const list = Array.isArray(data) ? data : [];
+
+      rows.value = list.map(mapRow);
+    },
+    onFinal: () => {
+      loading.value = false;
+    },
+  });
 };
 
-const onReset = () => {
+const shipByIds = async (ids: string[]) => {
+  if (!ids.length) return;
+
+  loading.value = true;
+
+  await executeApi<any>({
+    fn: () => shipPrizeBoxItems({ prizeBoxIds: ids }),
+    onSuccess: () => {
+      // 最穩：直接 reload，確保狀態與後端一致
+      checkedIds.value = new Set();
+      detailOpen.value = false;
+      loadPrizeBox();
+    },
+    onFinal: () => {
+      loading.value = false;
+    },
+  });
+};
+
+const recycleByIds = async (ids: string[]) => {
+  if (!ids.length) return;
+
+  loading.value = true;
+
+  await executeApi<any>({
+    fn: () => recyclePrizeBoxItems({ prizeBoxIds: ids }),
+    showSuccessDialog: true,
+    showFailDialog: true,
+    successTitle: '回收成功',
+    successMessage: '已將獎品回收並轉換為紅利，錢包已更新。',
+    errorTitle: '回收失敗',
+    errorMessage: '回收未完成，請稍後再試。',
+    onSuccess: async () => {
+      await walletStore.loadMe();
+
+      checkedIds.value = new Set();
+      detailOpen.value = false;
+      await loadPrizeBox();
+    },
+    onFinal: () => {
+      loading.value = false;
+    },
+  });
+};
+
+const onSearch = async () => {
+  page.value = 1;
+  // 後端目前沒有 query/filter endpoint，所以這裡就刷新一次最新資料
+  await loadPrizeBox();
+};
+
+const onReset = async () => {
   status.value = '';
-  series.value = '';
+  lotteryTitle.value = '';
   keyword.value = '';
   onlyUnshipped.value = false;
+
   page.value = 1;
   checkedIds.value = new Set();
+
+  await loadPrizeBox();
+};
+
+/** ========== helpers ========== */
+const formatDate = (iso: string) => {
+  if (!iso) return '-';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return iso;
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 };
 
 const statusLabel = (s: PrizeStatus) => {
-  if (s === 'IN_BOX') return '在盒中';
+  if (s === 'IN_BOX') return '在賞品盒中';
   if (s === 'SHIPPING') return '出貨中';
   if (s === 'DELIVERED') return '已送達';
   return '已兌換';
@@ -454,45 +584,64 @@ const toggleOne = (id: string, checked: boolean) => {
 
 const allChecked = computed(() => {
   if (pageRows.value.length === 0) return false;
-  return pageRows.value.every((r) => checkedIds.value.has(r.id));
+  const selectable = pageRows.value.filter((r) => r.status === 'IN_BOX');
+  if (selectable.length === 0) return false;
+  return selectable.every((r) => checkedIds.value.has(r.id));
 });
 
 const toggleAll = (checked: boolean) => {
   const next = new Set(checkedIds.value);
+
   pageRows.value.forEach((r) => {
+    if (r.status !== 'IN_BOX') return;
     if (checked) next.add(r.id);
     else next.delete(r.id);
   });
+
   checkedIds.value = next;
 };
 
 /** Detail */
 const detailOpen = ref(false);
-const selected = ref<PrizeRow | null>(null);
+const selected = ref(null);
 
-const openDetail = (row: PrizeRow) => {
+const openDetail = (row) => {
   selected.value = row;
   detailOpen.value = true;
 };
 
-/** 示範：出貨 */
-const shipOne = (row: PrizeRow) => {
+const shipOne = async (row) => {
   if (row.status !== 'IN_BOX') return;
-  row.status = 'SHIPPING';
+  await shipByIds([row.id]);
 };
 
-const batchShip = () => {
-  const ids = checkedIds.value;
-  rows.value.forEach((r) => {
-    if (ids.has(r.id) && r.status === 'IN_BOX') {
-      r.status = 'SHIPPING';
-    }
-  });
-  checkedIds.value = new Set();
+const recycleOne = async (row) => {
+  if (row.status !== 'IN_BOX') return;
+  if (!row.isRecyclable) return;
+  await recycleByIds([row.id]);
 };
+
+const batchShip = async () => {
+  const ids = Array.from(checkedIds.value);
+  await shipByIds(ids);
+};
+
+const batchRecycle = async () => {
+  const ids = Array.from(checkedIds.value).filter((id) => {
+    const r = rows.value.find((x) => x.id === id);
+    return !!r && r.status === 'IN_BOX' && r.isRecyclable;
+  });
+  await recycleByIds(ids);
+};
+
+onMounted(async () => {
+  await walletStore.loadMe();
+  await loadPrizeBox();
+});
 </script>
 
 <style scoped lang="scss">
+/* 你原本的 SCSS 完全保留 */
 .prizeBox {
   max-width: 920px;
   margin: 0 auto;
@@ -574,7 +723,10 @@ const batchShip = () => {
     justify-content: flex-end;
     gap: 10px;
   }
-
+  &__batch {
+    display: flex;
+    gap: 10px;
+  }
   &__btn {
     border: 0;
     border-radius: 12px;
@@ -667,8 +819,9 @@ const batchShip = () => {
     margin: 0;
     font-size: 12px;
     opacity: 0.75;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-      'Liberation Mono', 'Courier New', monospace;
+    font-family:
+      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+      'Courier New', monospace;
   }
 
   &__right {
@@ -841,8 +994,9 @@ const batchShip = () => {
     margin: 0;
     font-size: 12px;
     opacity: 0.75;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-      'Liberation Mono', 'Courier New', monospace;
+    font-family:
+      ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono',
+      'Courier New', monospace;
   }
 
   &__divider {

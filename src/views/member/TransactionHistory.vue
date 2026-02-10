@@ -15,7 +15,7 @@
             <input
               class="transactionHistory__input"
               type="date"
-              v-model="dateFrom"
+              v-model="createdAtStart"
             />
           </div>
 
@@ -24,7 +24,7 @@
             <input
               class="transactionHistory__input"
               type="date"
-              v-model="dateTo"
+              v-model="createdAtEnd"
             />
           </div>
 
@@ -32,35 +32,21 @@
             <label class="transactionHistory__label">類型</label>
             <select class="transactionHistory__input" v-model="type">
               <option value="">全部</option>
-              <option value="ORDER">購買</option>
-              <option value="ICHIBAN">一番賞</option>
-              <option value="REFUND">退款</option>
-              <option value="FEE">手續費</option>
-            </select>
-          </div>
-
-          <div class="transactionHistory__field">
-            <label class="transactionHistory__label">狀態</label>
-            <select class="transactionHistory__input" v-model="status">
-              <option value="">全部</option>
-              <option value="SUCCESS">成功</option>
-              <option value="PENDING">處理中</option>
-              <option value="FAILED">失敗</option>
-              <option value="CANCELED">已取消</option>
+              <option value="DRAW_GOLD">金幣抽獎</option>
+              <option value="DRAW_BONUS">紅利抽獎</option>
+              <option value="SHIPPING_FEE">運費支付</option>
             </select>
           </div>
 
           <div
             class="transactionHistory__field transactionHistory__field--full"
           >
-            <label class="transactionHistory__label"
-              >關鍵字（訂單號 / 交易號）</label
-            >
+            <label class="transactionHistory__label">訂單編號</label>
             <input
               class="transactionHistory__input"
               type="text"
-              placeholder="例如 ORD202601120001 / TX202601120001"
-              v-model.trim="keyword"
+              placeholder="例如 ORD202601120001"
+              v-model.trim="orderNumber"
             />
           </div>
         </div>
@@ -70,10 +56,17 @@
             class="transactionHistory__btn transactionHistory__btn--ghost"
             type="button"
             @click="onReset"
+            :disabled="loading"
           >
             重設
           </button>
-          <button class="transactionHistory__btn" type="submit">查詢</button>
+          <button
+            class="transactionHistory__btn"
+            type="submit"
+            :disabled="loading"
+          >
+            {{ loading ? '查詢中…' : '查詢' }}
+          </button>
         </div>
       </form>
     </div>
@@ -82,11 +75,14 @@
     <div class="transactionHistory__card">
       <div class="transactionHistory__resultHeader">
         <p class="transactionHistory__count">
-          共 <b>{{ filteredRows.length }}</b> 筆
+          共 <b>{{ rows.length }}</b> 筆
         </p>
 
         <p class="transactionHistory__sum">
-          本頁合計：<b>NT$ {{ pageSum.toLocaleString() }}</b>
+          本頁合計：
+          <b>
+            {{ pageSumText }}
+          </b>
         </p>
       </div>
 
@@ -96,35 +92,43 @@
           <thead>
             <tr>
               <th>日期</th>
-              <th>交易號</th>
-              <th>訂單號</th>
               <th>類型</th>
-              <th>金額</th>
-              <th>狀態</th>
+              <th>訂單編號</th>
+              <th>賞品</th>
+              <th>金幣</th>
+              <th>紅利</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="row in pageRows" :key="row.id">
-              <td>{{ row.createdAt }}</td>
-              <td class="transactionHistory__mono">{{ row.txNo }}</td>
-              <td class="transactionHistory__mono">{{ row.orderNo || '-' }}</td>
-              <td>{{ typeLabel(row.type) }}</td>
+              <td>{{ row.createdAtText }}</td>
+              <td>{{ row.typeName || row.type }}</td>
+              <td class="transactionHistory__mono">
+                {{ row.orderNumber || '-' }}
+              </td>
+              <td>{{ row.lotteryTitle || '-' }}</td>
+
               <td>
                 <span
-                  :class="{ 'transactionHistory__money--neg': row.amount < 0 }"
+                  :class="{
+                    'transactionHistory__money--neg': row.goldAmount > 0,
+                  }"
                 >
-                  {{ moneyText(row.amount) }}
+                  {{ goldText(row.goldAmount) }}
                 </span>
               </td>
+
               <td>
                 <span
-                  class="transactionHistory__badge"
-                  :class="badgeClass(row.status)"
+                  :class="{
+                    'transactionHistory__money--neg': row.bonusAmount > 0,
+                  }"
                 >
-                  {{ statusLabel(row.status) }}
+                  {{ bonusText(row.bonusAmount) }}
                 </span>
               </td>
+
               <td class="transactionHistory__right">
                 <button
                   class="transactionHistory__link"
@@ -136,8 +140,11 @@
               </td>
             </tr>
 
-            <tr v-if="pageRows.length === 0">
+            <tr v-if="!loading && pageRows.length === 0">
               <td class="transactionHistory__empty" colspan="7">查無資料</td>
+            </tr>
+            <tr v-if="loading">
+              <td class="transactionHistory__empty" colspan="7">載入中…</td>
             </tr>
           </tbody>
         </table>
@@ -151,42 +158,38 @@
           class="transactionHistory__item"
         >
           <div class="transactionHistory__itemTop">
-            <span
-              class="transactionHistory__badge"
-              :class="badgeClass(row.status)"
-            >
-              {{ statusLabel(row.status) }}
+            <span class="transactionHistory__badge">
+              {{ row.typeName || row.type }}
             </span>
-            <span class="transactionHistory__date">{{ row.createdAt }}</span>
+            <span class="transactionHistory__date">{{
+              row.createdAtText
+            }}</span>
           </div>
 
           <div class="transactionHistory__itemBody">
             <p class="transactionHistory__row">
-              <span class="transactionHistory__k">交易號</span>
+              <span class="transactionHistory__k">訂單編號</span>
               <span class="transactionHistory__v transactionHistory__mono">{{
-                row.txNo
+                row.orderNumber || '-'
               }}</span>
             </p>
             <p class="transactionHistory__row">
-              <span class="transactionHistory__k">訂單號</span>
-              <span class="transactionHistory__v transactionHistory__mono">{{
-                row.orderNo || '-'
-              }}</span>
-            </p>
-            <p class="transactionHistory__row">
-              <span class="transactionHistory__k">類型</span>
+              <span class="transactionHistory__k">賞品</span>
               <span class="transactionHistory__v">{{
-                typeLabel(row.type)
+                row.lotteryTitle || '-'
               }}</span>
             </p>
             <p class="transactionHistory__row">
-              <span class="transactionHistory__k">金額</span>
-              <span
-                class="transactionHistory__v"
-                :class="{ 'transactionHistory__money--neg': row.amount < 0 }"
-              >
-                {{ moneyText(row.amount) }}
-              </span>
+              <span class="transactionHistory__k">金幣</span>
+              <span class="transactionHistory__v">{{
+                goldText(row.goldAmount)
+              }}</span>
+            </p>
+            <p class="transactionHistory__row">
+              <span class="transactionHistory__k">紅利</span>
+              <span class="transactionHistory__v">{{
+                bonusText(row.bonusAmount)
+              }}</span>
             </p>
 
             <button
@@ -199,12 +202,16 @@
           </div>
         </div>
 
-        <div v-if="pageRows.length === 0" class="transactionHistory__emptyCard">
+        <div
+          v-if="!loading && pageRows.length === 0"
+          class="transactionHistory__emptyCard"
+        >
           查無資料
         </div>
+        <div v-if="loading" class="transactionHistory__emptyCard">載入中…</div>
       </div>
 
-      <!--  分頁：使用 BasePagination -->
+      <!-- 分頁 -->
       <div class="transactionHistory__pagination">
         <BasePagination
           v-model:page="page"
@@ -214,7 +221,7 @@
       </div>
     </div>
 
-    <!-- 明細 Dialog（簡易版） -->
+    <!-- 明細 Dialog -->
     <div
       v-if="detailOpen"
       class="transactionHistory__overlay"
@@ -222,7 +229,7 @@
     >
       <div class="transactionHistory__dialog">
         <div class="transactionHistory__dialogHeader">
-          <p class="transactionHistory__dialogTitle">交易明細</p>
+          <p class="transactionHistory__dialogTitle">消費明細</p>
           <button
             class="transactionHistory__dialogClose"
             type="button"
@@ -235,51 +242,50 @@
         <div v-if="selected" class="transactionHistory__dialogBody">
           <div class="transactionHistory__kv">
             <span class="transactionHistory__k">日期</span>
-            <span class="transactionHistory__v">{{ selected.createdAt }}</span>
-          </div>
-          <div class="transactionHistory__kv">
-            <span class="transactionHistory__k">交易號</span>
-            <span class="transactionHistory__v transactionHistory__mono">{{
-              selected.txNo
+            <span class="transactionHistory__v">{{
+              selected.createdAtText
             }}</span>
           </div>
-          <div class="transactionHistory__kv">
-            <span class="transactionHistory__k">訂單號</span>
-            <span class="transactionHistory__v transactionHistory__mono">{{
-              selected.orderNo || '-'
-            }}</span>
-          </div>
+
           <div class="transactionHistory__kv">
             <span class="transactionHistory__k">類型</span>
             <span class="transactionHistory__v">{{
-              typeLabel(selected.type)
+              selected.typeName || selected.type
             }}</span>
           </div>
+
           <div class="transactionHistory__kv">
-            <span class="transactionHistory__k">金額</span>
-            <span
-              class="transactionHistory__v"
-              :class="{ 'transactionHistory__money--neg': selected.amount < 0 }"
-            >
-              {{ moneyText(selected.amount) }}
-            </span>
+            <span class="transactionHistory__k">訂單編號</span>
+            <span class="transactionHistory__v transactionHistory__mono">{{
+              selected.orderNumber || '-'
+            }}</span>
           </div>
+
+          <div class="transactionHistory__kv" v-if="selected.lotteryTitle">
+            <span class="transactionHistory__k">賞品</span>
+            <span class="transactionHistory__v">{{
+              selected.lotteryTitle
+            }}</span>
+          </div>
+
           <div class="transactionHistory__kv">
-            <span class="transactionHistory__k">狀態</span>
-            <span class="transactionHistory__v">
-              <span
-                class="transactionHistory__badge"
-                :class="badgeClass(selected.status)"
-              >
-                {{ statusLabel(selected.status) }}
-              </span>
-            </span>
+            <span class="transactionHistory__k">金幣消費</span>
+            <span class="transactionHistory__v">{{
+              goldText(selected.goldAmount)
+            }}</span>
+          </div>
+
+          <div class="transactionHistory__kv">
+            <span class="transactionHistory__k">紅利消費</span>
+            <span class="transactionHistory__v">{{
+              bonusText(selected.bonusAmount)
+            }}</span>
           </div>
 
           <div class="transactionHistory__kv transactionHistory__kv--full">
-            <span class="transactionHistory__k">描述</span>
+            <span class="transactionHistory__k">說明</span>
             <span class="transactionHistory__v">{{
-              selected.description
+              selected.description || '-'
             }}</span>
           </div>
         </div>
@@ -299,214 +305,131 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { computed, ref, watch, onMounted } from 'vue';
 import BasePagination from '@/components/common/BasePagination.vue';
-
-type TxType = 'ORDER' | 'ICHIBAN' | 'REFUND' | 'FEE';
-type TxStatus = 'SUCCESS' | 'PENDING' | 'FAILED' | 'CANCELED';
-
-type TransactionRow = {
-  id: string;
-  createdAt: string; // YYYY-MM-DD
-  txNo: string; // 交易號
-  orderNo?: string; // 訂單號（可空）
-  type: TxType;
-  amount: number; // 正=扣款 or 加值? 這裡用正負表示收支（你可依後端定義調整）
-  status: TxStatus;
-  description: string;
-};
+import { getMyConsumptionRecords } from '@/services/consumptionRecordService';
 
 const pageSize = 10;
 const page = ref(1);
 
-const dateFrom = ref('');
-const dateTo = ref('');
-const type = ref<TxType | ''>('');
-const status = ref<TxStatus | ''>('');
-const keyword = ref('');
+const createdAtStart = ref('');
+const createdAtEnd = ref('');
+const type = ref('');
+const orderNumber = ref('');
 
-const COUNT = 78;
+const rows = ref<any[]>([]);
+const loading = ref(false);
 
-const pad = (n: number, len = 4) => String(n).padStart(len, '0');
-const toYMD = (d: Date) => {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+const pad2 = (n: number) => String(n).padStart(2, '0');
+
+const formatDateTime = (value: any) => {
+  if (!value) return '';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return String(value);
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(
+    d.getHours(),
+  )}:${pad2(d.getMinutes())}`;
 };
 
-const buildMockRows = (count: number): TransactionRow[] => {
-  const base = new Date();
-  const list: TransactionRow[] = [];
+const mapToRow = (x: any) => ({
+  id: String(x.id ?? ''),
+  userId: x.userId ?? undefined,
 
-  const typePool: TxType[] = [
-    'ORDER',
-    'ORDER',
-    'ORDER',
-    'ICHIBAN',
-    'REFUND',
-    'FEE',
-  ];
-  const statusPool: TxStatus[] = [
-    'SUCCESS',
-    'SUCCESS',
-    'SUCCESS',
-    'PENDING',
-    'FAILED',
-    'CANCELED',
-  ];
+  type: x.type ?? '',
+  typeName: x.typeName ?? undefined,
 
-  const orderAmounts = [120, 180, 250, 399, 520, 799, 999, 1290];
-  const feeAmounts = [-10, -15, -20];
-  const refundAmounts = [-120, -180, -399, -520];
-  const ichibanAmounts = [90, 150, 200, 300];
+  lotteryId: x.lotteryId ?? undefined,
+  lotteryTitle: x.lotteryTitle ?? undefined,
 
-  for (let i = 0; i < count; i++) {
-    const d = new Date(base);
-    d.setDate(base.getDate() - i);
+  orderId: x.orderId ?? undefined,
+  orderNumber: x.orderNumber ?? undefined,
 
-    const createdAt = toYMD(d);
-    const txNo = `TX${createdAt}${pad(i + 1, 4)}`;
+  goldAmount: Number(x.goldAmount ?? 0),
+  bonusAmount: Number(x.bonusAmount ?? 0),
 
-    const t = typePool[Math.floor(Math.random() * typePool.length)];
-    const s = statusPool[Math.floor(Math.random() * statusPool.length)];
+  description: x.description ?? undefined,
 
-    let amount = 0;
-    let orderNo: string | undefined = undefined;
-    let description = '';
+  createdAt: String(x.createdAt ?? ''),
+  createdAtText: formatDateTime(x.createdAt),
+});
 
-    if (t === 'ORDER') {
-      amount = orderAmounts[Math.floor(Math.random() * orderAmounts.length)];
-      orderNo = `ORD${createdAt}${pad(i + 1, 4)}`;
-      description = '商城購買商品扣款';
-    } else if (t === 'ICHIBAN') {
-      amount =
-        ichibanAmounts[Math.floor(Math.random() * ichibanAmounts.length)];
-      orderNo = `ICH${createdAt}${pad(i + 1, 4)}`;
-      description = '一番賞抽取消費';
-    } else if (t === 'REFUND') {
-      amount = refundAmounts[Math.floor(Math.random() * refundAmounts.length)];
-      orderNo = `ORD${createdAt}${pad(i + 1, 4)}`;
-      description = '訂單退款';
-    } else {
-      amount = feeAmounts[Math.floor(Math.random() * feeAmounts.length)];
-      description = '支付手續費';
-    }
+const fetchRecords = async () => {
+  loading.value = true;
+  try {
+    const req = {
+      condition: {
+        orderNumber: orderNumber.value || null,
+        type: type.value || null,
+        createdAtStart: createdAtStart.value || null,
+        createdAtEnd: createdAtEnd.value || null,
+      },
+    };
 
-    // 如果非 SUCCESS，讓描述更像真的
-    if (s === 'PENDING') description += '（處理中）';
-    if (s === 'FAILED') description += '（失敗）';
-    if (s === 'CANCELED') description += '（已取消）';
+    const res = await getMyConsumptionRecords(req);
 
-    list.push({
-      id: String(i + 1),
-      createdAt,
-      txNo,
-      orderNo,
-      type: t,
-      amount,
-      status: s,
-      description,
-    });
+    const maybe = (res as any)?.data ?? (res as any)?.result ?? res;
+    const arr = Array.isArray(maybe) ? maybe : (maybe?.list ?? []);
+
+    rows.value = (arr as any[]).map(mapToRow);
+    page.value = 1;
+  } catch (e) {
+    console.error('TransactionHistory - fetchRecords error:', e);
+    rows.value = [];
+  } finally {
+    loading.value = false;
   }
-
-  return list;
 };
 
-const rows = ref<TransactionRow[]>(buildMockRows(COUNT));
-
-const filteredRows = computed(() => {
-  const from = dateFrom.value ? new Date(dateFrom.value).getTime() : null;
-  const to = dateTo.value ? new Date(dateTo.value).getTime() : null;
-
-  return rows.value
-    .filter((r) => {
-      const t = new Date(r.createdAt).getTime();
-
-      const okFrom = from == null ? true : t >= from;
-      const okTo = to == null ? true : t <= to;
-      const okType = type.value ? r.type === type.value : true;
-      const okStatus = status.value ? r.status === status.value : true;
-      const kw = keyword.value.toLowerCase();
-      const okKeyword = kw
-        ? r.txNo.toLowerCase().includes(kw) ||
-          (r.orderNo || '').toLowerCase().includes(kw)
-        : true;
-
-      return okFrom && okTo && okType && okStatus && okKeyword;
-    })
-    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+onMounted(() => {
+  fetchRecords();
 });
 
 const totalPages = computed(() =>
-  Math.max(1, Math.ceil(filteredRows.value.length / pageSize)),
+  Math.max(1, Math.ceil(rows.value.length / pageSize)),
 );
 
 const pageRows = computed(() => {
   const start = (page.value - 1) * pageSize;
-  return filteredRows.value.slice(start, start + pageSize);
+  return rows.value.slice(start, start + pageSize);
 });
 
-const pageSum = computed(() =>
-  pageRows.value.reduce((sum, r) => sum + r.amount, 0),
+const pageGoldSum = computed(() =>
+  pageRows.value.reduce((sum, r) => sum + (r.goldAmount || 0), 0),
+);
+const pageBonusSum = computed(() =>
+  pageRows.value.reduce((sum, r) => sum + (r.bonusAmount || 0), 0),
+);
+const pageSumText = computed(
+  () =>
+    `金幣 ${pageGoldSum.value.toLocaleString()} / 紅利 ${pageBonusSum.value.toLocaleString()}`,
 );
 
-// 條件變動時回第一頁
-watch([dateFrom, dateTo, type, status, keyword], () => {
-  page.value = 1;
-});
-
-// totalPages 變動時，確保 page 不超界
 watch(totalPages, (tp) => {
   if (page.value > tp) page.value = tp;
   if (page.value < 1) page.value = 1;
 });
 
-const onSearch = () => {
-  // 目前是前端 computed 篩選，所以查詢按鈕不需要做事
-  // 接 API 後可在這裡打 API 更新 rows
+const onSearch = async () => {
+  await fetchRecords();
 };
 
-const onReset = () => {
-  dateFrom.value = '';
-  dateTo.value = '';
+const onReset = async () => {
+  createdAtStart.value = '';
+  createdAtEnd.value = '';
   type.value = '';
-  status.value = '';
-  keyword.value = '';
+  orderNumber.value = '';
   page.value = 1;
+  await fetchRecords();
 };
 
-const typeLabel = (t: TxType) => {
-  if (t === 'ORDER') return '購買';
-  if (t === 'ICHIBAN') return '一番賞';
-  if (t === 'REFUND') return '退款';
-  return '手續費';
-};
-
-const statusLabel = (s: TxStatus) => {
-  if (s === 'SUCCESS') return '成功';
-  if (s === 'PENDING') return '處理中';
-  if (s === 'FAILED') return '失敗';
-  return '已取消';
-};
-
-const badgeClass = (s: TxStatus) => ({
-  'is-success': s === 'SUCCESS',
-  'is-pending': s === 'PENDING',
-  'is-failed': s === 'FAILED',
-  'is-canceled': s === 'CANCELED',
-});
-
-const moneyText = (amt: number) => {
-  const sign = amt < 0 ? '-' : '';
-  return `${sign}NT$ ${Math.abs(amt).toLocaleString()}`;
-};
+const goldText = (v: number) => (v ? `-${Math.abs(v).toLocaleString()}` : '0');
+const bonusText = (v: number) => (v ? `-${Math.abs(v).toLocaleString()}` : '0');
 
 // Detail dialog
 const detailOpen = ref(false);
-const selected = ref<TransactionRow | null>(null);
+const selected = ref(null);
 
-const openDetail = (row: TransactionRow) => {
+const openDetail = (row) => {
   selected.value = row;
   detailOpen.value = true;
 };
@@ -592,6 +515,11 @@ const openDetail = (row: TransactionRow) => {
     cursor: pointer;
     background: #111;
     color: #fff;
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
 
     &--ghost {
       background: transparent;
@@ -747,15 +675,6 @@ const openDetail = (row: TransactionRow) => {
     font-size: 12px;
     font-weight: 900;
     border: 1px solid rgba(0, 0, 0, 0.12);
-
-    &.is-success {
-    }
-    &.is-pending {
-    }
-    &.is-failed {
-    }
-    &.is-canceled {
-    }
   }
 
   &__pagination {

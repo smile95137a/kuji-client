@@ -1,20 +1,16 @@
 // services/prizeBoxService.ts
 import { api } from './FrontAPI';
 
-const basePath = '/api/prize-box';
+const basePath = '/prize-box';
 
 interface RequestData {
   [key: string]: any;
 }
 
 /** 前台 - 查詢我的賞品盒 GET /api/prize-box */
-export const getMyPrizeBox = async (
-  req?: RequestData
-): Promise<ApiResponse<any>> => {
+export const getMyPrizeBox = async (): Promise<ApiResponse<any>> => {
   try {
-    const res = await api.get(`${basePath}`, {
-      params: req ?? undefined,
-    });
+    const res = await api.get(`${basePath}`);
     return res.data;
   } catch (e) {
     console.error('PrizeBox - getMyPrizeBox error:', e);
@@ -22,14 +18,12 @@ export const getMyPrizeBox = async (
   }
 };
 
-/** 前台 - 按店家分組查詢賞品盒（用於出貨選擇） GET /api/prize-box/summary */
-export const getPrizeBoxSummaryByStore = async (
-  req?: RequestData
-): Promise<ApiResponse<any>> => {
+/** 前台 - 按店家分組查詢賞品盒 GET /api/prize-box/summary */
+export const getPrizeBoxSummaryByStore = async (): Promise<
+  ApiResponse<any>
+> => {
   try {
-    const res = await api.get(`${basePath}/summary`, {
-      params: req ?? undefined,
-    });
+    const res = await api.get(`${basePath}/summary`);
     return res.data;
   } catch (e) {
     console.error('PrizeBox - getPrizeBoxSummaryByStore error:', e);
@@ -37,30 +31,36 @@ export const getPrizeBoxSummaryByStore = async (
   }
 };
 
-/** 前台 - 出貨（將選定獎品產生訂單） POST /api/prize-box/ship */
-export const shipPrizes = async (payload: {
-  prizeBoxIds: string[];
-  shippingMethodId?: string;
-  receiver?: any;
-}): Promise<ApiResponse<any>> => {
+/**
+ * 前台 - 出貨（將選定的獎品產生訂單）
+ * POST /api/prize-box/ship
+ * req: { prizeBoxIds: string[], ...其他欄位依 PrizeBoxShipReq }
+ */
+export const shipPrizeBoxItems = async (
+  req: RequestData,
+): Promise<ApiResponse<any>> => {
   try {
-    const res = await api.post(`${basePath}/ship`, payload);
+    const res = await api.post(`${basePath}/ship`, req ?? null);
     return res.data;
   } catch (e) {
-    console.error('PrizeBox - shipPrizes error:', e);
+    console.error('PrizeBox - shipPrizeBoxItems error:', e);
     throw e;
   }
 };
 
-/** 前台 - 回收獎品（轉換為紅利） POST /api/prize-box/recycle */
-export const recyclePrizes = async (payload: {
-  prizeBoxIds: string[];
-}): Promise<ApiResponse<any>> => {
+/**
+ * 前台 - 回收獎品（轉換為紅利）
+ * POST /api/prize-box/recycle
+ * req: { prizeBoxIds: string[] }
+ */
+export const recyclePrizeBoxItems = async (
+  req: RequestData,
+): Promise<ApiResponse<any>> => {
   try {
-    const res = await api.post(`${basePath}/recycle`, payload);
+    const res = await api.post(`${basePath}/recycle`, req ?? null);
     return res.data;
   } catch (e) {
-    console.error('PrizeBox - recyclePrizes error:', e);
+    console.error('PrizeBox - recyclePrizeBoxItems error:', e);
     throw e;
   }
 };

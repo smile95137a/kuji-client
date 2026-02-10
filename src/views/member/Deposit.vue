@@ -1,3 +1,4 @@
+<!-- src/views/member/Deposit.vue -->
 <template>
   <section class="deposit">
     <header class="deposit__header">
@@ -5,46 +6,55 @@
       <p class="deposit__subtitle">選擇儲值金額並完成付款</p>
     </header>
 
-    <!-- 餘額卡片 -->
+    <!-- 餘額卡片（改用 store） -->
     <div class="deposit__card">
       <div class="deposit__balance">
         <p class="deposit__balance-label">目前餘額</p>
-        <p class="deposit__balance-value">{{ balance.toLocaleString() }}</p>
+        <p class="deposit__balance-value">
+          {{ memberWallet.formatNumber(memberWallet.wallet.goldCoins) }}
+        </p>
       </div>
       <p class="deposit__hint">儲值完成後會立即更新至錢包</p>
     </div>
 
     <!-- 表單 -->
     <form class="deposit__card" @submit.prevent="onSubmit">
-      <!-- 快速選金額 -->
+      <!-- 方案 / 金額 -->
       <div class="deposit__section">
-        <p class="deposit__section-title">選擇儲值金額</p>
+        <p class="deposit__section-title">選擇儲值方案</p>
 
-        <div class="deposit__amount-grid">
+        <div v-if="loadingPlans" class="deposit__loading">載入方案中…</div>
+
+        <div v-else class="deposit__amount-grid">
           <button
-            v-for="amt in quickAmounts"
-            :key="amt"
+            v-for="p in plans"
+            :key="p.id"
             type="button"
             class="deposit__amount-btn"
-            :class="{ 'is-active': values.amount === amt }"
-            @click="setAmount(amt)"
+            :class="{ 'is-active': selectedPlanId === p.id }"
+            @click="selectPlan(p)"
           >
-            NT$ {{ amt.toLocaleString() }}
-          </button>
-        </div>
+            <div class="deposit__planTop">
+              <span class="deposit__planName">
+                {{ p.title || `方案 ${p.id}` }}
+              </span>
+              <span class="deposit__planAmt">
+                NT$ {{ Number(p.amount || 0).toLocaleString() }}
+              </span>
+            </div>
 
-        <!-- 自訂金額 -->
-        <div class="deposit__field">
-          <label class="deposit__label">或自訂金額</label>
-          <input
-            class="deposit__input"
-            type="number"
-            inputmode="numeric"
-            min="1"
-            placeholder="輸入儲值金額（NT$）"
-            v-model.number="amount"
-          />
-          <p v-if="errors.amount" class="deposit__error">{{ errors.amount }}</p>
+            <p v-if="p.bonusText" class="deposit__planMini">
+              {{ p.bonusText }}
+            </p>
+
+            <p v-if="p.description" class="deposit__planMini">
+              {{ p.description }}
+            </p>
+          </button>
+
+          <div v-if="plans.length === 0" class="deposit__emptyPlan">
+            目前沒有可用方案
+          </div>
         </div>
       </div>
 
@@ -107,7 +117,9 @@
           </p>
         </div>
 
-        <button class="deposit__submit" type="submit">確認儲值</button>
+        <button class="deposit__submit" type="submit" :disabled="submitting">
+          {{ submitting ? '處理中…' : '確認儲值' }}
+        </button>
 
         <p class="deposit__tip">點擊「確認儲值」代表你同意付款條款與相關規範</p>
       </div>
@@ -116,16 +128,25 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import { useForm } from 'vee-validate';
 import * as yup from 'yup';
 
+import { getActiveRechargePlans } from '@/services/rechargePlanService';
+import { createRechargeRequest } from '@/services/rechargeService';
+import { executeApi } from '@/utils/executeApiUtils';
+
+import { useMemberWalletStore } from '@/stores/memberWallet';
+
 type PayMethod = 'CREDIT_CARD' | 'ATM' | 'CVS';
 
-const balance = ref(1280); // TODO: 換成你的 wallet store / API
+const memberWallet = useMemberWalletStore();
 
-const quickAmounts = [200, 500, 1000, 2000, 5000];
+const plans = ref<any[]>([]);
+const loadingPlans = ref(false);
+const selectedPlanId = ref('');
 
+// ===== form =====
 const schema = yup.object({
   amount: yup
     .number()
@@ -138,7 +159,14 @@ const schema = yup.object({
     .required('請選擇付款方式'),
 });
 
-const { errors, values, defineField, handleSubmit, setFieldValue } = useForm({
+const {
+  errors,
+  values,
+  defineField,
+  handleSubmit,
+  setFieldValue,
+  setFieldError,
+} = useForm({
   validationSchema: schema,
   initialValues: {
     amount: 0,
@@ -149,17 +177,90 @@ const { errors, values, defineField, handleSubmit, setFieldValue } = useForm({
 const [amount] = defineField('amount');
 const [paymentMethod] = defineField('paymentMethod');
 
-const setAmount = (amt: number) => {
+const buildBonusText = (p) => {
+  const v = Number(p.bonusGold ?? p.bonusAmount ?? p.giftGold ?? 0) || 0;
+  if (!v) return '';
+  return `贈送：${v.toLocaleString()}`;
+};
+
+const selectPlan = (p) => {
+  selectedPlanId.value = p.id;
+  const amt = Number(p.amount ?? 0) || 0;
   setFieldValue('amount', amt);
 };
 
-const onSubmit = handleSubmit(async (form) => {
-  // TODO: 這裡接你的儲值 API / submitPaymentForm
-  // 例如：await createDepositOrder(form)
-  console.log('deposit submit:', form);
+// ===== api =====
+const loadPlans = async () => {
+  loadingPlans.value = true;
 
-  // Demo: 成功後更新餘額
-  balance.value += form.amount;
+  await executeApi<any>({
+    fn: () => getActiveRechargePlans(),
+    onSuccess: (raw) => {
+      // 你的 executeApi onSuccess 通常拿到 data
+      // 但這裡仍兼容：raw / raw.data / raw.data.data
+      const data = raw?.data?.data ?? raw?.data ?? raw;
+      const list = Array.isArray(data) ? data : [];
+
+      plans.value = list.map((x: any) => {
+        const p: any = {
+          id: String(x.id ?? ''),
+          title: x.title ?? x.name ?? undefined,
+          description: x.description ?? undefined,
+          amount: x.amount ?? x.price ?? x.rechargeAmount ?? 0,
+          bonusGold: x.bonusGold ?? undefined,
+          bonusAmount: x.bonusAmount ?? undefined,
+          giftGold: x.giftGold ?? undefined,
+        };
+        p.bonusText = buildBonusText(p);
+        return p;
+      });
+    },
+    onFinal: () => {
+      loadingPlans.value = false;
+    },
+  });
+};
+
+const submitting = ref(false);
+
+const onSubmit = handleSubmit(async (form) => {
+  if (!selectedPlanId.value) {
+    setFieldError('amount', '請先選擇一個儲值方案');
+    return;
+  }
+
+  submitting.value = true;
+
+  const payload = {
+    planId: selectedPlanId.value,
+    paymentMethod: form.paymentMethod,
+  };
+
+  await executeApi<any>({
+    fn: () => createRechargeRequest(payload),
+
+    showSuccessDialog: true,
+    showFailDialog: true,
+
+    successTitle: '儲值成功',
+    successMessage: `已完成儲值 NT$ ${Number(values.amount || 0).toLocaleString()}，餘額已更新。`,
+
+    errorTitle: '儲值失敗',
+    errorMessage: '儲值未完成，請稍後再試或更換方案。',
+
+    onSuccess: async (_data) => {
+      await memberWallet.loadMe();
+    },
+
+    onFinal: async () => {
+      submitting.value = false;
+    },
+  });
+});
+
+onMounted(async () => {
+  await memberWallet.loadMe();
+  await loadPlans();
 });
 </script>
 
@@ -219,13 +320,19 @@ const onSubmit = handleSubmit(async (form) => {
     font-weight: 700;
   }
 
+  &__loading {
+    opacity: 0.7;
+    font-size: 13px;
+    padding: 6px 0;
+  }
+
   &__amount-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
     gap: 10px;
 
     @media (max-width: 640px) {
-      grid-template-columns: repeat(2, minmax(0, 1fr));
+      grid-template-columns: repeat(1, minmax(0, 1fr));
     }
   }
 
@@ -236,11 +343,43 @@ const onSubmit = handleSubmit(async (form) => {
     padding: 12px 10px;
     cursor: pointer;
     font-weight: 700;
+    text-align: left;
 
     &.is-active {
       border-color: rgba(0, 0, 0, 0.45);
       transform: translateY(-1px);
     }
+  }
+
+  &__planTop {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 10px;
+  }
+
+  &__planName {
+    font-weight: 800;
+  }
+
+  &__planAmt {
+    font-weight: 900;
+  }
+
+  &__planMini {
+    margin: 6px 0 0;
+    font-size: 12px;
+    opacity: 0.75;
+    line-height: 1.3;
+  }
+
+  &__emptyPlan {
+    grid-column: 1 / -1;
+    border: 1px dashed rgba(0, 0, 0, 0.2);
+    border-radius: 12px;
+    padding: 14px;
+    text-align: center;
+    opacity: 0.7;
   }
 
   &__field {
@@ -258,6 +397,12 @@ const onSubmit = handleSubmit(async (form) => {
     border-radius: 12px;
     padding: 12px;
     outline: none;
+  }
+
+  &__tipSmall {
+    margin: 8px 0 0;
+    font-size: 12px;
+    opacity: 0.65;
   }
 
   &__pay-grid {
@@ -326,6 +471,11 @@ const onSubmit = handleSubmit(async (form) => {
     cursor: pointer;
     background: #111;
     color: #fff;
+
+    &:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
   }
 
   &__tip {

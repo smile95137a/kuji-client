@@ -25,6 +25,8 @@ import TransactionHistory from '@/views/member/TransactionHistory.vue';
 import Notifications from '@/views/member/Notifications.vue';
 import ProfileEdit from '@/views/member/ProfileEdit.vue';
 import PrizeBox from '@/views/member/PrizeBox.vue';
+import OrderHistory from '@/views/member/OrderHistory.vue';
+import OrderDetail from '@/views/member/OrderDetail.vue';
 
 export const routes: Array<RouteRecordRaw> = [
   {
@@ -138,6 +140,19 @@ export const routes: Array<RouteRecordRaw> = [
             path: 'deposit-history',
             name: 'DepositHistory',
             component: DepositHistory,
+            meta: { requiresAuth: true },
+          },
+          {
+            path: 'order-history',
+            name: 'OrderHistory',
+            component: OrderHistory,
+            meta: { requiresAuth: true },
+          },
+
+          {
+            path: 'orders/:orderId',
+            name: 'OrderDetail',
+            component: OrderDetail,
             meta: { requiresAuth: true },
           },
           {

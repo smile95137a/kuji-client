@@ -31,7 +31,7 @@
                 <div class="memberCenter__walletBar">
                   <span class="memberCenter__walletTag">代幣</span>
                   <span class="memberCenter__walletAmount">
-                    {{ formatNumber(wallet.goldCoins) }}
+                    {{ store.formatNumber(store.wallet.goldCoins) }}
                   </span>
                 </div>
               </div>
@@ -54,7 +54,7 @@
                 <div class="memberCenter__walletBar">
                   <span class="memberCenter__walletTag">紅利</span>
                   <span class="memberCenter__walletAmount">
-                    {{ formatNumber(wallet.bonusCoins) }}
+                    {{ store.formatNumber(store.wallet.bonusCoins) }}
                   </span>
                 </div>
               </div>
@@ -74,50 +74,22 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, provide, ref } from 'vue';
-import { useRoute, useRouter } from 'vue-router';
-import { getMe } from '@/services/userService';
+import { onMounted, provide } from 'vue';
+import { useRoute } from 'vue-router';
+
+import MemberSideMenu from '@/components/member/MemberSideMenu.vue';
 import GCoin from '@/assets/image/GCoin.png';
 import RCoin from '@/assets/image/RCoin.png';
-import { executeApi } from '@/utils/executeApiUtils';
-import MemberSideMenu from '@/components/member/MemberSideMenu.vue';
+
+import { useMemberWalletStore } from '@/stores/memberWallet';
 
 const route = useRoute();
-const router = useRouter();
+const store = useMemberWalletStore();
 
-const me = ref<any>(null);
-
-/**  只用兩個：goldCoins / bonusCoins */
-const wallet = computed(() => {
-  const u = me.value || {};
-  return {
-    goldCoins: Number(u.goldCoins ?? 0) || 0,
-    bonusCoins: Number(u.bonusCoins ?? 0) || 0,
-  };
-});
-
-const formatNumber = (n: number) => {
-  try {
-    return new Intl.NumberFormat('zh-TW').format(n || 0);
-  } catch {
-    return String(n || 0);
-  }
-};
-
-/**  給子頁用（要用就 inject('memberMe')） */
-provide('memberMe', me);
-
-const loadMe = async () => {
-  await executeApi<any>({
-    fn: () => getMe(),
-    onSuccess: (raw) => {
-      // 支援 raw、raw.data、raw.data.data
-      me.value = raw?.data?.data ?? raw?.data ?? raw ?? null;
-    },
-  });
-};
+/** 給子頁用（要用就 inject('memberMe')） */
+provide('memberMe', store.me);
 
 onMounted(async () => {
-  await loadMe();
+  await store.loadMe();
 });
 </script>
