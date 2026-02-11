@@ -205,6 +205,7 @@ import { ichibanResultDialog } from '@/utils/dialog/ichibanResultDialog';
 import { scratchCardDialog } from '@/utils/dialog/scratchCardDialog';
 import { ichibanResultCardDialog } from '@/utils/dialog/ichibanResultCardDialog';
 import { gotchaDialog } from '@/utils/dialog/gotchaDialog';
+import { getLotterySession } from '@/services/lotteryDrawService';
 
 const overlay = useOverlayStore();
 
@@ -270,6 +271,13 @@ watch(
 const kujiTitle = computed(() => detail.value?.title || '未命名商品');
 const kujiSubTitle = computed(() => detail.value?.description || '');
 const breadcrumbCategory = computed(() => detail.value?.categoryName || '商城');
+const isOpener = computed(() => !!session.value?.isOpener);
+
+const isScratchPlayerMode = computed(() => {
+  return (
+    String(detail.value?.playMode ?? '').toUpperCase() === 'SCRATCH_PLAYER'
+  );
+});
 
 /* -----------------------------
  * helpers
@@ -536,43 +544,49 @@ const handleScratch = async () => {
   const ok = await ensureCanDraw();
   if (!ok) return;
 
-  const count = 1;
+  await refreshSession(); // 🔥 先更新 session
+
+  const tryDraw = async () => {
+    return await drawLottery(kujiId.value, {
+      count: 1,
+      ticket: [],
+    });
+  };
 
   await executeApi({
-    fn: () =>
-      drawLottery(kujiId.value, {
-        count,
-        ticket: [],
-      }),
+    fn: tryDraw,
+
     onSuccess: async (data: any) => {
+      /**
+       * 🔴 如果需要指定大獎
+       */
+      if (data?.designationRequired) {
+        await handleDesignatePrize(data.availableNumbers || []);
+        return;
+      }
+
+      if (!Array.isArray(data) || !data.length) return;
+
       overlay.open();
 
       try {
+        const result = data[0];
+
         const ok = await scratchCardDialog({
-          title: 'STARDO・刮刮樂（單抽）',
-          imageSrc: data[0].prizeImageUrl,
+          title: 'STARDO・刮刮樂',
+          imageSrc: result?.prizeImageUrl,
           idleText: '刮開看看，抽到什麼賞？',
-          revealText: data[0].prizeName,
+          revealText: result?.prizeName ?? '銘謝惠顧',
           threshold: 45,
-          grade: data[0].prizeLevel,
+          grade: result?.prizeLevel,
         });
 
         if (!ok) return;
 
-        const drawnCount = Array.isArray(data) ? data.length : 0;
-        const unitPrice = Number(displayPrice.value ?? 0) || 0;
-        const totalPrice = unitPrice * drawnCount;
-
-        const beforeRemain = Math.max(
-          0,
-          Number(detail.value?.remainingPrizes ?? 0) || 0,
-        );
-        const remain = Math.max(0, beforeRemain - drawnCount);
-
         await ichibanResultDialog({
-          remain,
-          count: drawnCount,
-          totalPrice,
+          remain: Math.max(0, Number(detail.value?.remainingPrizes ?? 0) - 1),
+          count: 1,
+          totalPrice: displayPrice.value,
           items: data,
         });
       } finally {
@@ -581,6 +595,7 @@ const handleScratch = async () => {
 
       await reload();
     },
+
     onFail: async () => {
       await ichibanInfoDialog({
         title: '刮刮樂失敗',
@@ -652,6 +667,34 @@ const handleGacha = async () => {
       });
     },
   });
+};
+const handleDesignatePrize = async (availableNumbers: number[]) => {
+  if (!availableNumbers.length) return;
+
+  overlay.open();
+
+  try {
+    // ⚠️ 正式上線請改成 UI 指定
+    const pick = [...availableNumbers]
+      .sort(() => Math.random() - 0.5)
+      .slice(0, 3);
+
+    await designatePrizePositions(kujiId.value, {
+      prizeNumbers: pick,
+    });
+
+    await ichibanInfoDialog({
+      title: '大獎位置已設定',
+      content: '已成功指定大獎，開始抽獎吧！',
+    });
+
+    await refreshSession(); // 🔥 指定後刷新
+
+    // 🔥 再抽一次
+    await handleScratch();
+  } finally {
+    overlay.close();
+  }
 };
 
 const handlePrimaryAction = async () => {
@@ -852,6 +895,19 @@ const handleExchange = async (payload: {
 /* -----------------------------
  * API fetch
  * ----------------------------- */
+const refreshSession = async () => {
+  if (!kujiId.value) return;
+
+  await executeApi({
+    fn: () => getLotterySession(kujiId.value),
+    showCatchDialog: false,
+    showFailDialog: false,
+    onSuccess: (data: any) => {
+      session.value = data;
+    },
+  });
+};
+
 const reload = async () => {
   if (!kujiId.value) return;
 
@@ -864,12 +920,13 @@ const reload = async () => {
         detail.value = data?.lottery ?? null;
         prizesData.value = Array.isArray(data?.prizes) ? data.prizes : [];
         ticketData.value = Array.isArray(data?.tickets) ? data.tickets : [];
-        session.value = data?.session ?? null;
       },
       onFail: async () => {
         errorMsg.value = '載入失敗，請稍後再試';
       },
     });
+
+    await refreshSession(); // 🔥 不再用 data.session
   } catch (e) {
     console.error(e);
     errorMsg.value = '載入失敗，請稍後再試';
@@ -877,6 +934,7 @@ const reload = async () => {
     loading.value = false;
   }
 };
+
 const HOT_LS_PREFIX = 'kuji_hot_v1'; // 想改版本可改 v2
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
