@@ -137,7 +137,11 @@
       </section>
 
       <!-- 抽況 -->
-      <section class="ichibanDetail__status" ref="statusSectionRef">
+      <section
+        class="ichibanDetail__status"
+        ref="statusSectionRef"
+        v-if="!isGacha"
+      >
         <h2 class="ichibanDetail__status-title">檢視抽況</h2>
 
         <RemainingCounter
@@ -200,6 +204,7 @@ import { gachaTearDialog } from '@/utils/dialog/kujiRevealStripDialog';
 import { ichibanResultDialog } from '@/utils/dialog/ichibanResultDialog';
 import { scratchCardDialog } from '@/utils/dialog/scratchCardDialog';
 import { ichibanResultCardDialog } from '@/utils/dialog/ichibanResultCardDialog';
+import { gotchaDialog } from '@/utils/dialog/gotchaDialog';
 
 const overlay = useOverlayStore();
 
@@ -292,19 +297,43 @@ const periodText = computed(() => {
  * playMode / tags
  * ----------------------------- */
 
+/* -----------------------------
+ * playMode / tags
+ * ----------------------------- */
+
 const isScratchMode = computed(() => {
   const m = String(detail.value?.playMode ?? '').toUpperCase();
   return m === 'SCRATCH_MODE';
 });
 
-const primaryCtaText = computed(() =>
-  isScratchMode.value ? '開刮！' : '開抽！',
-);
+/** ✅ is 扭蛋 */
+const isGacha = computed(() => {
+  // 兼容多種後端命名（你可以保留你實際會出現的那幾個）
+  const playMode = String(detail.value?.playMode ?? '').toUpperCase();
+  const category = String(detail.value?.category ?? '').toUpperCase();
+  const type = String(detail.value?.type ?? '').toUpperCase();
+
+  return (
+    playMode === 'GACHA_MODE' ||
+    playMode === 'GASHAPON_MODE' ||
+    category === 'GACHA' ||
+    category === 'GASHAPON' ||
+    type === 'GACHA' ||
+    type === 'GASHAPON'
+  );
+});
+
+const primaryCtaText = computed(() => {
+  if (isScratchMode.value) return '開刮！';
+  if (isGacha.value) return '扭一顆！';
+  return '開抽！';
+});
 
 const playModeText = computed(() => {
   const m = String(detail.value?.playMode ?? '').toUpperCase();
   if (m === 'SCRATCH_MODE') return '刮刮樂';
   if (m === 'LOTTERY_MODE') return '抽籤';
+  if (m === 'GACHA_MODE' || m === 'GASHAPON_MODE') return '扭蛋';
   return '-';
 });
 
@@ -519,8 +548,16 @@ const handleScratch = async () => {
       overlay.open();
 
       try {
-        const tearResult = await gachaTearDialog({ pulls: data });
-        if (!tearResult) return;
+        const ok = await scratchCardDialog({
+          title: 'STARDO・刮刮樂（單抽）',
+          imageSrc: data[0].prizeImageUrl,
+          idleText: '刮開看看，抽到什麼賞？',
+          revealText: data[0].prizeName,
+          threshold: 45,
+          grade: data[0].prizeLevel,
+        });
+
+        if (!ok) return;
 
         const drawnCount = Array.isArray(data) ? data.length : 0;
         const unitPrice = Number(displayPrice.value ?? 0) || 0;
@@ -560,8 +597,75 @@ const handleDraw = async () => {
   statusSectionRef.value?.scrollIntoView({ behavior: 'smooth' });
   isDrawPanelOpen.value = true;
 };
+
+const handleGacha = async () => {
+  const ok = await ensureCanDraw();
+  if (!ok) return;
+
+  const count = 1;
+
+  await executeApi({
+    fn: () =>
+      drawLottery(kujiId.value, {
+        count,
+        ticket: [], // 扭蛋不需要指定票券
+      }),
+    onSuccess: async (data: any) => {
+      overlay.open();
+
+      try {
+        // 撕開（扭蛋/抽獎都可共用）
+        const results = await gotchaDialog({
+          title: '扭蛋機抽獎中',
+          pulls: data,
+          speed: 0.6,
+        });
+
+        if (!results) return;
+
+        const drawnCount = Array.isArray(data) ? data.length : 0;
+        const unitPrice = Number(displayPrice.value ?? 0) || 0;
+        const totalPrice = unitPrice * drawnCount;
+
+        const beforeRemain = Math.max(
+          0,
+          Number(detail.value?.remainingPrizes ?? 0) || 0,
+        );
+        const remain = Math.max(0, beforeRemain - drawnCount);
+
+        await ichibanResultDialog({
+          remain,
+          count: drawnCount,
+          totalPrice,
+          items: data,
+        });
+      } finally {
+        overlay.close();
+      }
+
+      await reload();
+    },
+    onFail: async () => {
+      await ichibanInfoDialog({
+        title: '扭蛋失敗',
+        content: '請稍後再試',
+      });
+    },
+  });
+};
+
 const handlePrimaryAction = async () => {
-  await handleDraw(); // LOTTERY_MODE
+  if (isScratchMode.value) {
+    await handleScratch();
+    return;
+  }
+
+  if (isGacha.value) {
+    await handleGacha();
+    return;
+  }
+
+  await handleDraw(); // LOTTERY_MODE：開抽況面板
 };
 
 const handleViewStatus = () => {
@@ -693,96 +797,6 @@ const handleExchange = async (payload: {
   }
 
   if (isScratchMode.value) {
-    const prizeNumbers = safeTickets
-      .map((id) => Number(ticketNoById.value[id] ?? 0))
-      .filter((n) => Number.isFinite(n) && n > 0);
-
-    if (prizeNumbers.length !== safeTickets.length) {
-      await ichibanInfoDialog({
-        title: '提示訊息',
-        content: '票券資料不完整，請重新載入後再試一次',
-      });
-      return;
-    }
-
-    // 1) 先指定位置（刮刮樂）
-    await executeApi({
-      fn: () => designatePrizePositions(kujiId.value, { prizeNumbers }),
-      errorTitle: '刮刮樂初始化失敗',
-      errorMessage: '指定大獎位置失敗，請稍後再試。',
-      onSuccess: async (data) => {
-        // drawRes 期望是 array
-        const list = data;
-
-        if (!list.length) {
-          await ichibanInfoDialog({
-            title: '提示訊息',
-            content: '未取得刮刮樂結果，請稍後再試',
-          });
-          return;
-        }
-
-        closeDrawPanel();
-        overlay.open();
-
-        // summary vars
-        let finished = 0;
-        let completed = 0;
-        let canceledAt: number | null = null;
-
-        // grade counts
-        const gradeCounts: Record<string, number> = {};
-        const getGrade = (p: any) =>
-          String(p?.grade ?? p?.prizeLevel ?? p?.level ?? '-');
-        for (const p of list) {
-          const g = getGrade(p);
-          gradeCounts[g] = gradeCounts[g] ?? 0;
-        }
-
-        try {
-          for (let i = 0; i < list.length; i++) {
-            const drawNo = i + 1;
-            const prize = list[i];
-
-            const grade = getGrade(prize);
-            const name = String(
-              prize?.name ?? prize?.prizeName ?? prize?.title ?? '未命名獎品',
-            );
-            const imageSrc = String(
-              prize?.imageSrc ?? prize?.imageUrl ?? prize?.prizeImageUrl ?? '',
-            );
-
-            const ok = await scratchCardDialog({
-              title: `STARDO（第 ${drawNo} 張｜${grade}）`,
-              imageSrc,
-              idleText: `第 ${drawNo} 張，刮開看看抽到什麼？`,
-              revealText: `第 ${drawNo} 張：${grade}・${name}`,
-              threshold: 45,
-              grade,
-            });
-
-            finished++;
-
-            if (!ok) {
-              canceledAt = drawNo;
-              break;
-            }
-
-            completed++;
-            gradeCounts[grade] = (gradeCounts[grade] ?? 0) + 1;
-          }
-
-          await ichibanInfoDialog({
-            title: '刮刮樂完成',
-            content: `完成 ${completed}/${finished}`,
-          });
-        } finally {
-          overlay.close();
-        }
-
-        await reload();
-      },
-    });
   } else {
     await executeApi({
       fn: () =>

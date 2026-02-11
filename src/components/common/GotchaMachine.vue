@@ -35,7 +35,7 @@
           <div class="prize">
             <img
               class="wiggle"
-              :src="prize?.image || ''"
+              :src="prize?.prizeImageUrl || ''"
               alt="prize"
               draggable="false"
             />
@@ -60,8 +60,6 @@ import demo1Img from '@/assets/image/demo1.jpg';
 import { faHandPointer } from '@fortawesome/free-solid-svg-icons';
 
 gsap.registerPlugin(RoughEase);
-
-type Prize = { image: string; title: string };
 
 //  方案 B：inline SVG（不外連）
 const inlineSvgDataUri = (svg: string) =>
@@ -88,22 +86,17 @@ const props = withDefaults(
     speed?: number;
     machineSrc?: string;
     pointerSrc?: string;
-    prizes?: Prize[];
+    prizes?: any[];
   }>(),
   {
     speed: 1,
     machineSrc: defaultMachineSrc,
-    prizes: () => [
-      { image: demo1Img, title: '皮卡丘A賞' },
-      { image: demo1Img, title: '皮卡丘B賞' },
-      { image: demo1Img, title: '皮卡丘C賞' },
-      { image: demo1Img, title: '皮卡丘D賞' },
-    ],
+    prizes: () => [],
   },
 );
 
 const emit = defineEmits<{
-  (e: 'got-prize', prize: Prize): void;
+  (e: 'got-prize', prize): void;
 }>();
 
 const appRef = ref<HTMLElement | null>(null);
@@ -113,7 +106,7 @@ const shineRef = ref<HTMLElement | null>(null);
 const prizeBallContainerRef = ref<HTMLElement | null>(null);
 const prizeRewardContainerRef = ref<HTMLElement | null>(null);
 
-const prize = ref<Prize | null>(null);
+const prize = ref(null);
 
 // ----- internal state -----
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
