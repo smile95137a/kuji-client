@@ -26,81 +26,66 @@
     </div>
   </section>
 </template>
-
 <script setup lang="ts">
-import visualSrc from '@/assets/image/hot-topics-visual.png'; // 換成你的 ICHIBAN KUJI 圖
+import { ref, onMounted, computed } from 'vue';
+import visualSrc from '@/assets/image/hot-topics-visual.png';
 
-// 依照你圖上的排列/內容寫死（你要增刪就改這裡）
-const topics = [
-  '鋼彈系列',
-  '新世紀福音戰士',
-  '七龍珠',
-  '航海王',
-  '獵人',
-  '精',
-  '靈寶可夢',
-  '數碼寶貝',
-  '魔物獵人',
-  '進擊的巨人',
-  'JOJO的奇妙',
-  '冒險',
-  '吉伊卡哇',
-  '膽大黨',
-  '咒術迴戰',
-  '鏈鋸人',
-  '火影忍者',
-  '假面騎士',
-  '鬼滅之刃',
-  '遊戲王',
-  '我的英雄學院',
-  '勇者鬥惡龍',
-  '哥吉拉',
-  '葬送的芙莉蓮',
-  '超人力霸王',
-  '碧藍航線',
-  '蠟筆小新',
-  '初音未來',
-  '烙印勇士',
-  '魔神英雄傳',
-  '天天突破紅蓮螺巖',
-  '閃',
-  '電鋸麗車',
-  '藍色監獄',
-  '間諜家家酒',
-  '星際大戰',
-  '變形金剛',
-  '鋼鐵人',
-  '蜘蛛人',
-  '蝙蝠俠',
-  '神力女超人',
-  '哈利波特',
-  '異形',
-  '終極戰士',
-  '金剛戰士',
-  '回到未來',
-  '玩具總動員',
-  '魔鬼剋星',
-  '太空超人',
-  '忍者龜',
-  '音速小子',
-  '侏羅紀公園',
-];
+import {
+  getLotteryCategoryOptions,
+  getLotterySubCategoryOptions,
+} from '@/services/enumService';
+import { executeApi } from '@/utils/executeApiUtils';
 
-// 需要紅色的（照圖挑幾個，你想改就改這裡）
+interface EnumOption {
+  label: string;
+  value: string;
+  description?: string;
+}
+
+const loading = ref(false);
+const topics = ref<string[]>([]);
+
+/* -----------------------------
+ * 需要紅色的（可以改成依 value 判斷）
+ * ----------------------------- */
 const hotSet = new Set<string>([
   '鋼彈系列',
-  '精',
-  '靈寶可夢',
   '進擊的巨人',
   '吉伊卡哇',
-  '膽大黨',
   '星際大戰',
-  '忍者龜',
 ]);
 
+/* -----------------------------
+ * 點擊事件
+ * ----------------------------- */
 const onClick = (t: string) => {
   console.log('topic click:', t);
 };
+
+/* -----------------------------
+ * 取得分類
+ * ----------------------------- */
+const fetchCategories = async () => {
+  loading.value = true;
+
+  await executeApi({
+    fn: () => getLotterySubCategoryOptions(),
+    showCatchDialog: false,
+    showFailDialog: false,
+    onSuccess: (res: any) => {
+      // res.data 是 EnumOption[]
+      const list: EnumOption[] = Array.isArray(res) ? res : (res?.data ?? []);
+
+      topics.value = list.map((item) => item.label);
+    },
+  });
+
+  loading.value = false;
+};
+
+onMounted(() => {
+  fetchCategories();
+});
 </script>
 
 <style scoped lang="scss">
@@ -163,7 +148,9 @@ const onClick = (t: string) => {
     letter-spacing: 0.5px;
     color: rgba(0, 0, 0, 0.82);
 
-    transition: transform 120ms ease, opacity 120ms ease;
+    transition:
+      transform 120ms ease,
+      opacity 120ms ease;
 
     &:hover {
       transform: translateY(-1px);
