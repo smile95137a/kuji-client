@@ -161,7 +161,7 @@
       <section
         class="ichibanDetail__status"
         ref="statusSectionRef"
-        v-if="!isGacha"
+        v-if="!isGacha && !isScratchMode"
       >
         <h2 class="ichibanDetail__status-title">檢視抽況</h2>
 
@@ -640,9 +640,6 @@ const handleScratch = async () => {
     fn: tryDraw,
 
     onSuccess: async (data: any) => {
-      /**
-       * 🔴 如果需要指定大獎
-       */
       if (data?.designationRequired) {
         await handleDesignatePrize(data.availableNumbers || []);
         return;
