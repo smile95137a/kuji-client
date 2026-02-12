@@ -77,14 +77,21 @@
                   :tags="tags"
                 />
 
-                <!-- 🛡️ 保護期提示 -->
                 <div v-if="protectionInfo" class="ichibanDetail__protection">
                   <div class="protection-badge">
-                    <span class="protection-icon">🛡️</span>
+                    <span class="protection-icon" aria-hidden="true">
+                      <font-awesome-icon :icon="['fas', 'shield-halved']" />
+                    </span>
+
                     <div class="protection-content">
                       <div class="protection-title">開套者保護期</div>
-                      <div class="protection-message">{{ protectionInfo.message }}</div>
-                      <div class="protection-detail" v-if="protectionInfo.endTime">
+                      <div class="protection-message">
+                        {{ protectionInfo.message }}
+                      </div>
+                      <div
+                        class="protection-detail"
+                        v-if="protectionInfo.endTime"
+                      >
                         有效期限：{{ protectionInfo.endTime }}
                       </div>
                     </div>
@@ -318,16 +325,12 @@ const isScratchPlayerMode = computed(() => {
 });
 
 const isScratchStoreMode = computed(() => {
-  return (
-    String(detail.value?.playMode ?? '').toUpperCase() === 'SCRATCH_STORE'
-  );
+  return String(detail.value?.playMode ?? '').toUpperCase() === 'SCRATCH_STORE';
 });
 
 /** 是否為刮刮樂模式（自製賞） */
 const isScratchModeCustom = computed(() => {
-  return (
-    String(detail.value?.playMode ?? '').toUpperCase() === 'SCRATCH_MODE'
-  );
+  return String(detail.value?.playMode ?? '').toUpperCase() === 'SCRATCH_MODE';
 });
 
 /* -----------------------------
@@ -362,7 +365,9 @@ const periodText = computed(() => {
 
 const isScratchMode = computed(() => {
   const m = String(detail.value?.playMode ?? '').toUpperCase();
-  return m === 'SCRATCH_MODE' || m === 'SCRATCH_PLAYER' || m === 'SCRATCH_STORE';
+  return (
+    m === 'SCRATCH_MODE' || m === 'SCRATCH_PLAYER' || m === 'SCRATCH_STORE'
+  );
 });
 
 /** ✅ is 扭蛋 */
@@ -424,12 +429,12 @@ const isInProtection = computed(() => {
 
 const protectionInfo = computed(() => {
   if (!isInProtection.value) return null;
-  
+
   const protectionDraws = session.value?.protectionDraws ?? 0;
   const openerDrawCount = session.value?.openerDrawCount ?? 0;
   const remainingDraws = protectionDraws - openerDrawCount;
   const endTime = session.value?.protectionEndTime;
-  
+
   return {
     remainingDraws,
     totalDraws: protectionDraws,
@@ -753,8 +758,10 @@ const handleDesignatePrize = async (availableNumbers: number[]) => {
 
   try {
     // 獲取大獎列表
-    const grandPrizes = prizesData.value.filter((p: any) => p.isGrandPrize === true);
-    
+    const grandPrizes = prizesData.value.filter(
+      (p: any) => p.isGrandPrize === true,
+    );
+
     if (!grandPrizes.length) {
       await ichibanInfoDialog({
         title: '錯誤',
@@ -769,13 +776,13 @@ const handleDesignatePrize = async (availableNumbers: number[]) => {
     // 為每個大獎依次選號
     for (const prize of grandPrizes) {
       const quantity = prize.quantity || 1;
-      
+
       // 顯示對話框讓玩家選號
       const selectedNumbers = await showDesignationUI(
         availableNumbers,
         quantity,
         prize,
-        usedNumbers
+        usedNumbers,
       );
 
       // 玩家取消
@@ -821,7 +828,7 @@ const showDesignationUI = (
   availableNumbers: number[],
   count: number,
   prize: any,
-  usedNumbers: number[]
+  usedNumbers: number[],
 ): Promise<number[]> => {
   return new Promise((resolve) => {
     designationAvailableNumbers.value = availableNumbers;

@@ -5,21 +5,11 @@
 
     <div class="dialog__panel" @click.stop>
       <div class="dialog__header">
-        <h3 class="dialog__title">🎁 指定大獎位置</h3>
-        <div class="current-prize-info" v-if="currentPrize">
-          <img 
-            v-if="currentPrize.imageUrl" 
-            :src="currentPrize.imageUrl" 
-            :alt="currentPrize.name"
-            class="prize-image"
-          />
-          <div class="prize-details">
-            <div class="prize-name">{{ currentPrize.name }}</div>
-            <div class="prize-level">{{ currentPrize.level }} 賞</div>
-          </div>
-        </div>
+        <h3 class="dialog__title">指定大獎位置</h3>
+
         <p class="dialog__subtitle">
-          請為此大獎選擇 <strong class="highlight">{{ requiredCount }}</strong> 個號碼
+          請為此大獎選擇
+          <strong class="highlight">{{ requiredCount }}</strong> 個號碼
         </p>
       </div>
 
@@ -38,12 +28,14 @@
             class="number-btn"
             :class="{
               'number-btn--selected': selectedNumbers.includes(num),
-              'number-btn--disabled': isDisabled(num)
+              'number-btn--disabled': isDisabled(num),
             }"
             @click="toggleNumber(num)"
           >
             <span class="number-text">{{ num }}</span>
-            <span v-if="selectedNumbers.includes(num)" class="check-icon">✓</span>
+            <span v-if="selectedNumbers.includes(num)" class="check-icon"
+              >✓</span
+            >
           </button>
         </div>
 
@@ -100,13 +92,13 @@ const props = withDefaults(
     availableNumbers: number[];
     requiredCount?: number;
     currentPrize?: Prize | null;
-    usedNumbers?: number[];  // 已經被其他大獎指定的號碼
+    usedNumbers?: number[]; // 已經被其他大獎指定的號碼
   }>(),
   {
     requiredCount: 3,
     currentPrize: null,
     usedNumbers: () => [],
-  }
+  },
 );
 
 const emit = defineEmits<{
@@ -135,7 +127,7 @@ const isDisabled = (num: number) => {
 
 const toggleNumber = (num: number) => {
   if (isDisabled(num)) return;
-  
+
   const index = selectedNumbers.value.indexOf(num);
   if (index > -1) {
     // 已選中，取消選擇
@@ -169,6 +161,11 @@ const handleBackdropClick = () => {
 </script>
 
 <style scoped lang="scss">
+/* theme */
+$brand: #b43325;
+$brand-weak: rgba(180, 51, 37, 0.12);
+$brand-weak-2: rgba(180, 51, 37, 0.2);
+
 .prize-designation-dialog {
   position: fixed;
   inset: 0;
@@ -204,29 +201,35 @@ const handleBackdropClick = () => {
 
 .dialog__title {
   font-size: 22px;
-  font-weight: 700;
-  color: #333;
+  font-weight: 800;
+  color: #2b2b2b;
   margin-bottom: 12px;
+  letter-spacing: 0.5px;
 }
 
 .current-prize-info {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  padding: 16px;
-  background: linear-gradient(135deg, #ffeaa7 0%, #fdcb6e 100%);
-  border-radius: 12px;
-  margin-bottom: 12px;
+  gap: 14px;
+  padding: 14px;
+  background: linear-gradient(
+    135deg,
+    $brand-weak 0%,
+    rgba(255, 255, 255, 1) 100%
+  );
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 14px;
+  margin-bottom: 10px;
 }
 
 .prize-image {
   width: 60px;
   height: 60px;
   object-fit: cover;
-  border-radius: 8px;
+  border-radius: 10px;
   border: 2px solid #fff;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
 }
 
 .prize-details {
@@ -235,29 +238,30 @@ const handleBackdropClick = () => {
 
 .prize-name {
   font-size: 18px;
-  font-weight: 700;
-  color: #2d3436;
+  font-weight: 800;
+  color: #222;
   margin-bottom: 4px;
 }
 
 .prize-level {
-  font-size: 14px;
-  font-weight: 600;
-  color: #636e72;
-  padding: 2px 8px;
-  background: rgba(255, 255, 255, 0.6);
-  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: $brand;
+  padding: 3px 10px;
+  background: rgba(180, 51, 37, 0.1);
+  border-radius: 999px;
   display: inline-block;
 }
 
 .dialog__subtitle {
   font-size: 14px;
-  color: #666;
+  color: rgba(0, 0, 0, 0.62);
   margin: 0;
 
   .highlight {
-    color: #ff6b6b;
+    color: $brand;
     font-size: 18px;
+    font-weight: 900;
   }
 }
 
@@ -270,14 +274,15 @@ const handleBackdropClick = () => {
   justify-content: center;
   margin-bottom: 16px;
   padding: 10px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: rgba(180, 51, 37, 0.12);
+  border: 1px solid rgba(180, 51, 37, 0.15);
   border-radius: 12px;
 }
 
 .selection-count {
-  font-size: 16px;
-  font-weight: 600;
-  color: #fff;
+  font-size: 15px;
+  font-weight: 800;
+  color: $brand;
 }
 
 .numbers-grid {
@@ -293,50 +298,58 @@ const handleBackdropClick = () => {
 .number-btn {
   position: relative;
   aspect-ratio: 1;
-  border: 2px solid #ddd;
+  border: 2px solid rgba(0, 0, 0, 0.12);
   border-radius: 12px;
   background: #fff;
   font-size: 16px;
-  font-weight: 600;
-  color: #333;
+  font-weight: 800;
+  color: rgba(0, 0, 0, 0.82);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    border-color 120ms ease,
+    opacity 120ms ease;
   display: flex;
   align-items: center;
   justify-content: center;
 
   &:hover:not(&--disabled) {
-    border-color: #667eea;
+    border-color: rgba(180, 51, 37, 0.55);
     transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+    box-shadow: 0 6px 16px rgba(180, 51, 37, 0.18);
   }
 
   &--selected {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-color: #667eea;
+    background: $brand;
+    border-color: $brand;
     color: #fff;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
+    box-shadow: 0 8px 18px rgba(180, 51, 37, 0.35);
 
     .number-text {
-      transform: scale(0.85);
+      transform: scale(0.9);
+    }
+
+    .check-icon {
+      background: rgba(255, 255, 255, 0.18);
+      border: 1px solid rgba(255, 255, 255, 0.22);
     }
   }
 
   &--disabled {
-    opacity: 0.3;
+    opacity: 0.28;
     cursor: not-allowed;
   }
 
   .number-text {
-    transition: transform 0.2s ease;
+    transition: transform 120ms ease;
   }
 
   .check-icon {
     position: absolute;
-    top: 2px;
-    right: 2px;
+    top: 4px;
+    right: 4px;
     font-size: 12px;
-    background: rgba(255, 255, 255, 0.3);
     border-radius: 50%;
     width: 18px;
     height: 18px;
@@ -349,14 +362,14 @@ const handleBackdropClick = () => {
 .selected-list {
   margin-top: 16px;
   padding: 12px;
-  background: #f8f9fa;
+  background: rgba(0, 0, 0, 0.03);
   border-radius: 12px;
 }
 
 .selected-label {
   font-size: 13px;
-  font-weight: 600;
-  color: #666;
+  font-weight: 800;
+  color: rgba(0, 0, 0, 0.62);
   margin-bottom: 8px;
 }
 
@@ -370,17 +383,22 @@ const handleBackdropClick = () => {
   display: inline-flex;
   align-items: center;
   padding: 6px 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
-  border-radius: 20px;
+  background: rgba(180, 51, 37, 0.1);
+  color: $brand;
+  border: 1px solid rgba(180, 51, 37, 0.2);
+  border-radius: 999px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 800;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    background 120ms ease;
 
   &:hover {
-    transform: scale(1.05);
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
+    background: rgba(180, 51, 37, 0.14);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(180, 51, 37, 0.12);
   }
 }
 
@@ -388,7 +406,7 @@ const handleBackdropClick = () => {
   display: flex;
   gap: 12px;
   padding-top: 16px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
 }
 
 .dialog__btn {
@@ -397,9 +415,12 @@ const handleBackdropClick = () => {
   border: none;
   border-radius: 12px;
   font-size: 16px;
-  font-weight: 600;
+  font-weight: 800;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    transform 120ms ease,
+    box-shadow 120ms ease,
+    opacity 120ms ease;
 
   &:disabled {
     opacity: 0.5;
@@ -407,278 +428,41 @@ const handleBackdropClick = () => {
   }
 
   &--secondary {
-    background: #e0e0e0;
-    color: #666;
+    background: rgba(0, 0, 0, 0.08);
+    color: rgba(0, 0, 0, 0.68);
 
     &:hover:not(:disabled) {
-      background: #d5d5d5;
+      background: rgba(0, 0, 0, 0.12);
     }
   }
 
   &--primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: $brand;
     color: #fff;
 
     &:hover:not(:disabled) {
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+      box-shadow: 0 10px 20px rgba(180, 51, 37, 0.28);
     }
   }
 }
 
-// 滾動條樣式
+/* 滾動條樣式 */
 .numbers-grid::-webkit-scrollbar {
   width: 8px;
 }
 
 .numbers-grid::-webkit-scrollbar-track {
-  background: #f1f1f1;
+  background: rgba(0, 0, 0, 0.06);
   border-radius: 4px;
 }
 
 .numbers-grid::-webkit-scrollbar-thumb {
-  background: #888;
+  background: rgba(0, 0, 0, 0.35);
   border-radius: 4px;
 
   &:hover {
-    background: #555;
-  }
-}
-</style>
-
-<style scoped lang="scss">
-.prize-designation-dialog {
-  position: fixed;
-  inset: 0;
-  z-index: 10000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.dialog__backdrop {
-  position: absolute;
-  inset: 0;
-  background-color: rgba(0, 0, 0, 0.75);
-}
-
-.dialog__panel {
-  position: relative;
-  z-index: 1;
-  max-width: 600px;
-  max-height: 90vh;
-  width: 90%;
-  background-color: #fff;
-  border-radius: 20px;
-  padding: 24px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
-  overflow-y: auto;
-}
-
-.dialog__header {
-  margin-bottom: 20px;
-  text-align: center;
-}
-
-.dialog__title {
-  font-size: 22px;
-  font-weight: 700;
-  color: #333;
-  margin-bottom: 8px;
-}
-
-.dialog__subtitle {
-  font-size: 14px;
-  color: #666;
-  margin: 0;
-
-  .highlight {
-    color: #ff6b6b;
-    font-size: 18px;
-  }
-}
-
-.dialog__body {
-  margin-bottom: 20px;
-}
-
-.selection-info {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 16px;
-  padding: 10px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 12px;
-}
-
-.selection-count {
-  font-size: 16px;
-  font-weight: 600;
-  color: #fff;
-}
-
-.numbers-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
-  gap: 8px;
-  margin-bottom: 16px;
-  max-height: 400px;
-  overflow-y: auto;
-  padding: 4px;
-}
-
-.number-btn {
-  position: relative;
-  aspect-ratio: 1;
-  border: 2px solid #ddd;
-  border-radius: 12px;
-  background: #fff;
-  font-size: 16px;
-  font-weight: 600;
-  color: #333;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  &:hover:not(&--disabled) {
-    border-color: #667eea;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
-  }
-
-  &--selected {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-color: #667eea;
-    color: #fff;
-    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
-
-    .number-text {
-      transform: scale(0.85);
-    }
-  }
-
-  &--disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
-  }
-
-  .number-text {
-    transition: transform 0.2s ease;
-  }
-
-  .check-icon {
-    position: absolute;
-    top: 2px;
-    right: 2px;
-    font-size: 12px;
-    background: rgba(255, 255, 255, 0.3);
-    border-radius: 50%;
-    width: 18px;
-    height: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-}
-
-.selected-list {
-  margin-top: 16px;
-  padding: 12px;
-  background: #f8f9fa;
-  border-radius: 12px;
-}
-
-.selected-label {
-  font-size: 13px;
-  font-weight: 600;
-  color: #666;
-  margin-bottom: 8px;
-}
-
-.selected-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.chip {
-  display: inline-flex;
-  align-items: center;
-  padding: 6px 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: #fff;
-  border-radius: 20px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:hover {
-    transform: scale(1.05);
-    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.4);
-  }
-}
-
-.dialog__footer {
-  display: flex;
-  gap: 12px;
-  padding-top: 16px;
-  border-top: 1px solid #eee;
-}
-
-.dialog__btn {
-  flex: 1;
-  padding: 12px 24px;
-  border: none;
-  border-radius: 12px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-
-  &:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  &--secondary {
-    background: #e0e0e0;
-    color: #666;
-
-    &:hover:not(:disabled) {
-      background: #d5d5d5;
-    }
-  }
-
-  &--primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: #fff;
-
-    &:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-    }
-  }
-}
-
-// 滾動條樣式
-.numbers-grid::-webkit-scrollbar {
-  width: 8px;
-}
-
-.numbers-grid::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
-}
-
-.numbers-grid::-webkit-scrollbar-thumb {
-  background: #888;
-  border-radius: 4px;
-
-  &:hover {
-    background: #555;
+    background: rgba(0, 0, 0, 0.5);
   }
 }
 </style>

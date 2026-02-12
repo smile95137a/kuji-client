@@ -90,7 +90,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import confetti from 'canvas-confetti';
-import demo1Img from '@/assets/image/demo1.jpg';
+import demo1Img from '@/assets/image/weblogo.png';
 
 const MULTI_CONFETTI_COLORS = [
   '#fffbeb',
