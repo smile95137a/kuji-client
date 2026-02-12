@@ -25,9 +25,14 @@ export const drawLottery = async (
 };
 
 /** 前台 - 指定大獎位置（刮刮樂模式） POST /lottery/draw/{lotteryId}/designate */
+export interface PrizeDesignation {
+  ticketNumber: number;
+  prizeId: string;
+}
+
 export const designatePrizePositions = async (
   lotteryId: string,
-  payload: { prizeNumbers: number[] },
+  payload: { designations: PrizeDesignation[] },
 ): Promise<ApiResponse<any>> => {
   try {
     const res = await api.post(`${basePath}/${lotteryId}/designate`, payload);
@@ -50,6 +55,19 @@ export const getLotterySession = async (
     return res.data;
   } catch (e) {
     console.error('LotteryDraw - getLotterySession error:', e);
+    throw e;
+  }
+};
+
+/** 前台 - 查詢籤位列表 GET /lottery/draw/{lotteryId}/tickets */
+export const getLotteryTickets = async (
+  lotteryId: string,
+): Promise<ApiResponse<any>> => {
+  try {
+    const res = await api.get(`${basePath}/${lotteryId}/tickets`);
+    return res.data;
+  } catch (e) {
+    console.error('LotteryDraw - getLotteryTickets error:', e);
     throw e;
   }
 };

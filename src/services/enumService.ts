@@ -155,7 +155,10 @@ export const getLotteryCategoryOptions = async (
     throw e;
   }
 };
-/** 前台 - 商品子類型選項 GET /enums/lottery-sub-category */
+/**
+ * 前台 - 商品子類型選項 GET /enums/lottery-sub-category
+ * @deprecated 請使用 categoryService.queryThemes() 代替
+ */
 export const getLotterySubCategoryOptions = async (
   req?: RequestData,
 ): Promise<ApiResponse<any>> => {

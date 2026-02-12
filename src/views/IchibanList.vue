@@ -4,7 +4,7 @@ import { useRoute, useRouter } from 'vue-router';
 import IchibanKujiCard from '@/components/IchibanKujiCard.vue';
 import BasePagination from '@/components/common/BasePagination.vue';
 import NoData from '@/components/common/NoData.vue';
-import { queryBrowseLotteries } from '@/services/lotteryBrowseService';
+import { queryBrowseLotteries, type BrowseCondition } from '@/services/lotteryBrowseService';
 import { executeApi } from '@/utils/executeApiUtils';
 const DEFAULT_SORT = 'latest';
 const DEFAULT_TAG = 'all';
@@ -96,8 +96,16 @@ const tags = computed(() => {
  * fetch
  * ------------------------------ */
 const fetchList = async () => {
+  const condition: BrowseCondition = {};
+  
+  // 只在初始載入時，如果 URL 有 tag 參數，才加到 condition
+  const urlTag = route.query.tag;
+  if (urlTag && typeof urlTag === 'string' && urlTag !== 'all') {
+    condition.theme = urlTag;
+  }
+  
   await executeApi({
-    fn: () => queryBrowseLotteries({ condition: {} }),
+    fn: () => queryBrowseLotteries({ condition }),
     onSuccess: async (data) => {
       const arr = Array.isArray(data) ? data : [];
       kujiList.value = arr.map((x) => {
@@ -184,6 +192,19 @@ watch(
   (type) => {
     currentCategory.value = typeToCategory[type] ?? 'all';
     resetUiState();
+  },
+  { immediate: true },
+);
+
+/* ------------------------------
+ * 從 URL 讀取主題參數（只在初始時設定）
+ * ------------------------------ */
+watch(
+  () => route.query.tag,
+  (tag) => {
+    if (tag && typeof tag === 'string') {
+      currentTag.value = tag;
+    }
   },
   { immediate: true },
 );

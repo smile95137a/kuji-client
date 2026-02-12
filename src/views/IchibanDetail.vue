@@ -77,6 +77,20 @@
                   :tags="tags"
                 />
 
+                <!-- 🛡️ 保護期提示 -->
+                <div v-if="protectionInfo" class="ichibanDetail__protection">
+                  <div class="protection-badge">
+                    <span class="protection-icon">🛡️</span>
+                    <div class="protection-content">
+                      <div class="protection-title">開套者保護期</div>
+                      <div class="protection-message">{{ protectionInfo.message }}</div>
+                      <div class="protection-detail" v-if="protectionInfo.endTime">
+                        有效期限：{{ protectionInfo.endTime }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 <div class="ichibanDetail__actions">
                   <KujiButton
                     class="ichibanDetail__cta ichibanDetail__cta--primary"
@@ -170,6 +184,18 @@
       @randomSelect="handleRandomSelect"
       @exchange="handleExchange"
     />
+
+    <!-- 🎯 大獎指定對話框 -->
+    <PrizeDesignationDialog
+      v-if="showDesignationDialog"
+      :available-numbers="designationAvailableNumbers"
+      :required-count="designationRequiredCount"
+      :current-prize="designationCurrentPrize"
+      :used-numbers="designationUsedNumbers"
+      @confirm="onDesignationConfirm"
+      @cancel="onDesignationCancel"
+      @close="onDesignationCancel"
+    />
   </div>
 </template>
 
@@ -186,6 +212,7 @@ import IchibanStatusGrid from '@/components/ichiban/IchibanStatusGrid.vue';
 import IchibanDrawPanel from '@/components/ichiban/IchibanDrawPanel.vue';
 import RemainingCounter from '@/components/IchibanDetail/RemainingCounter.vue';
 import IchibanMetaInfo from '@/components/IchibanDetail/IchibanMetaInfo.vue';
+import PrizeDesignationDialog from '@/components/common/PrizeDesignationDialog.vue';
 
 import demo1 from '@/assets/image/demo1.jpg';
 
@@ -196,6 +223,7 @@ import {
 import {
   designatePrizePositions,
   drawLottery,
+  type PrizeDesignation,
 } from '@/services/lotteryDrawService';
 import { executeApi } from '@/utils/executeApiUtils';
 import { useOverlayStore } from '@/stores/overlay';
@@ -242,6 +270,16 @@ const ticketData = ref<TicketItem[]>([]);
 const session = ref<any>(null);
 
 /* -----------------------------
+ * 大獎指定對話框狀態
+ * ----------------------------- */
+const showDesignationDialog = ref(false);
+const designationAvailableNumbers = ref<number[]>([]);
+const designationRequiredCount = ref(3);
+const designationCurrentPrize = ref<any>(null);
+const designationUsedNumbers = ref<number[]>([]);
+const designationResolve = ref<((numbers: number[]) => void) | null>(null);
+
+/* -----------------------------
  * gallery / banner
  * ----------------------------- */
 const activeGalleryIndex = ref(0);
@@ -279,6 +317,19 @@ const isScratchPlayerMode = computed(() => {
   );
 });
 
+const isScratchStoreMode = computed(() => {
+  return (
+    String(detail.value?.playMode ?? '').toUpperCase() === 'SCRATCH_STORE'
+  );
+});
+
+/** 是否為刮刮樂模式（自製賞） */
+const isScratchModeCustom = computed(() => {
+  return (
+    String(detail.value?.playMode ?? '').toUpperCase() === 'SCRATCH_MODE'
+  );
+});
+
 /* -----------------------------
  * helpers
  * ----------------------------- */
@@ -311,7 +362,7 @@ const periodText = computed(() => {
 
 const isScratchMode = computed(() => {
   const m = String(detail.value?.playMode ?? '').toUpperCase();
-  return m === 'SCRATCH_MODE';
+  return m === 'SCRATCH_MODE' || m === 'SCRATCH_PLAYER' || m === 'SCRATCH_STORE';
 });
 
 /** ✅ is 扭蛋 */
@@ -340,6 +391,8 @@ const primaryCtaText = computed(() => {
 const playModeText = computed(() => {
   const m = String(detail.value?.playMode ?? '').toUpperCase();
   if (m === 'SCRATCH_MODE') return '刮刮樂';
+  if (m === 'SCRATCH_PLAYER') return '刮刮樂（玩家指定）';
+  if (m === 'SCRATCH_STORE') return '刮刮樂（店家指定）';
   if (m === 'LOTTERY_MODE') return '抽籤';
   if (m === 'GACHA_MODE' || m === 'GASHAPON_MODE') return '扭蛋';
   return '-';
@@ -359,6 +412,31 @@ const canDraw = computed(() => session.value?.canDraw !== false);
 const cannotDrawReason = computed(
   () => session.value?.cannotDrawReason || '目前無法抽選',
 );
+
+/* -----------------------------
+ * 保護期提示
+ * ----------------------------- */
+const isInProtection = computed(() => {
+  const protectionDraws = session.value?.protectionDraws;
+  const openerDrawCount = session.value?.openerDrawCount ?? 0;
+  return isOpener.value && protectionDraws && openerDrawCount < protectionDraws;
+});
+
+const protectionInfo = computed(() => {
+  if (!isInProtection.value) return null;
+  
+  const protectionDraws = session.value?.protectionDraws ?? 0;
+  const openerDrawCount = session.value?.openerDrawCount ?? 0;
+  const remainingDraws = protectionDraws - openerDrawCount;
+  const endTime = session.value?.protectionEndTime;
+  
+  return {
+    remainingDraws,
+    totalDraws: protectionDraws,
+    endTime: endTime ? formatDate(endTime) : '',
+    message: `保護期內：還剩 ${remainingDraws} 次專屬抽獎機會`,
+  };
+});
 
 const goLogin = () => {
   router.push({ path: '/login' });
@@ -674,18 +752,59 @@ const handleDesignatePrize = async (availableNumbers: number[]) => {
   overlay.open();
 
   try {
-    // ⚠️ 正式上線請改成 UI 指定
-    const pick = [...availableNumbers]
-      .sort(() => Math.random() - 0.5)
-      .slice(0, 3);
+    // 獲取大獎列表
+    const grandPrizes = prizesData.value.filter((p: any) => p.isGrandPrize === true);
+    
+    if (!grandPrizes.length) {
+      await ichibanInfoDialog({
+        title: '錯誤',
+        content: '此套餐沒有設定大獎',
+      });
+      return;
+    }
 
+    const designations: PrizeDesignation[] = [];
+    const usedNumbers: number[] = [];
+
+    // 為每個大獎依次選號
+    for (const prize of grandPrizes) {
+      const quantity = prize.quantity || 1;
+      
+      // 顯示對話框讓玩家選號
+      const selectedNumbers = await showDesignationUI(
+        availableNumbers,
+        quantity,
+        prize,
+        usedNumbers
+      );
+
+      // 玩家取消
+      if (!selectedNumbers || selectedNumbers.length === 0) {
+        await ichibanInfoDialog({
+          title: '已取消',
+          content: '請先指定大獎位置才能開始抽獎',
+        });
+        return;
+      }
+
+      // 將選擇的號碼加入指定列表
+      for (const num of selectedNumbers) {
+        designations.push({
+          ticketNumber: num,
+          prizeId: prize.id,
+        });
+        usedNumbers.push(num);
+      }
+    }
+
+    // 調用 API
     await designatePrizePositions(kujiId.value, {
-      prizeNumbers: pick,
+      designations,
     });
 
     await ichibanInfoDialog({
       title: '大獎位置已設定',
-      content: '已成功指定大獎，開始抽獎吧！',
+      content: `已成功指定 ${designations.length} 個大獎位置，開始抽獎吧！`,
     });
 
     await refreshSession(); // 🔥 指定後刷新
@@ -694,6 +813,39 @@ const handleDesignatePrize = async (availableNumbers: number[]) => {
     await handleScratch();
   } finally {
     overlay.close();
+  }
+};
+
+/** 顯示大獎指定 UI 並等待玩家選擇 */
+const showDesignationUI = (
+  availableNumbers: number[],
+  count: number,
+  prize: any,
+  usedNumbers: number[]
+): Promise<number[]> => {
+  return new Promise((resolve) => {
+    designationAvailableNumbers.value = availableNumbers;
+    designationRequiredCount.value = count;
+    designationCurrentPrize.value = prize;
+    designationUsedNumbers.value = usedNumbers;
+    showDesignationDialog.value = true;
+    designationResolve.value = resolve;
+  });
+};
+
+const onDesignationConfirm = (numbers: number[]) => {
+  showDesignationDialog.value = false;
+  if (designationResolve.value) {
+    designationResolve.value(numbers);
+    designationResolve.value = null;
+  }
+};
+
+const onDesignationCancel = () => {
+  showDesignationDialog.value = false;
+  if (designationResolve.value) {
+    designationResolve.value([]);
+    designationResolve.value = null;
   }
 };
 
@@ -1018,3 +1170,48 @@ watch(
  * ----------------------------- */
 const goHome = () => router.push({ name: 'Home' });
 </script>
+
+<style scoped lang="scss">
+/* 保護期提示樣式 */
+.ichibanDetail__protection {
+  margin: 16px 0;
+}
+
+.protection-badge {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.protection-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.protection-content {
+  flex: 1;
+  color: #fff;
+}
+
+.protection-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  opacity: 0.95;
+}
+
+.protection-message {
+  font-size: 15px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.protection-detail {
+  font-size: 12px;
+  opacity: 0.85;
+}
+</style>

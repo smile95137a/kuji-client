@@ -28,20 +28,13 @@
 </template>
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
+import { useRouter } from 'vue-router';
 import visualSrc from '@/assets/image/hot-topics-visual.png';
 
-import {
-  getLotteryCategoryOptions,
-  getLotterySubCategoryOptions,
-} from '@/services/enumService';
+import { queryThemes, type CategoryRes } from '@/services/categoryService';
 import { executeApi } from '@/utils/executeApiUtils';
 
-interface EnumOption {
-  label: string;
-  value: string;
-  description?: string;
-}
-
+const router = useRouter();
 const loading = ref(false);
 const topics = ref<string[]>([]);
 
@@ -56,27 +49,30 @@ const hotSet = new Set<string>([
 ]);
 
 /* -----------------------------
- * 點擊事件
+ * 點擊事件 - 跳轉到商品列表並篩選主題
  * ----------------------------- */
 const onClick = (t: string) => {
   console.log('topic click:', t);
+  // 跳轉到一番賞列表並帶上主題標籤
+  router.push({ name: 'IchibanList', query: { type: 'kuji', tag: t } });
 };
 
 /* -----------------------------
- * 取得分類
+ * 取得主題
  * ----------------------------- */
 const fetchCategories = async () => {
   loading.value = true;
 
   await executeApi({
-    fn: () => getLotterySubCategoryOptions(),
+    fn: () => queryThemes(),
     showCatchDialog: false,
     showFailDialog: false,
     onSuccess: (res: any) => {
-      // res.data 是 EnumOption[]
-      const list: EnumOption[] = Array.isArray(res) ? res : (res?.data ?? []);
+      // res.data 是 CategoryRes[]
+      const list: CategoryRes[] = Array.isArray(res) ? res : (res?.data ?? []);
 
-      topics.value = list.map((item) => item.label);
+      // 只取 name 欄位
+      topics.value = list.map((item) => item.name);
     },
   });
 
