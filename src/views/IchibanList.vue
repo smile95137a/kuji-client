@@ -19,16 +19,30 @@ const router = useRouter();
 const route = useRoute();
 
 const typeToCategory: Record<string, string | 'all'> = {
-  kuji: 'OFFICIAL_ICHIBAN', // 官方一番賞
-  gacha: 'GACHA', // 扭蛋
-  custom: 'CUSTOM_GACHA', // 自製賞
-  card: 'TRADING_CARD', // 卡牌
+  kuji: 'OFFICIAL_ICHIBAN',
+  gacha: 'GACHA',
+  scratch: 'SCRATCH', // 虛擬類型，由 playMode 決定
+  custom: 'CUSTOM_GACHA',
+  card: 'TRADING_CARD',
 };
 const typeToTitle: Record<string, string> = {
   kuji: '一番賞',
   gacha: '扭蛋',
+  scratch: '刮刮樂',
   custom: '自製賞',
   card: '卡牌',
+};
+
+/** 判斷商品是否屬於刮刮樂（以 playMode 為主） */
+const isScratchItem = (item: any) => {
+  const m = String(item?.playMode ?? '').toUpperCase();
+  return m === 'SCRATCH_MODE' || m === 'SCRATCH_CARD_MODE';
+};
+
+/** 判斷商品是否屬於真正的扭蛋（category=GACHA 且無籤位制 playMode） */
+const isGachaItem = (item: any) => {
+  const category = String(item?.category ?? '').toUpperCase();
+  return category === 'GACHA' && !isScratchItem(item);
 };
 
 const pageTitle = computed(() => typeToTitle[currentType.value] ?? '商城');
@@ -120,8 +134,15 @@ const fetchList = async () => {
  * ------------------------------ */
 const filteredList = computed(() => {
   let list = kujiList.value as any[];
+  const type = currentType.value;
 
-  if (currentCategory.value !== 'all') {
+  if (type === 'scratch') {
+    // 刮刮樂：以 playMode 優先判斷
+    list = list.filter((item) => isScratchItem(item));
+  } else if (type === 'gacha') {
+    // 扭蛋：category=GACHA 且非刮刮樂 playMode
+    list = list.filter((item) => isGachaItem(item));
+  } else if (currentCategory.value !== 'all') {
     list = list.filter((item) => item.category === currentCategory.value);
   }
 

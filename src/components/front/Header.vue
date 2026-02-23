@@ -220,6 +220,7 @@ type MenuItem = { key: string; label: string; mega?: boolean };
 const primaryMenu: MenuItem[] = [
   { key: 'kuji', label: '官方一番賞' },
   { key: 'gacha', label: '扭蛋' },
+  { key: 'scratch', label: '刮刮樂' },
   { key: 'custom', label: '自製一番賞' },
   { key: 'card', label: '卡牌' },
 ];
@@ -276,6 +277,7 @@ const primaryTo = (item: MenuItem): RouteLocationRaw => {
   const map: Record<string, RouteLocationRaw> = {
     kuji: { name: 'IchibanList', query: { type: 'kuji' } },
     gacha: { name: 'IchibanList', query: { type: 'gacha' } },
+    scratch: { name: 'IchibanList', query: { type: 'scratch' } },
     custom: { name: 'IchibanList', query: { type: 'custom' } },
     card: { name: 'IchibanList', query: { type: 'card' } },
   };

@@ -98,6 +98,19 @@
                   </div>
                 </div>
 
+                <!-- 扭蛋次數選擇（1-10），僅 GACHA 模式顯示 -->
+                <div v-if="isGacha" class="ichibanDetail__gachaCount">
+                  <span class="ichibanDetail__gachaCountLabel">次數：</span>
+                  <div class="ichibanDetail__gachaCountBtns">
+                    <button
+                      v-for="n in [1, 2, 3, 5, 10]"
+                      :key="n"
+                      :class="['ichibanDetail__gachaCountBtn', { 'is-active': gachaCount === n }]"
+                      @click="gachaCount = n"
+                    >{{ n }}</button>
+                  </div>
+                </div>
+
                 <div class="ichibanDetail__actions">
                   <KujiButton
                     class="ichibanDetail__cta ichibanDetail__cta--primary"
@@ -157,13 +170,20 @@
         </div>
       </section>
 
-      <!-- 抽況 -->
+      <!-- 抽況 / 格數選擇 -->
       <section
         class="ichibanDetail__status"
         ref="statusSectionRef"
-        v-if="!isGacha && !isScratchMode"
+        v-if="!isGacha"
       >
-        <h2 class="ichibanDetail__status-title">檢視抽況</h2>
+        <h2 class="ichibanDetail__status-title">
+          {{ isScratchMode ? '選擇格數' : '檢視抽況' }}
+        </h2>
+
+        <!-- 刮刮樂大獎提示（位置由後端指定後顯示） -->
+        <div v-if="isScratchMode && grandPrizeNumbers.length" class="ichibanDetail__grandPrizeBanner">
+          🏆 我的大獎位置：第 <strong>{{ grandPrizeNumbers.join('、') }}</strong> 格
+        </div>
 
         <RemainingCounter
           :remaining-prizes="detail?.remainingPrizes ?? null"
@@ -171,11 +191,10 @@
           :tickets="statusCards"
         />
 
-        <!-- ⚠️ 這裡 @select 請改成 emit ticketId(UUID) -->
         <IchibanStatusGrid
           :cards="statusCards"
           :active-cards="activeCards"
-          @select="openDrawPanelFromCard"
+          @select="handleCardSelect"
         />
       </section>
 
@@ -190,6 +209,16 @@
       @close="closeDrawPanel"
       @randomSelect="handleRandomSelect"
       @exchange="handleExchange"
+    />
+
+    <!-- 刮刮樂確認面板 -->
+    <IchibanScratchPanel
+      :is-open="isScratchPanelOpen"
+      :ticket-number="activeCardNumbers[0] ?? null"
+      :ticket-id="activeCards[0] ?? null"
+      :remaining="detail?.remainingPrizes ?? 0"
+      @close="closeScratchPanel"
+      @scratch="handleScratchFromPanel"
     />
 
     <!-- 🎯 大獎指定對話框 -->
@@ -217,6 +246,7 @@ import IchibanPrizeCard from '@/components/ichiban/IchibanPrizeCard.vue';
 import IchibanNoticeSection from '@/components/ichiban/IchibanNoticeSection.vue';
 import IchibanStatusGrid from '@/components/ichiban/IchibanStatusGrid.vue';
 import IchibanDrawPanel from '@/components/ichiban/IchibanDrawPanel.vue';
+import IchibanScratchPanel from '@/components/ichiban/IchibanScratchPanel.vue';
 import RemainingCounter from '@/components/IchibanDetail/RemainingCounter.vue';
 import IchibanMetaInfo from '@/components/IchibanDetail/IchibanMetaInfo.vue';
 import PrizeDesignationDialog from '@/components/common/PrizeDesignationDialog.vue';
@@ -232,6 +262,7 @@ import {
   drawLottery,
   type PrizeDesignation,
 } from '@/services/lotteryDrawService';
+import { randomDrawLottery } from '@/services/lotteryRandomService';
 import { executeApi } from '@/utils/executeApiUtils';
 import { useOverlayStore } from '@/stores/overlay';
 import { ichibanInfoDialog } from '@/utils/dialog/ichibanInfoDialog';
@@ -318,20 +349,8 @@ const kujiSubTitle = computed(() => detail.value?.description || '');
 const breadcrumbCategory = computed(() => detail.value?.categoryName || '商城');
 const isOpener = computed(() => !!session.value?.isOpener);
 
-const isScratchPlayerMode = computed(() => {
-  return (
-    String(detail.value?.playMode ?? '').toUpperCase() === 'SCRATCH_PLAYER'
-  );
-});
-
-const isScratchStoreMode = computed(() => {
-  return String(detail.value?.playMode ?? '').toUpperCase() === 'SCRATCH_STORE';
-});
-
-/** 是否為刮刮樂模式（自製賞） */
-const isScratchModeCustom = computed(() => {
-  return String(detail.value?.playMode ?? '').toUpperCase() === 'SCRATCH_MODE';
-});
+// isScratchPlayerMode / isScratchStoreMode / isScratchModeCustom 已移除
+// 後端只有 SCRATCH_MODE 與 SCRATCH_CARD_MODE，統一用 isScratchMode 判斷
 
 /* -----------------------------
  * helpers
@@ -363,35 +382,38 @@ const periodText = computed(() => {
  * playMode / tags
  * ----------------------------- */
 
+/** 刮刮樂 / 刮刮卡模式：playMode 為 SCRATCH_MODE 或 SCRATCH_CARD_MODE */
 const isScratchMode = computed(() => {
   const m = String(detail.value?.playMode ?? '').toUpperCase();
-  const category = String(detail.value?.category ?? '').toUpperCase();
-  return (
-    (m === 'SCRATCH_MODE' || m === 'SCRATCH_PLAYER' || m === 'SCRATCH_STORE') &&
-    category !== 'GACHA'
-  );
+  return m === 'SCRATCH_MODE' || m === 'SCRATCH_CARD_MODE';
 });
 
-/** ✅ is 扭蛋 */
+/** 真正的扭蛋（加權隨機）：category=GACHA 且沒有籤位制 playMode */
 const isGacha = computed(() => {
-  // 兼容多種後端命名（你可以保留你實際會出現的那幾個）
   const category = String(detail.value?.category ?? '').toUpperCase();
-  return category === 'GACHA';
+  const m = String(detail.value?.playMode ?? '').toUpperCase();
+  // 有籤位制 playMode 就不算扭蛋（走 draw 路由）
+  const isTicketBased = m === 'LOTTERY_MODE' || m === 'SCRATCH_MODE' || m === 'SCRATCH_CARD_MODE';
+  return category === 'GACHA' && !isTicketBased;
 });
+
+/** 扭蛋次數（1-10） */
+const gachaCount = ref(1);
 
 const primaryCtaText = computed(() => {
-  if (isScratchMode.value) return '開刮！';
-  if (isGacha.value) return '扭一顆！';
+  if (isScratchMode.value) return '點下方格數開始刮！';
+  if (isGacha.value) return `扭 ${gachaCount.value} 顆！`;
   return '開抽！';
 });
 
 const playModeText = computed(() => {
   const m = String(detail.value?.playMode ?? '').toUpperCase();
-  if (m === 'SCRATCH_MODE') return '刮刮樂';
-  if (m === 'SCRATCH_PLAYER') return '刮刮樂（玩家指定）';
-  if (m === 'SCRATCH_STORE') return '刮刮樂（店家指定）';
-  if (m === 'LOTTERY_MODE') return '抽籤';
-  if (m === 'GACHA_MODE' || m === 'GASHAPON_MODE') return '扭蛋';
+  const category = String(detail.value?.category ?? '').toUpperCase();
+  // 先看 playMode，再看 category
+  if (m === 'LOTTERY_MODE') return '抽籤型';
+  if (m === 'SCRATCH_MODE') return '刮刮樂型';
+  if (m === 'SCRATCH_CARD_MODE') return '刮刮卡型';
+  if (category === 'GACHA') return '扭蛋'; // 只有無 playMode 的 GACHA 才顯示扭蛋
   return '-';
 });
 
@@ -550,6 +572,7 @@ const prizes = computed(() => {
 const statusSectionRef = ref<HTMLElement | null>(null);
 
 const isDrawPanelOpen = ref(false);
+const isScratchPanelOpen = ref(false);
 
 /**  改成存 ticket UUID（string[]） */
 const activeCards = ref<string[]>([]);
@@ -582,6 +605,15 @@ const availableTicketIds = computed<string[]>(() => {
     .map((t) => String(t.id));
 });
 
+/** 刮刮樂大獎格號（isGrandPrize=true 的賞品 prizeNumber） */
+const grandPrizeNumbers = computed<number[]>(() => {
+  if (!isScratchMode.value) return [];
+  return (prizesData.value as any[])
+    .filter((p: any) => p.isGrandPrize === true)
+    .map((p: any) => Number(p?.prizeNumber ?? p?.ticketNumber ?? 0))
+    .filter((n) => n > 0);
+});
+
 const toggleCardSelection = (ticketId: string) => {
   if (!availableTicketIds.value.includes(ticketId)) return;
 
@@ -590,8 +622,28 @@ const toggleCardSelection = (ticketId: string) => {
   else activeCards.value.push(ticketId);
 };
 
+/**
+ * 票格點擊：刮刮樂模式只保留一格選取；一番賞模式開抽況面板
+ */
+const handleCardSelect = async (ticketId: string) => {
+  if (isScratchMode.value) {
+    const ok = await ensureCanDraw();
+    if (!ok) return;
+    // 刮刮樂：呼叫後直接開面板（單選）
+    activeCards.value = [ticketId];
+    isScratchPanelOpen.value = true;
+  } else {
+    await openDrawPanelFromCard(ticketId);
+  }
+};
+
 const closeDrawPanel = () => {
   isDrawPanelOpen.value = false;
+  activeCards.value = [];
+};
+
+const closeScratchPanel = () => {
+  isScratchPanelOpen.value = false;
   activeCards.value = [];
 };
 
@@ -615,16 +667,27 @@ const ensureCanDraw = async () => {
   return true;
 };
 
-const handleScratch = async () => {
+/**
+ * 執行刮刮樂
+ * @param ticketIdOverride 外部傳入的 ticket UUID；省略時從 activeCards[0] 取
+ */
+const handleScratch = async (ticketIdOverride?: string) => {
   const ok = await ensureCanDraw();
   if (!ok) return;
+
+  // 確認有選到格子（UUID）
+  const selectedTicketId = ticketIdOverride ?? activeCards.value[0];
+  if (!selectedTicketId) {
+    statusSectionRef.value?.scrollIntoView({ behavior: 'smooth' });
+    return;
+  }
 
   await refreshSession(); // 🔥 先更新 session
 
   const tryDraw = async () => {
     return await drawLottery(kujiId.value, {
       count: 1,
-      ticket: [],
+      ticket: [selectedTicketId], // ✅ 送 UUID，不是 ticketNumber
     });
   };
 
@@ -637,14 +700,18 @@ const handleScratch = async () => {
         return;
       }
 
-      if (!Array.isArray(data) || !data.length) return;
+      const drawResults: any[] = Array.isArray(data) ? data : [];
+      if (!drawResults.length) return;
 
       overlay.open();
+      // 清除選取狀態
+      activeCards.value = [];
 
       try {
-        const result = data[0];
+        const result = drawResults[0];
 
-        const ok = await scratchCardDialog({
+        // 刮刮樂動畫
+        await scratchCardDialog({
           title: 'STARDO・刮刮樂',
           imageSrc: result?.prizeImageUrl,
           idleText: '刮開看看，抽到什麼賞？',
@@ -653,13 +720,12 @@ const handleScratch = async () => {
           grade: result?.prizeLevel,
         });
 
-        if (!ok) return;
-
+        // 無論有無刮完動畫，都顯示抽獎結果
         await ichibanResultDialog({
           remain: Math.max(0, Number(detail.value?.remainingPrizes ?? 0) - 1),
           count: 1,
           totalPrice: displayPrice.value,
-          items: data,
+          items: drawResults,
         });
       } finally {
         overlay.close();
@@ -689,28 +755,31 @@ const handleGacha = async () => {
   const ok = await ensureCanDraw();
   if (!ok) return;
 
-  const count = 1;
+  const count = Math.min(Math.max(1, gachaCount.value), 10);
 
   await executeApi({
-    fn: () =>
-      drawLottery(kujiId.value, {
-        count,
-        ticket: [], // 扭蛋不需要指定票券
-      }),
+    // GACHA 走 /lottery/random/{id}/draw（加權隨機），count 為 query param
+    fn: () => randomDrawLottery(kujiId.value, count),
     onSuccess: async (data: any) => {
+      // /lottery/random 回傳 DrawResponseRes { results, goldUsed, ... }
+      // /lottery/draw 直接回傳 DrawResultRes[]
+      const drawResults: any[] = Array.isArray(data?.results)
+        ? data.results
+        : Array.isArray(data)
+          ? data
+          : [];
+
       overlay.open();
 
       try {
-        // 撕開（扭蛋/抽獎都可共用）
-        const results = await gotchaDialog({
+        // 扭蛋抽獎動畫
+        await gotchaDialog({
           title: '扭蛋機抽獎中',
-          pulls: data,
+          pulls: drawResults,
           speed: 0.6,
         });
 
-        if (!results) return;
-
-        const drawnCount = Array.isArray(data) ? data.length : 0;
+        const drawnCount = drawResults.length;
         const unitPrice = Number(displayPrice.value ?? 0) || 0;
         const totalPrice = unitPrice * drawnCount;
 
@@ -720,11 +789,12 @@ const handleGacha = async () => {
         );
         const remain = Math.max(0, beforeRemain - drawnCount);
 
+        // 無論動畫結果如何，都顯示抽獎結果
         await ichibanResultDialog({
           remain,
           count: drawnCount,
           totalPrice,
-          items: data,
+          items: drawResults,
         });
       } finally {
         overlay.close();
@@ -845,9 +915,18 @@ const onDesignationCancel = () => {
   }
 };
 
+const handleScratchFromPanel = async (payload: {
+  type: 'gold' | 'silver';
+  ticketId: string;
+}) => {
+  closeScratchPanel();
+  await handleScratch(payload.ticketId);
+};
+
 const handlePrimaryAction = async () => {
   if (isScratchMode.value) {
-    await handleScratch();
+    // 刮刮樂：引導使用者在下方格數選擇格子
+    statusSectionRef.value?.scrollIntoView({ behavior: 'smooth' });
     return;
   }
 
@@ -988,6 +1067,9 @@ const handleExchange = async (payload: {
   }
 
   if (isScratchMode.value) {
+    // 刮刮樂：直接用 safeTickets[0] UUID 執行抽取
+    await handleScratch(safeTickets[0]);
+    return;
   } else {
     await executeApi({
       fn: () =>
@@ -1209,5 +1291,69 @@ const goHome = () => router.push({ name: 'Home' });
 .protection-detail {
   font-size: 12px;
   opacity: 0.85;
+}
+
+/* 扭蛋次數選擇器 */
+.ichibanDetail__gachaCount {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.ichibanDetail__gachaCountLabel {
+  font-size: 14px;
+  color: #666;
+  white-space: nowrap;
+}
+
+.ichibanDetail__gachaCountBtns {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.ichibanDetail__gachaCountBtn {
+  min-width: 40px;
+  height: 36px;
+  padding: 0 10px;
+  border: 1.5px solid #ddd;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: #333;
+
+  &:hover {
+    border-color: var(--color-primary, #e75480);
+    color: var(--color-primary, #e75480);
+  }
+
+  &.is-active {
+    border-color: var(--color-primary, #e75480);
+    background: var(--color-primary, #e75480);
+    color: #fff;
+  }
+}
+
+/* 刮刮樂大獎提示 */
+.ichibanDetail__grandPrizeBanner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  margin-bottom: 12px;
+  background: linear-gradient(135deg, #fff8e7 0%, #fff3cd 100%);
+  border: 1.5px solid #f5c518;
+  border-radius: 10px;
+  font-size: 15px;
+  color: #6b4c00;
+
+  strong {
+    color: #b8860b;
+    font-size: 17px;
+  }
 }
 </style>
