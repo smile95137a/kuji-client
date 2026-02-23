@@ -365,26 +365,18 @@ const periodText = computed(() => {
 
 const isScratchMode = computed(() => {
   const m = String(detail.value?.playMode ?? '').toUpperCase();
+  const category = String(detail.value?.category ?? '').toUpperCase();
   return (
-    m === 'SCRATCH_MODE' || m === 'SCRATCH_PLAYER' || m === 'SCRATCH_STORE'
+    (m === 'SCRATCH_MODE' || m === 'SCRATCH_PLAYER' || m === 'SCRATCH_STORE') &&
+    category !== 'GACHA'
   );
 });
 
 /** ✅ is 扭蛋 */
 const isGacha = computed(() => {
   // 兼容多種後端命名（你可以保留你實際會出現的那幾個）
-  const playMode = String(detail.value?.playMode ?? '').toUpperCase();
   const category = String(detail.value?.category ?? '').toUpperCase();
-  const type = String(detail.value?.type ?? '').toUpperCase();
-
-  return (
-    playMode === 'GACHA_MODE' ||
-    playMode === 'GASHAPON_MODE' ||
-    category === 'GACHA' ||
-    category === 'GASHAPON' ||
-    type === 'GACHA' ||
-    type === 'GASHAPON'
-  );
+  return category === 'GACHA';
 });
 
 const primaryCtaText = computed(() => {
