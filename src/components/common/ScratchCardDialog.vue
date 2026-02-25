@@ -14,8 +14,8 @@
             </button>
           </div>
 
-          <div class="scDialog__body">
-            <!-- 目前這一張 -->
+          <!-- 刮卡動畫阶段 -->
+          <div class="scDialog__body" v-if="!showReveal">
             <ScratchCard
               :key="currentIndex"
               :image-src="currentCard.imageSrc"
@@ -24,17 +24,31 @@
               :idle-text="currentCard.idleText"
               :reveal-text="currentCard.revealText"
               :threshold="currentCard.threshold"
+              :revealed-number="currentCard.revealedNumber"
               @revealed="handleRevealed"
             />
           </div>
 
+          <!-- revealedNumber 大字顯示階段（動畫結束後，只顯示號碼） -->
+          <div class="scDialog__revealBody" v-else>
+            <div class="scDialog__revealLabel">🎉 你的號碼</div>
+            <div class="scDialog__revealNumber">{{ currentRevealedNumber }}</div>
+            <button
+              class="scDialog__btn scDialog__btn--confirm"
+              type="button"
+              @click="confirmReveal"
+            >
+              查看獎品
+            </button>
+          </div>
+
           <!-- 進度（多張時顯示） -->
-          <p class="scDialog__progress" v-if="cards.length > 1">
+          <p class="scDialog__progress" v-if="cards.length > 1 && !showReveal">
             {{ currentIndex + 1 }} / {{ cards.length }}
           </p>
 
-          <!-- 操作按鈕 -->
-          <div class="scDialog__actions">
+          <!-- 操作按鈕（展示 revealedNumber 時隱藏，防止截圖跳過） -->
+          <div class="scDialog__actions" v-if="!showReveal">
             <button class="scDialog__btn" type="button" @click="skipOne">
               跳過
             </button>
@@ -63,6 +77,8 @@ type ScratchItem = {
   idleText?: string;
   revealText?: string;
   threshold?: number;
+  /** 刮刮樂模式：刮開後展示的號碼（來自後端 response） */
+  revealedNumber?: number | null;
 };
 
 const props = withDefaults(
@@ -82,6 +98,8 @@ const props = withDefaults(
     revealText?: string;
     threshold?: number;
     grade?: string;
+    /** 單張模式：來自後端的 revealedNumber */
+    revealedNumber?: number | null;
   }>(),
   {
     threshold: 45,
@@ -112,6 +130,7 @@ const singleCard = computed<ScratchItem>(() => ({
   idleText: props.idleText,
   revealText: props.revealText,
   threshold: props.threshold,
+  revealedNumber: props.revealedNumber,
 }));
 
 /** 最終使用的卡片列表：有 cards 就走多張，沒有就走單張 */
@@ -130,6 +149,14 @@ const currentIndex = ref(0);
 /** 已完成結果（刮開 or 跳過） */
 const results = ref<ScratchItem[]>([]);
 
+/** 動畫結束後展示 revealedNumber 階段 */
+const showReveal = ref(false);
+
+/** 目前展示的 revealedNumber */
+const currentRevealedNumber = computed(
+  () => currentCard.value?.revealedNumber ?? null,
+);
+
 const currentCard = computed(() => cards.value[currentIndex.value]);
 
 /** Dialog 打開時重置（避免上次殘留） */
@@ -139,6 +166,7 @@ watch(
     if (open) {
       currentIndex.value = 0;
       results.value = [];
+      showReveal.value = false;
     }
   },
 );
@@ -167,7 +195,18 @@ const pushAndNext = (item: ScratchItem) => {
 };
 
 const handleRevealed = () => {
-  // 「刮完」等同於完成這一張
+  const card = currentCard.value;
+  // 如果有 revealedNumber，展示大字連接畫面，待玩家確認後才進入結果
+  if (card?.revealedNumber != null) {
+    showReveal.value = true;
+  } else {
+    pushAndNext(card);
+  }
+};
+
+/** 玩家在 revealedNumber 畫面點「查看獎品」 */
+const confirmReveal = () => {
+  showReveal.value = false;
   pushAndNext(currentCard.value);
 };
 
@@ -176,17 +215,15 @@ const handleRevealed = () => {
 ===================== */
 
 const skipOne = () => {
-  // 單張：等同直接完成
-  // 多張：直接把當前這張當作已完成
+  showReveal.value = false;
   pushAndNext(currentCard.value);
 };
 
 const skipAll = () => {
+  showReveal.value = false;
   const rest = cards.value.slice(currentIndex.value);
   results.value.push(...rest);
 
-  // 這裡也順便補一個 revealed（代表最後一次操作把剩下都完成）
-  // 如果你不想要這個事件，也可以拿掉
   const last = rest[rest.length - 1];
   if (last) emit('revealed', { item: last, results: results.value });
 
@@ -335,5 +372,53 @@ const handleCancel = () => {
 
 .scDialog__btn--danger {
   background: #7c2d12;
+}
+
+.scDialog__btn--confirm {
+  background: #b43325;
+  margin-top: 16px;
+  width: 100%;
+  font-size: 15px;
+  font-weight: 800;
+  padding: 12px 24px;
+}
+
+/* revealedNumber 大字展示區 */
+.scDialog__revealBody {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem 1rem 0.5rem;
+  text-align: center;
+}
+
+.scDialog__revealLabel {
+  font-size: 13px;
+  color: #6b7280;
+  margin-bottom: 8px;
+  letter-spacing: 0.05em;
+}
+
+.scDialog__revealNumber {
+  font-size: 72px;
+  font-weight: 950;
+  line-height: 1;
+  color: #b43325;
+  text-shadow: 0 4px 16px rgba(180, 51, 37, 0.35);
+  letter-spacing: -2px;
+  margin-bottom: 8px;
+}
+
+.scDialog__revealGrade {
+  font-size: 18px;
+  font-weight: 800;
+  color: #374151;
+  margin-bottom: 4px;
+}
+
+.scDialog__revealPrize {
+  font-size: 15px;
+  font-weight: 700;
+  color: #6b7280;
 }
 </style>

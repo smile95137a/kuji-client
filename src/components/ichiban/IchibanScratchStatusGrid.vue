@@ -24,9 +24,9 @@
           aria-hidden="true"
         />
 
-        <!-- 已刮：號碼 -->
+        <!-- 已刮：顯示 revealedNumber（刮開號碼），沒有則顯示 ticketNumber -->
         <div v-else class="scratchGrid__num">
-          {{ t.ticketNumber }}
+          {{ t.revealedNumber ?? t.ticketNumber }}
         </div>
       </button>
     </div>
@@ -40,6 +40,8 @@ type TicketItem = {
   id: string;
   ticketNumber: number;
   status: 'AVAILABLE' | 'DRAWN' | 'RESERVED' | 'LOCKED' | string;
+  /** 刮刮樂：刮開後的號碼（已抽才有值） */
+  revealedNumber?: number | null;
 };
 
 const props = defineProps<{

@@ -70,6 +70,8 @@ export function scratchCardDialog(options: any): Promise<boolean> {
           revealText: options.revealText,
           threshold: options.threshold,
           grade: options.grade,
+          /** 後端回傳的 revealedNumber，兩張卡片動畫後展示 */
+          revealedNumber: options.revealedNumber ?? null,
           // 刮到「完成」的事件
           onRevealed: () => {
             confirmAndClose();

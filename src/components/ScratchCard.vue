@@ -51,8 +51,19 @@
         </div>
       </div>
 
-      <!-- 真正的獎品圖片 -->
+      <!-- 刮刮樂模式：底層顯示 revealedNumber 數字 -->
+      <div
+        v-if="revealedNumber != null"
+        ref="prizeImageRef"
+        class="scratch-card-number"
+        :class="{ animate: isRevealed }"
+      >
+        <span class="scratch-card-number__value">{{ revealedNumber }}</span>
+      </div>
+
+      <!-- 一般模式：底層顯示獎品圖片 -->
       <img
+        v-else
         ref="prizeImageRef"
         class="scratch-card-image"
         :class="{ animate: isRevealed }"
@@ -132,6 +143,8 @@ const props = withDefaults(
     threshold?: number;
     /** A / B / C / Last / 其他 */
     grade?: string;
+    /** 刮刮樂模式：刮開後底層顯示的號碼（取代獎品圖片） */
+    revealedNumber?: number | null;
   }>(),
   {
     imageAlt: 'Scratch card prize',
@@ -625,6 +638,35 @@ const onCoverTransitionEnd = (event: TransitionEvent) => {
 
   &.animate {
     animation: pop-out-in cubic-bezier(0.65, 1.35, 0.5, 1) 1s;
+  }
+}
+
+/* 刮刮樂數字底層 */
+.scratch-card-number {
+  position: relative;
+  z-index: 1;
+  border-radius: 12px;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle, #fff8f0 0%, #fff 60%);
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.25);
+  user-select: none;
+  will-change: transform;
+
+  &.animate {
+    animation: pop-out-in cubic-bezier(0.65, 1.35, 0.5, 1) 1s;
+  }
+
+  &__value {
+    font-size: 96px;
+    font-weight: 950;
+    line-height: 1;
+    color: #b43325;
+    text-shadow: 0 4px 24px rgba(180, 51, 37, 0.3);
+    letter-spacing: -2px;
   }
 }
 

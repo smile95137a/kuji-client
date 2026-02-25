@@ -55,8 +55,11 @@
         <div class="scratchRemainingCounter__protectionText">
           {{ protectionInfo.message }}
         </div>
+        <div v-if="countdownText" class="scratchRemainingCounter__countdown">
+          ⏱ 保護剩餘：{{ countdownText }}
+        </div>
         <div
-          v-if="protectionInfo.endTime"
+          v-else-if="protectionInfo.endTime"
           class="scratchRemainingCounter__protectionSub"
         >
           有效期限：{{ protectionInfo.endTime }}
@@ -67,7 +70,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue';
 
 type TicketItem = {
   id: string;
@@ -87,14 +90,86 @@ const props = defineProps<{
   totalPrizes: number | null;
   tickets?: TicketItem[] | null;
   protectionInfo?: ProtectionInfo | null;
+  /** ISO 8601 保護期結束時間，用於倒數計時 */
+  protectionEndTime?: string | null;
 }>();
 
+const emit = defineEmits<{
+  /** 倒數歸零（保護期結束），父層應呼叫 reload */
+  (e: 'expired'): void;
+}>();
+
+/* =========================
+   倒數計時
+========================= */
+const secondsLeft = ref(0);
+let _timer: ReturnType<typeof setInterval> | null = null;
+
+const calcSeconds = () => {
+  if (!props.protectionEndTime) return 0;
+  const end = new Date(props.protectionEndTime).getTime();
+  if (Number.isNaN(end)) return 0;
+  return Math.max(0, Math.floor((end - Date.now()) / 1000));
+};
+
+const stopTimer = () => {
+  if (_timer) {
+    clearInterval(_timer);
+    _timer = null;
+  }
+};
+
+const startTimer = () => {
+  stopTimer();
+  secondsLeft.value = calcSeconds();
+  if (secondsLeft.value <= 0) return;
+  _timer = setInterval(() => {
+    secondsLeft.value = calcSeconds();
+    if (secondsLeft.value <= 0) {
+      stopTimer();
+      emit('expired');
+    }
+  }, 1000);
+};
+
+onMounted(() => {
+  if (props.protectionEndTime) startTimer();
+});
+
+onUnmounted(() => stopTimer());
+
+watch(
+  () => props.protectionEndTime,
+  (val) => {
+    if (val) startTimer();
+    else stopTimer();
+  },
+);
+
+const countdownText = computed(() => {
+  if (!props.protectionEndTime || secondsLeft.value <= 0) return '';
+  const m = Math.floor(secondsLeft.value / 60);
+  const s = secondsLeft.value % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+});
+
+// 優先以 tickets 陣列本身計算，確保 剩餘 + 已刮 = 總數
+const ticketArr = computed(() =>
+  Array.isArray(props.tickets) ? props.tickets : [],
+);
+
 const totalSafe = computed(() => {
+  if (ticketArr.value.length > 0) return ticketArr.value.length;
   const n = Number(props.totalPrizes ?? 0);
   return Number.isFinite(n) && n > 0 ? n : 0;
 });
 
 const remainingSafe = computed(() => {
+  if (ticketArr.value.length > 0) {
+    return ticketArr.value.filter(
+      (t) => String(t.status).toUpperCase() === 'AVAILABLE',
+    ).length;
+  }
   const n = Number(props.remainingPrizes ?? 0);
   return Number.isFinite(n) && n >= 0 ? n : 0;
 });
@@ -355,6 +430,15 @@ $text-soft: rgba(255, 255, 255, 0.72);
   margin-top: 6px;
   font-size: 12px;
   color: rgba(255, 255, 255, 0.72);
+}
+
+.scratchRemainingCounter__countdown {
+  margin-top: 8px;
+  font-size: 20px;
+  font-weight: 900;
+  color: rgba(255, 59, 48, 0.92);
+  letter-spacing: 2px;
+  text-shadow: 0 0 12px rgba(255, 59, 48, 0.4);
 }
 
 /* =========================

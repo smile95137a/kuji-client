@@ -200,6 +200,8 @@
           :total-prizes="detail?.totalPrizes ?? null"
           :tickets="statusCards"
           :protection-info="protectionInfo"
+          :protection-end-time="session?.protectionEndTime ?? null"
+          @expired="reload"
         />
 
         <RemainingCounter
@@ -213,7 +215,7 @@
           v-if="isScratchMode"
           :cards="statusCards"
           :active-cards="activeCards"
-          @select="openDrawPanelFromCard"
+          @select="handleScratchCardSelect"
         />
 
         <IchibanStatusGrid
@@ -241,9 +243,10 @@
     <!-- 刮刮樂確認面板 -->
     <IchibanScratchPanel
       :is-open="isScratchPanelOpen"
-      :ticket-number="activeCardNumbers[0] ?? null"
-      :ticket-id="activeCards[0] ?? null"
-      :remaining="detail?.remainingPrizes ?? 0"
+      :ticket-numbers="activeCardNumbers"
+      :ticket-ids="activeCards"
+      :remaining="scratchRemainingCount"
+      :price-per-draw="displayPrice"
       @close="closeScratchPanel"
       @scratch="handleScratchFromPanel"
     />
@@ -289,6 +292,8 @@ import {
   designatePrizePositions,
   drawLottery,
   type PrizeDesignation,
+  type GrandPrizeInfo,
+  type DrawResult,
 } from '@/services/lotteryDrawService';
 import { randomDrawLottery } from '@/services/lotteryRandomService';
 import { executeApi } from '@/utils/executeApiUtils';
@@ -465,9 +470,12 @@ const cannotDrawReason = computed(
  * 保護期提示
  * ----------------------------- */
 const isInProtection = computed(() => {
-  const protectionDraws = session.value?.protectionDraws;
-  const openerDrawCount = session.value?.openerDrawCount ?? 0;
-  return isOpener.value && protectionDraws && openerDrawCount < protectionDraws;
+  const s = session.value;
+  if (!s) return false;
+  const protectionDraws = s.protectionDraws ?? 0;
+  const openerDrawCount = s.openerDrawCount ?? 0;
+  // 不限制 isOpener：小套者 / 非小套者都應看到保護期營出
+  return protectionDraws > 0 && openerDrawCount < protectionDraws;
 });
 
 const protectionInfo = computed(() => {
@@ -477,6 +485,15 @@ const protectionInfo = computed(() => {
   const openerDrawCount = session.value?.openerDrawCount ?? 0;
   const remainingDraws = protectionDraws - openerDrawCount;
   const endTime = session.value?.protectionEndTime;
+
+  if (!isOpener.value) {
+    return {
+      remainingDraws,
+      totalDraws: protectionDraws,
+      endTime: endTime ? formatDate(endTime) : '',
+      message: '等待開套玩家完成保護抽，暫時無法抽取',
+    };
+  }
 
   return {
     remainingDraws,
@@ -634,6 +651,9 @@ const availableTicketIds = computed<string[]>(() => {
     .map((t) => String(t.id));
 });
 
+/** 刮刮樂模式下，剩餘可刮格數（由 tickets 計算，數字精確） */
+const scratchRemainingCount = computed(() => availableTicketIds.value.length);
+
 /** 刮刮樂大獎格號（isGrandPrize=true 的賞品 prizeNumber） */
 const grandPrizeNumbers = computed<number[]>(() => {
   if (!isScratchMode.value) return [];
@@ -656,14 +676,30 @@ const toggleCardSelection = (ticketId: string) => {
  */
 const handleCardSelect = async (ticketId: string) => {
   if (isScratchMode.value) {
-    const ok = await ensureCanDraw();
-    if (!ok) return;
-    // 刮刮樂：呼叫後直接開面板（單選）
-    activeCards.value = [ticketId];
-    isScratchPanelOpen.value = true;
+    await handleScratchCardSelect(ticketId);
   } else {
     await openDrawPanelFromCard(ticketId);
   }
+};
+
+/**
+ * 刮刮樂格子點擊：支援多選，每次 toggle 該格，面板跟著顯示/隱藏
+ */
+const handleScratchCardSelect = async (ticketId: string) => {
+  const ok = await ensureCanDraw();
+  if (!ok) return;
+
+  if (!availableTicketIds.value.includes(ticketId)) return;
+
+  const idx = activeCards.value.indexOf(ticketId);
+  if (idx >= 0) {
+    activeCards.value.splice(idx, 1);
+  } else {
+    activeCards.value.push(ticketId);
+  }
+
+  // 有選格子就展開面板；全部取消就關閉
+  isScratchPanelOpen.value = activeCards.value.length > 0;
 };
 
 const closeDrawPanel = () => {
@@ -697,6 +733,20 @@ const ensureCanDraw = async () => {
 };
 
 /**
+ * 檢查唔單彈窗（免單彈窗）
+ */
+const showFreeDrawModal = async (results: any[]) => {
+  for (const result of results) {
+    if (result.triggeredFreeDraw && Number(result.refundAmount ?? 0) > 0) {
+      await ichibanInfoDialog({
+        title: '恰喜！開套免單',
+        content: `已退還 ${result.refundAmount} 元至你的帳戶`,
+      });
+    }
+  }
+};
+
+/**
  * 執行刮刮樂
  * @param ticketIdOverride 外部傳入的 ticket UUID；省略時從 activeCards[0] 取
  */
@@ -724,22 +774,39 @@ const handleScratch = async (ticketIdOverride?: string) => {
     fn: tryDraw,
 
     onSuccess: async (data: any) => {
+      // Step 1: designationRequired 攔截（SCRATCH_PLAYER 尚未指定大獎）
       if (data?.designationRequired) {
-        await handleDesignatePrize(data.availableNumbers || []);
+        await handleDesignatePrize(
+          data.availableNumbers || [],
+          data.grandPrizes || [],
+        );
         return;
       }
 
-      const drawResults: any[] = Array.isArray(data) ? data : [];
+      // Step 2: 解析 DrawBatchResponse（v4.0：data.results，不再是裸陣列）
+      const drawResults: DrawResult[] = Array.isArray(data?.results)
+        ? data.results
+        : Array.isArray(data)
+          ? data
+          : [];
       if (!drawResults.length) return;
+
+      // Step 3: 檢查後端回傳的失敗結果
+      const result = drawResults[0];
+      if (result?.success === false) {
+        await ichibanInfoDialog({
+          title: '刮刮樂失敗',
+          content: result.message || '請稍後再試',
+        });
+        return;
+      }
 
       overlay.open();
       // 清除選取狀態
       activeCards.value = [];
 
       try {
-        const result = drawResults[0];
-
-        // 刮刮樂動畫
+        // 刮刮樂動畫（包含 revealedNumber 大字展示）
         await scratchCardDialog({
           title: 'STARDO・刮刮樂',
           imageSrc: result?.prizeImageUrl,
@@ -747,6 +814,7 @@ const handleScratch = async (ticketIdOverride?: string) => {
           revealText: result?.prizeName ?? '銘謝惠顧',
           threshold: 45,
           grade: result?.prizeLevel,
+          revealedNumber: result?.revealedNumber ?? null,
         });
 
         // 無論有無刮完動畫，都顯示抽獎結果
@@ -756,6 +824,9 @@ const handleScratch = async (ticketIdOverride?: string) => {
           totalPrice: displayPrice.value,
           items: drawResults,
         });
+
+        // 免單彈窗
+        await showFreeDrawModal(drawResults);
       } finally {
         overlay.close();
       }
@@ -790,13 +861,22 @@ const handleGacha = async () => {
     // GACHA 走 /lottery/random/{id}/draw（加權隨機），count 為 query param
     fn: () => randomDrawLottery(kujiId.value, count),
     onSuccess: async (data: any) => {
-      // /lottery/random 回傳 DrawResponseRes { results, goldUsed, ... }
-      // /lottery/draw 直接回傳 DrawResultRes[]
-      const drawResults: any[] = Array.isArray(data?.results)
+      // v4.0: DrawBatchResponse { playMode, gameMode, results[] }
+      // 相容舊格式 DrawResponseRes { results, goldUsed, ... } 或裸陣列
+      const drawResults: DrawResult[] = Array.isArray(data?.results)
         ? data.results
         : Array.isArray(data)
           ? data
           : [];
+
+      // 檢查後端回傳的失敗結果
+      if (drawResults.length > 0 && drawResults[0]?.success === false) {
+        await ichibanInfoDialog({
+          title: '扭蛋失敗',
+          content: drawResults[0].message || '請稍後再試',
+        });
+        return;
+      }
 
       overlay.open();
 
@@ -825,6 +905,9 @@ const handleGacha = async () => {
           totalPrice,
           items: drawResults,
         });
+
+        // 免單彈窗
+        await showFreeDrawModal(drawResults);
       } finally {
         overlay.close();
       }
@@ -839,17 +922,16 @@ const handleGacha = async () => {
     },
   });
 };
-const handleDesignatePrize = async (availableNumbers: number[]) => {
+const handleDesignatePrize = async (
+  availableNumbers: number[],
+  grandPrizes: GrandPrizeInfo[],
+) => {
   if (!availableNumbers.length) return;
 
   overlay.open();
 
   try {
-    // 獲取大獎列表
-    const grandPrizes = prizesData.value.filter(
-      (p: any) => p.isGrandPrize === true,
-    );
-
+    // grandPrizes 直接來自 draw 回應，不再從本地 prizesData 取
     if (!grandPrizes.length) {
       await ichibanInfoDialog({
         title: '錯誤',
@@ -885,8 +967,8 @@ const handleDesignatePrize = async (availableNumbers: number[]) => {
       // 將選擇的號碼加入指定列表
       for (const num of selectedNumbers) {
         designations.push({
-          ticketNumber: num,
-          prizeId: prize.id,
+          revealedNumber: num,
+          prizeId: prize.prizeId, // ✅ 使用 API 回應的 prizeId 欄位
         });
         usedNumbers.push(num);
       }
@@ -944,12 +1026,12 @@ const onDesignationCancel = () => {
   }
 };
 
-const handleScratchFromPanel = async (payload: {
-  type: 'gold' | 'silver';
-  ticketId: string;
-}) => {
+const handleScratchFromPanel = async (payload: { ticketIds: string[] }) => {
   closeScratchPanel();
-  await handleScratch(payload.ticketId);
+  // 依序刮每張票（每張都有刮刮樂動畫）
+  for (const ticketId of payload.ticketIds) {
+    await handleScratch(ticketId);
+  }
 };
 
 const handlePrimaryAction = async () => {
@@ -1054,11 +1136,24 @@ const handleExchange = async (payload: {
           ticket: safeTickets,
         }),
       onSuccess: async (data: any) => {
+        // v4.0: DrawBatchResponse.results
+        const drawResults: DrawResult[] = Array.isArray(data?.results)
+          ? data.results
+          : Array.isArray(data) ? data : [];
+
+        if (drawResults.length > 0 && drawResults[0]?.success === false) {
+          await ichibanInfoDialog({
+            title: '抽獎失敗',
+            content: drawResults[0].message || '請稍後再試',
+          });
+          return;
+        }
+
         closeDrawPanel();
         overlay.open();
 
         try {
-          const drawnCount = Array.isArray(data) ? data.length : 0;
+          const drawnCount = drawResults.length;
           const unitPrice = Number(displayPrice.value ?? 0) || 0;
           const totalPrice = unitPrice * drawnCount;
           const beforeRemain = Math.max(
@@ -1074,10 +1169,13 @@ const handleExchange = async (payload: {
 
           const again = await ichibanResultCardDialog({
             remain,
-            count: data.length,
+            count: drawnCount,
             totalPrice,
-            items: data,
+            items: drawResults,
           });
+
+          // 免單彈窗
+          await showFreeDrawModal(drawResults);
         } finally {
           overlay.close();
         }
@@ -1107,14 +1205,27 @@ const handleExchange = async (payload: {
           ticket: safeTickets,
         }),
       onSuccess: async (data: any) => {
+        // v4.0: DrawBatchResponse.results
+        const drawResults: DrawResult[] = Array.isArray(data?.results)
+          ? data.results
+          : Array.isArray(data) ? data : [];
+
+        if (drawResults.length > 0 && drawResults[0]?.success === false) {
+          await ichibanInfoDialog({
+            title: '抽獎失敗',
+            content: drawResults[0].message || '請稍後再試',
+          });
+          return;
+        }
+
         closeDrawPanel();
         overlay.open();
 
         try {
-          const tearResult = await gachaTearDialog({ pulls: data });
+          const tearResult = await gachaTearDialog({ pulls: drawResults });
           if (!tearResult) return;
 
-          const drawnCount = Array.isArray(data) ? data.length : 0;
+          const drawnCount = drawResults.length;
           const unitPrice = Number(displayPrice.value ?? 0) || 0;
           const totalPrice = unitPrice * drawnCount;
           const beforeRemain = Math.max(
@@ -1132,8 +1243,11 @@ const handleExchange = async (payload: {
             remain,
             count: drawnCount,
             totalPrice,
-            items: data,
+            items: drawResults,
           });
+
+          // 免單彈窗
+          await showFreeDrawModal(drawResults);
         } finally {
           overlay.close();
         }

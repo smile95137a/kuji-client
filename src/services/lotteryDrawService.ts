@@ -24,9 +24,50 @@ export const drawLottery = async (
   }
 };
 
+/** 單筆抽獎結果 */
+export interface DrawResult {
+  success: boolean;
+  ticketId?: string;
+  ticketNumber?: number;
+  revealedNumber?: number | null; // SCRATCH_MODE 才有值
+  prizeId?: string;
+  prizeLevel?: string;
+  prizeName?: string;
+  prizeImageUrl?: string;
+  isGrandPrize?: boolean;
+  triggeredFreeDraw?: boolean;
+  refundAmount?: number;
+  message?: string;
+}
+
+/** 抽獎批次回應（v4.0 Breaking Change：不再是裸陣列） */
+export interface DrawBatchResponse {
+  playMode: string;  // 'LOTTERY_MODE' | 'SCRATCH_MODE'
+  gameMode: string;  // 'RANDOM' | 'SCRATCH_STORE' | 'SCRATCH_PLAYER'
+  results: DrawResult[];
+}
+
+/** designationRequired 回應中的大獎資訊 */
+export interface GrandPrizeInfo {
+  prizeId: string;
+  prizeName: string;
+  prizeLevel: string;
+  quantity: number;
+  prizeImageUrl?: string;
+}
+
+/** designationRequired 攔截回應 */
+export interface DesignationRequiredResponse {
+  designationRequired: true;
+  message: string;
+  availableNumbers: number[];
+  grandPrizes: GrandPrizeInfo[];
+}
+
 /** 前台 - 指定大獎位置（刮刮樂模式） POST /lottery/draw/{lotteryId}/designate */
 export interface PrizeDesignation {
-  ticketNumber: number;
+  /** 刮開後的號碼（來自 /draw response 的 availableNumbers），不是 ticketNumber */
+  revealedNumber: number;
   prizeId: string;
 }
 

@@ -7,6 +7,20 @@
       <div class="dialog__header">
         <h3 class="dialog__title">指定大獎位置</h3>
 
+        <!-- 大獎資訊卡片 -->
+        <div v-if="currentPrize" class="current-prize-info">
+          <img
+            v-if="currentPrize.prizeImageUrl"
+            :src="currentPrize.prizeImageUrl"
+            :alt="currentPrize.prizeName"
+            class="prize-image"
+          />
+          <div class="prize-details">
+            <div class="prize-name">{{ currentPrize.prizeName }}</div>
+            <span class="prize-level">{{ currentPrize.prizeLevel }}</span>
+          </div>
+        </div>
+
         <p class="dialog__subtitle">
           請為此大獎選擇
           <strong class="highlight">{{ requiredCount }}</strong> 個號碼
@@ -79,12 +93,11 @@
 import { ref, computed } from 'vue';
 
 interface Prize {
-  id: string;
-  name: string;
-  level: string;
-  imageUrl?: string;
+  prizeId: string;
+  prizeName: string;
+  prizeLevel: string;
+  prizeImageUrl?: string;
   quantity: number;
-  isGrandPrize: boolean;
 }
 
 const props = withDefaults(
