@@ -105,9 +105,14 @@
                     <button
                       v-for="n in [1, 2, 3, 5, 10]"
                       :key="n"
-                      :class="['ichibanDetail__gachaCountBtn', { 'is-active': gachaCount === n }]"
+                      :class="[
+                        'ichibanDetail__gachaCountBtn',
+                        { 'is-active': gachaCount === n },
+                      ]"
                       @click="gachaCount = n"
-                    >{{ n }}</button>
+                    >
+                      {{ n }}
+                    </button>
                   </div>
                 </div>
 
@@ -181,17 +186,38 @@
         </h2>
 
         <!-- 刮刮樂大獎提示（位置由後端指定後顯示） -->
-        <div v-if="isScratchMode && grandPrizeNumbers.length" class="ichibanDetail__grandPrizeBanner">
-          🏆 我的大獎位置：第 <strong>{{ grandPrizeNumbers.join('、') }}</strong> 格
+        <div
+          v-if="isScratchMode && grandPrizeNumbers.length"
+          class="ichibanDetail__grandPrizeBanner"
+        >
+          🏆 我的大獎位置：第
+          <strong>{{ grandPrizeNumbers.join('、') }}</strong> 格
         </div>
 
+        <ScratchRemainingCounter
+          v-if="isScratchMode"
+          :remaining-prizes="detail?.remainingPrizes ?? null"
+          :total-prizes="detail?.totalPrizes ?? null"
+          :tickets="statusCards"
+          :protection-info="protectionInfo"
+        />
+
         <RemainingCounter
+          v-else
           :remaining-prizes="detail?.remainingPrizes ?? null"
           :total-prizes="detail?.totalPrizes ?? null"
           :tickets="statusCards"
         />
 
+        <IchibanScratchStatusGrid
+          v-if="isScratchMode"
+          :cards="statusCards"
+          :active-cards="activeCards"
+          @select="openDrawPanelFromCard"
+        />
+
         <IchibanStatusGrid
+          v-else
           :cards="statusCards"
           :active-cards="activeCards"
           @select="handleCardSelect"
@@ -202,6 +228,7 @@
     </main>
 
     <IchibanDrawPanel
+      v-if="!isScratchMode"
       :is-open="isDrawPanelOpen"
       :remaining="detail?.remainingPrizes"
       :active-cards="activeCards"
@@ -250,7 +277,8 @@ import IchibanScratchPanel from '@/components/ichiban/IchibanScratchPanel.vue';
 import RemainingCounter from '@/components/IchibanDetail/RemainingCounter.vue';
 import IchibanMetaInfo from '@/components/IchibanDetail/IchibanMetaInfo.vue';
 import PrizeDesignationDialog from '@/components/common/PrizeDesignationDialog.vue';
-
+import ScratchRemainingCounter from '@/components/IchibanDetail/ScratchRemainingCounter.vue';
+import IchibanScratchStatusGrid from '@/components/ichiban/IchibanScratchStatusGrid.vue';
 import demo1 from '@/assets/image/demo1.jpg';
 
 import {
@@ -393,7 +421,8 @@ const isGacha = computed(() => {
   const category = String(detail.value?.category ?? '').toUpperCase();
   const m = String(detail.value?.playMode ?? '').toUpperCase();
   // 有籤位制 playMode 就不算扭蛋（走 draw 路由）
-  const isTicketBased = m === 'LOTTERY_MODE' || m === 'SCRATCH_MODE' || m === 'SCRATCH_CARD_MODE';
+  const isTicketBased =
+    m === 'LOTTERY_MODE' || m === 'SCRATCH_MODE' || m === 'SCRATCH_CARD_MODE';
   return category === 'GACHA' && !isTicketBased;
 });
 
