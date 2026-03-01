@@ -185,13 +185,25 @@
           {{ isScratchMode ? '選擇格數' : '檢視抽況' }}
         </h2>
 
-        <!-- 刮刮樂大獎提示（位置由後端指定後顯示） -->
+        <!-- ✅ 刮刮樂大獎提示（顯示中獎號碼） -->
         <div
-          v-if="isScratchMode && grandPrizeNumbers.length"
+          v-if="isScratchMode && designatedWinningNumbers.length"
           class="ichibanDetail__grandPrizeBanner"
         >
-          🏆 我的大獎位置：第
-          <strong>{{ grandPrizeNumbers.join('、') }}</strong> 格
+          <div class="grand-prize-announcement">
+            <div class="grand-prize-icon" aria-hidden="true">🏆</div>
+            <div class="grand-prize-content">
+              <div class="grand-prize-title">中獎號碼公告</div>
+              <div v-for="(group, idx) in grandPrizeDisplay" :key="idx" class="grand-prize-item">
+                <strong class="grand-prize-numbers">{{ group.numbers.join('、') }}</strong>
+                <span class="grand-prize-arrow">→</span>
+                <span class="grand-prize-name">{{ group.prizeName }}</span>
+              </div>
+              <div class="grand-prize-hint">
+                刮中以上號碼即可獲得對應大獎！
+              </div>
+            </div>
+          </div>
         </div>
 
         <ScratchRemainingCounter
@@ -339,6 +351,16 @@ const detail = ref<any>(null);
 const prizesData = ref<any[]>([]);
 const ticketData = ref<TicketItem[]>([]);
 const session = ref<any>(null);
+
+/** ✅ 新增：刮刮樂大獎中獎號碼（從 API 取得） */
+type DesignatedWinningNumber = {
+  revealedNumber: number;
+  prizeId: string;
+  prizeName: string;
+  prizeLevel: string;
+  prizeImageUrl: string | null;
+};
+const designatedWinningNumbers = ref<DesignatedWinningNumber[]>([]);
 
 /* -----------------------------
  * 大獎指定對話框狀態
@@ -654,13 +676,32 @@ const availableTicketIds = computed<string[]>(() => {
 /** 刮刮樂模式下，剩餘可刮格數（由 tickets 計算，數字精確） */
 const scratchRemainingCount = computed(() => availableTicketIds.value.length);
 
-/** 刮刮樂大獎格號（isGrandPrize=true 的賞品 prizeNumber） */
+/** ✅ 刮刮樂大獎中獎號碼（從 designatedWinningNumbers 取得） */
 const grandPrizeNumbers = computed<number[]>(() => {
   if (!isScratchMode.value) return [];
-  return (prizesData.value as any[])
-    .filter((p: any) => p.isGrandPrize === true)
-    .map((p: any) => Number(p?.prizeNumber ?? p?.ticketNumber ?? 0))
+  return designatedWinningNumbers.value
+    .map((d) => d.revealedNumber)
     .filter((n) => n > 0);
+});
+
+/** 刮刮樂大獎資訊顯示文字 */
+const grandPrizeDisplay = computed(() => {
+  if (!isScratchMode.value || !designatedWinningNumbers.value.length) return null;
+  
+  // 按 prizeId 分組
+  const grouped = designatedWinningNumbers.value.reduce((acc, item) => {
+    if (!acc[item.prizeId]) {
+      acc[item.prizeId] = {
+        prizeName: item.prizeName,
+        prizeLevel: item.prizeLevel,
+        numbers: [],
+      };
+    }
+    acc[item.prizeId].numbers.push(item.revealedNumber);
+    return acc;
+  }, {} as Record<string, { prizeName: string; prizeLevel: string; numbers: number[] }>);
+
+  return Object.values(grouped);
 });
 
 const toggleCardSelection = (ticketId: string) => {
@@ -791,6 +832,11 @@ const handleScratch = async (ticketIdOverride?: string) => {
           : [];
       if (!drawResults.length) return;
 
+      // ✅ 新增：處理 protectionEndTime（首次抽獎時會返回）
+      if (data?.protectionEndTime && session.value) {
+        session.value.protectionEndTime = data.protectionEndTime;
+      }
+
       // Step 3: 檢查後端回傳的失敗結果
       const result = drawResults[0];
       if (result?.success === false) {
@@ -868,6 +914,11 @@ const handleGacha = async () => {
         : Array.isArray(data)
           ? data
           : [];
+
+      // ✅ 新增：處理 protectionEndTime（扭蛋模式為 null）
+      if (data?.protectionEndTime && session.value) {
+        session.value.protectionEndTime = data.protectionEndTime;
+      }
 
       // 檢查後端回傳的失敗結果
       if (drawResults.length > 0 && drawResults[0]?.success === false) {
@@ -974,10 +1025,15 @@ const handleDesignatePrize = async (
       }
     }
 
-    // 調用 API
-    await designatePrizePositions(kujiId.value, {
+    // ✅ 調用 API 並接收回應
+    const designateResult = await designatePrizePositions(kujiId.value, {
       designations,
     });
+
+    // ✅ 更新 designatedWinningNumbers（從回應中取得）
+    if (designateResult?.designatedWinningNumbers) {
+      designatedWinningNumbers.value = designateResult.designatedWinningNumbers;
+    }
 
     await ichibanInfoDialog({
       title: '大獎位置已設定',
@@ -1141,6 +1197,11 @@ const handleExchange = async (payload: {
           ? data.results
           : Array.isArray(data) ? data : [];
 
+        // ✅ 新增：處理 protectionEndTime
+        if (data?.protectionEndTime && session.value) {
+          session.value.protectionEndTime = data.protectionEndTime;
+        }
+
         if (drawResults.length > 0 && drawResults[0]?.success === false) {
           await ichibanInfoDialog({
             title: '抽獎失敗',
@@ -1209,6 +1270,11 @@ const handleExchange = async (payload: {
         const drawResults: DrawResult[] = Array.isArray(data?.results)
           ? data.results
           : Array.isArray(data) ? data : [];
+
+        // ✅ 新增：處理 protectionEndTime
+        if (data?.protectionEndTime && session.value) {
+          session.value.protectionEndTime = data.protectionEndTime;
+        }
 
         if (drawResults.length > 0 && drawResults[0]?.success === false) {
           await ichibanInfoDialog({
@@ -1293,6 +1359,11 @@ const reload = async () => {
         detail.value = data?.lottery ?? null;
         prizesData.value = Array.isArray(data?.prizes) ? data.prizes : [];
         ticketData.value = Array.isArray(data?.tickets) ? data.tickets : [];
+        
+        // ✅ 新增：取得 designatedWinningNumbers（刮刮樂大獎中獎號碼）
+        designatedWinningNumbers.value = Array.isArray(data?.designatedWinningNumbers)
+          ? data.designatedWinningNumbers
+          : [];
       },
       onFail: async () => {
         errorMsg.value = '載入失敗，請稍後再試';
@@ -1481,22 +1552,71 @@ const goHome = () => router.push({ name: 'Home' });
   }
 }
 
-/* 刮刮樂大獎提示 */
+/* ✅ 刮刮樂大獎提示（中獎號碼公告） */
 .ichibanDetail__grandPrizeBanner {
+  padding: 14px 18px;
+  margin-bottom: 16px;
+  background: linear-gradient(135deg, #fff8e7 0%, #fff3cd 100%);
+  border: 2px solid #f5c518;
+  border-radius: 12px;
+}
+
+.grand-prize-announcement {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.grand-prize-icon {
+  font-size: 28px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.grand-prize-content {
+  flex: 1;
+}
+
+.grand-prize-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #b8860b;
+  margin-bottom: 8px;
+}
+
+.grand-prize-item {
   display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 10px 16px;
-  margin-bottom: 12px;
-  background: linear-gradient(135deg, #fff8e7 0%, #fff3cd 100%);
-  border: 1.5px solid #f5c518;
-  border-radius: 10px;
-  font-size: 15px;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 14px;
   color: #6b4c00;
 
-  strong {
-    color: #b8860b;
-    font-size: 17px;
+  &:last-of-type {
+    margin-bottom: 8px;
   }
+}
+
+.grand-prize-numbers {
+  font-weight: 700;
+  color: #d4880f;
+  font-size: 16px;
+}
+
+.grand-prize-arrow {
+  color: #b8860b;
+  font-weight: 600;
+}
+
+.grand-prize-name {
+  font-weight: 600;
+  color: #6b4c00;
+}
+
+.grand-prize-hint {
+  font-size: 12px;
+  color: #8b6914;
+  font-style: italic;
+  margin-top: 4px;
 }
 </style>
