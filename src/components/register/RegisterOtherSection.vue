@@ -3,6 +3,7 @@ import { inject, ref, type Ref } from 'vue';
 import { useFormContext } from 'vee-validate';
 
 const submitted = inject<Ref<boolean>>('registerSubmitted', ref(false));
+const isSubmitting = inject<Ref<boolean>>('registerIsSubmitting', ref(false));
 
 const { defineField, errors } = useFormContext();
 const [agreeTerms] = defineField('agreeTerms');
@@ -34,7 +35,9 @@ const [agreeTerms] = defineField('agreeTerms');
     </p>
 
     <div class="register__other-btn">
-      <button type="submit" class="register__btn">註冊成為會員</button>
+      <button type="submit" class="register__btn" :disabled="isSubmitting">
+        {{ isSubmitting ? '送出中...' : '註冊成為會員' }}
+      </button>
     </div>
   </div>
 </template>

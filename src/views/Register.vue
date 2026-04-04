@@ -1,22 +1,25 @@
 <!-- src/views/register/Register.vue -->
 <script setup lang="ts">
-import { ref, provide } from 'vue';
+import { ref, provide, onMounted } from 'vue';
 import Card from '@/components/common/MCard.vue';
 import RegisterMainSection from '@/components/register/RegisterMainSection.vue';
 import RegisterOtherSection from '@/components/register/RegisterOtherSection.vue';
 
 import { useForm } from 'vee-validate';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute } from 'vue-router';
 import * as yup from 'yup';
 
 import { executeApi } from '@/utils/executeApiUtils';
 import { register } from '@/services/AuthService';
 
 const router = useRouter();
+const route = useRoute();
 
 /**  送出後才顯示錯誤 */
 const submitted = ref(false);
+const isSubmitting = ref(false);
 provide('registerSubmitted', submitted);
+provide('registerIsSubmitting', isSubmitting);
 
 const schema = yup.object({
   email: yup.string().required('Email 是必填項').email('Email 格式不正確'),
@@ -43,7 +46,7 @@ const schema = yup.object({
     .required(),
 });
 
-const { handleSubmit } = useForm({
+const { handleSubmit, setFieldValue } = useForm({
   validationSchema: schema,
   validateOnMount: false,
   initialValues: {
@@ -63,9 +66,18 @@ const { handleSubmit } = useForm({
   },
 });
 
+// 從 URL ?ref=CODE 自動填入推薦碼
+onMounted(() => {
+  const refCode = route.query.ref;
+  if (refCode && typeof refCode === 'string' && refCode.trim()) {
+    setFieldValue('referralCode', refCode.trim());
+  }
+});
+
 const onSubmit = handleSubmit(
   async (values) => {
     submitted.value = true;
+    isSubmitting.value = true;
 
     const payload = {
       email: values.email,
@@ -97,6 +109,7 @@ const onSubmit = handleSubmit(
         await router.push({ name: 'Login' });
       },
     });
+    isSubmitting.value = false;
   },
   async () => {
     submitted.value = true;

@@ -87,3 +87,25 @@ export const resetPassword = async (
     throw e;
   }
 };
+
+/**
+ * 驗證推薦碼是否有效。
+ * 後端回傳 HTTP 200 + { isValid: boolean, ownerName?: string }。
+ * 傳入 signal 可取消進行中的請求（AbortController）。
+ */
+export const validateReferralCode = async (
+  code: string,
+  signal?: AbortSignal,
+): Promise<ApiResponse<{ isValid: boolean; ownerName?: string; errorCode?: string }>> => {
+  try {
+    const res = await api.get(`${basePath}/referral/validate`, {
+      params: { code },
+      signal,
+    });
+    return res.data;
+  } catch (e: any) {
+    if (e?.name === 'CanceledError' || e?.name === 'AbortError') throw e;
+    console.error('Auth - validateReferralCode error:', e);
+    throw e;
+  }
+};

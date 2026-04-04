@@ -16,6 +16,8 @@ import Faq from '@/views/Faq.vue';
 import Promotion from '@/views/Promotion.vue';
 import Transaction from '@/views/Transaction.vue';
 import Cooperation from '@/views/Cooperation.vue';
+import StoreList from '@/views/StoreList.vue';
+import StoreDetail from '@/views/StoreDetail.vue';
 import MemberCenter from '@/views/member/MemberCenter.vue';
 
 import MemberProfile from '@/views/member/MemberProfile.vue';
@@ -62,6 +64,18 @@ export const routes: Array<RouteRecordRaw> = [
         component: Cooperation,
         path: 'cooperation',
         name: 'Cooperation',
+      },
+
+      {
+        path: 'store',
+        name: 'StoreList',
+        component: StoreList,
+      },
+
+      {
+        path: 'store/:id',
+        name: 'StoreDetail',
+        component: StoreDetail,
       },
 
       {

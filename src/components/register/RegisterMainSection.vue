@@ -1,8 +1,9 @@
 <!-- src/components/register/RegisterMainSection.vue -->
 <script setup lang="ts">
-import { onMounted, ref, watch, inject, type Ref, computed } from 'vue';
+import { onMounted, ref, watch, inject, type Ref, computed, onUnmounted } from 'vue';
 import { useFormContext } from 'vee-validate';
 import { getAllCities, getDistrictsByCity } from '@/services/districtService';
+import { useReferralCodeValidator } from '@/composables/useReferralCodeValidator';
 
 type Option = { value: string; label: string };
 
@@ -52,6 +53,8 @@ const passwordInputType = computed(() =>
 const confirmPasswordInputType = computed(() =>
   showConfirmPassword.value ? 'text' : 'password',
 );
+
+const { isValidating: referralValidating, isValid: referralIsValid, ownerName: referralOwnerName, validationError: referralError, validate: validateReferral, reset: resetReferral } = useReferralCodeValidator();
 
 let cityReqToken = 0;
 let areaReqToken = 0;
@@ -131,6 +134,17 @@ watch(area, async (newArea) => {
 
   setFieldValue('zipCode', hit?.zipCode || '');
 });
+
+// 推薦碼即時驗證（600ms debounce + AbortController）
+watch(referralCode, (code) => {
+  if (code?.trim()) {
+    validateReferral(code.trim());
+  } else {
+    resetReferral();
+  }
+});
+
+onUnmounted(() => resetReferral());
 </script>
 
 <template>
@@ -297,14 +311,38 @@ watch(area, async (newArea) => {
       <div class="register__form-inputs m-t-20">
         <p class="register__text">推薦碼</p>
         <input
+          id="referralCode"
           class="register__form-input"
           v-model="referralCode"
           v-bind="referralCodeProps"
           :class="{
             'register__form-input--error': submitted && errors.referralCode,
+            'register__form-input--valid': referralIsValid === true,
+            'register__form-input--invalid': referralIsValid === false,
           }"
-          placeholder="選填（最多 20 字）"
+          placeholder="選填（輸入後自動驗證）"
+          maxlength="20"
+          aria-describedby="referralCode-status"
         />
+
+        <!-- 驗證中 -->
+        <p v-if="referralValidating" id="referralCode-status" class="register__text register__text--muted">
+          ⏳ 驗證推薦碼中...
+        </p>
+
+        <!-- 有效 -->
+        <p v-else-if="referralIsValid === true" id="referralCode-status" class="register__text register__text--success">
+          ✅ 有效推薦碼
+          <span v-if="referralOwnerName">（由 {{ referralOwnerName }} 提供）</span>
+        </p>
+
+        <!-- 無效 -->
+        <p v-else-if="referralIsValid === false" id="referralCode-status" class="register__text register__text--error">
+          ❌ {{ referralError }}
+        </p>
+
+        <p v-else id="referralCode-status"></p>
+
         <p
           v-if="submitted && errors.referralCode"
           class="register__text register__text--error"
@@ -458,5 +496,28 @@ watch(area, async (newArea) => {
 
 .register__eyeBtn:hover {
   color: rgba(0, 0, 0, 0.78);
+}
+
+/* 推薦碼驗證狀態 */
+.register__form-input--valid {
+  border-color: #38a169 !important;
+  outline-color: #38a169;
+}
+
+.register__form-input--invalid {
+  border-color: #e53e3e !important;
+  outline-color: #e53e3e;
+}
+
+.register__text--success {
+  color: #38a169;
+  font-size: 0.85rem;
+  margin-top: 4px;
+}
+
+.register__text--muted {
+  color: #888;
+  font-size: 0.85rem;
+  margin-top: 4px;
 }
 </style>
