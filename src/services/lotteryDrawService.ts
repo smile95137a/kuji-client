@@ -66,6 +66,13 @@ export interface DesignationRequiredResponse {
   grandPrizes: GrandPrizeInfo[];
 }
 
+/** awaitingDesignation 攔截回應（非開套玩家等待中） */
+export interface DesignationPendingResponse {
+  awaitingDesignation: true;  // discriminant literal type
+  message: string;            // human-readable hint from backend
+  openerDeadline: string;     // ISO-8601 countdown target
+}
+
 /** ✅ 新增：已指定的大獎中獎號碼 */
 export interface DesignatedWinningNumber {
   revealedNumber: number;
@@ -95,6 +102,11 @@ export interface SessionResponse {
   status: string; // 'ACTIVE' | 'EXPIRED'
   canDraw?: boolean;
   cannotDrawReason?: string | null;
+  // ─── NEW FIELDS (015-scratch-lottery-prize-rules) ───────────────────────────
+  /** ISO-8601; null = no active designation window or already done */
+  designationDeadline?: string | null;
+  /** true = opener has designated prize numbers; default false for backwards compat */
+  isDesignationComplete: boolean;
 }
 
 /** ✅ 新增：籤位資訊 */

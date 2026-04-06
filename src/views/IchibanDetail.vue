@@ -98,6 +98,24 @@
                   </div>
                 </div>
 
+                <!-- 開套者指定大獎橫幅 (FE-1) -->
+                <div v-if="showOpenerBanner" class="ichibanDetail__designation-banner">
+                  <div class="designation-badge">
+                    <span class="designation-icon" aria-hidden="true">
+                      <font-awesome-icon :icon="['fas', 'trophy']" />
+                    </span>
+                    <div class="designation-content">
+                      <div class="designation-title">指定大獎號碼</div>
+                      <div class="designation-message">
+                        您是開套者，請先指定大獎號碼才能開始抽獎。
+                      </div>
+                    </div>
+                    <KujiButton variant="primary" size="sm" @click="triggerDesignationFromSession">
+                      立即指定
+                    </KujiButton>
+                  </div>
+                </div>
+
                 <!-- 扭蛋次數選擇（1-10），僅 GACHA 模式顯示 -->
                 <div v-if="isGacha" class="ichibanDetail__gachaCount">
                   <span class="ichibanDetail__gachaCountLabel">次數：</span>
@@ -274,11 +292,20 @@
       @cancel="onDesignationCancel"
       @close="onDesignationCancel"
     />
+
+    <!-- 非開套玩家等待 overlay (FE-2 / FE-4) -->
+    <DesignationWaitingOverlay
+      :show="showWaitingOverlay"
+      :opener-deadline="waitingOpenerDeadline"
+      :message="waitingMessage"
+      @close="onWaitingOverlayClose"
+      @expired="onWaitingOverlayExpired"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, onMounted, watch } from 'vue';
+import { computed, ref, onMounted, onUnmounted, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import KujiButton from '@/components/common/KujiButton.vue';
@@ -292,6 +319,7 @@ import IchibanScratchPanel from '@/components/ichiban/IchibanScratchPanel.vue';
 import RemainingCounter from '@/components/IchibanDetail/RemainingCounter.vue';
 import IchibanMetaInfo from '@/components/IchibanDetail/IchibanMetaInfo.vue';
 import PrizeDesignationDialog from '@/components/common/PrizeDesignationDialog.vue';
+import DesignationWaitingOverlay from '@/components/ichiban/DesignationWaitingOverlay.vue';
 import ScratchRemainingCounter from '@/components/IchibanDetail/ScratchRemainingCounter.vue';
 import IchibanScratchStatusGrid from '@/components/ichiban/IchibanScratchStatusGrid.vue';
 import demo1 from '@/assets/image/demo1.jpg';
@@ -306,6 +334,8 @@ import {
   type PrizeDesignation,
   type GrandPrizeInfo,
   type DrawResult,
+  type DesignationPendingResponse,
+  type SessionResponse,
 } from '@/services/lotteryDrawService';
 import { randomDrawLottery } from '@/services/lotteryRandomService';
 import { executeApi } from '@/utils/executeApiUtils';
@@ -373,6 +403,60 @@ const designationUsedNumbers = ref<number[]>([]);
 const designationResolve = ref<((numbers: number[]) => void) | null>(null);
 
 /* -----------------------------
+ * DesignationWaiting overlay state (T003)
+ * ----------------------------- */
+// === DesignationWaiting overlay state ===
+const showWaitingOverlay = ref(false);
+const waitingOpenerDeadline = ref('');
+const waitingMessage = ref('');
+let waitingPollInterval: ReturnType<typeof setInterval> | null = null;
+
+const stopWaitingOverlay = () => {
+  if (waitingPollInterval) {
+    clearInterval(waitingPollInterval);
+    waitingPollInterval = null;
+  }
+  showWaitingOverlay.value = false;
+};
+
+const showDesignationWaitingOverlay = (deadline: string, message: string) => {
+  waitingOpenerDeadline.value = deadline;
+  waitingMessage.value = message;
+  showWaitingOverlay.value = true;
+
+  // 30-second polling: auto-close when opener completes designation
+  if (waitingPollInterval) clearInterval(waitingPollInterval);
+  waitingPollInterval = setInterval(async () => {
+    await executeApi({
+      fn: () => getLotterySession(kujiId.value),
+      showCatchDialog: false,
+      showFailDialog: false,
+      onSuccess: (data: SessionResponse | null) => {
+        if (data?.isDesignationComplete === true || data?.designationDeadline === null) {
+          stopWaitingOverlay();
+          reload();
+        }
+      },
+    });
+  }, 30_000);
+};
+
+const onWaitingOverlayClose = () => {
+  stopWaitingOverlay();
+  // Do NOT reload — user dismissed voluntarily. Guard in handleScratchCardSelect
+  // ensures scratch calls continue to hit the API and be re-intercepted if needed.
+};
+
+const onWaitingOverlayExpired = async () => {
+  stopWaitingOverlay();
+  await reload();
+  await ichibanInfoDialog({
+    title: '計時結束',
+    content: '計時結束，您已可嘗試成為開套者，請重新進入抽獎流程。',
+  });
+};
+
+/* -----------------------------
  * gallery / banner
  * ----------------------------- */
 const activeGalleryIndex = ref(0);
@@ -403,6 +487,20 @@ const kujiTitle = computed(() => detail.value?.title || '未命名商品');
 const kujiSubTitle = computed(() => detail.value?.description || '');
 const breadcrumbCategory = computed(() => detail.value?.categoryName || '商城');
 const isOpener = computed(() => !!session.value?.isOpener);
+
+/** 開套者是否已完成指定 — 後端明確訊號，取代 designatedWinningNumbers.length 判斷 */
+const designationDone = computed(
+  () => session.value?.isDesignationComplete === true,
+);
+
+/** 顯示「請立即指定」橫幅的條件 */
+const showOpenerBanner = computed(
+  () =>
+    isScratchMode.value &&
+    String(detail.value?.gameMode ?? '').toUpperCase() === 'SCRATCH_PLAYER' &&
+    (session.value?.isOpener === true) &&
+    !designationDone.value,
+);
 
 // isScratchPlayerMode / isScratchStoreMode / isScratchModeCustom 已移除
 // 後端只有 SCRATCH_MODE 與 SCRATCH_CARD_MODE，統一用 isScratchMode 判斷
@@ -730,6 +828,9 @@ const handleScratchCardSelect = async (ticketId: string) => {
   const ok = await ensureCanDraw();
   if (!ok) return;
 
+  // Pre-flight: block draw while waiting overlay is visible (FE-4 FR-FE-009)
+  if (showWaitingOverlay.value) return;
+
   if (!availableTicketIds.value.includes(ticketId)) return;
 
   const idx = activeCards.value.indexOf(ticketId);
@@ -820,6 +921,15 @@ const handleScratch = async (ticketIdOverride?: string) => {
         await handleDesignatePrize(
           data.availableNumbers || [],
           data.grandPrizes || [],
+        );
+        return;
+      }
+
+      // Step 1b: awaitingDesignation 攔截（非開套玩家等待中）
+      if ((data as DesignationPendingResponse)?.awaitingDesignation === true) {
+        showDesignationWaitingOverlay(
+          (data as DesignationPendingResponse).openerDeadline,
+          (data as DesignationPendingResponse).message || '開套者正在指定大獎位置，請稍候',
         );
         return;
       }
@@ -1026,9 +1136,21 @@ const handleDesignatePrize = async (
     }
 
     // ✅ 調用 API 並接收回應
-    const designateResult = await designatePrizePositions(kujiId.value, {
-      designations,
-    });
+    let designateResult: any;
+    try {
+      designateResult = await designatePrizePositions(kujiId.value, {
+        designations,
+      });
+    } catch (err: any) {
+      const msg =
+        err?.response?.data?.message ||
+        err?.message ||
+        '指定失敗，請稍後再試。';
+      await ichibanInfoDialog({ title: '指定失敗', content: msg });
+      // Re-invoke the full designation flow so player can re-select numbers and retry
+      await handleDesignatePrize(availableNumbers, grandPrizes);
+      return;
+    }
 
     // ✅ 更新 designatedWinningNumbers（從回應中取得）
     if (designateResult?.designatedWinningNumbers) {
@@ -1082,7 +1204,39 @@ const onDesignationCancel = () => {
   }
 };
 
+/** 開套者從橫幅點擊「立即指定」，使用 probe ticket 觸發 designationRequired 流程 */
+const triggerDesignationFromSession = async () => {
+  const probeTicketId = availableTicketIds.value[0];
+  if (!probeTicketId) {
+    await ichibanInfoDialog({
+      title: '提示訊息',
+      content: '目前無可用格數，無法開始指定流程。',
+    });
+    return;
+  }
+
+  await executeApi({
+    fn: () => drawLottery(kujiId.value, { count: 1, ticket: [probeTicketId] }),
+    onSuccess: async (data: any) => {
+      if (data?.designationRequired === true) {
+        await handleDesignatePrize(
+          data.availableNumbers ?? [],
+          data.grandPrizes ?? [],
+        );
+      }
+    },
+    onFail: async () => {
+      await ichibanInfoDialog({
+        title: '錯誤',
+        content: '無法取得指定流程資訊，請稍後再試。',
+      });
+    },
+  });
+};
+
 const handleScratchFromPanel = async (payload: { ticketIds: string[] }) => {
+  // Pre-flight: block draw while waiting overlay is visible (FE-4 FR-FE-009)
+  if (showWaitingOverlay.value) return;
   closeScratchPanel();
   // 依序刮每張票（每張都有刮刮樂動畫）
   for (const ticketId of payload.ticketIds) {
@@ -1371,6 +1525,22 @@ const reload = async () => {
     });
 
     await refreshSession(); // 🔥 不再用 data.session
+
+    // Proactive SCRATCH_PLAYER waiting / opener check (FE-4 + FE-6)
+    const gameModeForCheck = detail.value?.gameMode as string | undefined;
+    if (gameModeForCheck?.toUpperCase() === 'SCRATCH_PLAYER' && session.value) {
+      const deadline = session.value.designationDeadline;
+      const isOpenerLocal = session.value.isOpener === true;
+      const designationDoneLocal = session.value.isDesignationComplete === true;
+
+      if (!designationDoneLocal && deadline && new Date(deadline) > new Date()) {
+        if (!isOpenerLocal && !showWaitingOverlay.value) {
+          // Non-opener: proactively show waiting overlay
+          showDesignationWaitingOverlay(deadline, '開套者正在指定大獎位置，請稍候。');
+        }
+        // Opener: showOpenerBanner computed handles banner display reactively
+      }
+    }
   } catch (e) {
     console.error(e);
     errorMsg.value = '載入失敗，請稍後再試';
@@ -1441,6 +1611,13 @@ const hitHotCount = async () => {
   });
 };
 
+onUnmounted(() => {
+  if (waitingPollInterval) {
+    clearInterval(waitingPollInterval);
+    waitingPollInterval = null;
+  }
+});
+
 onMounted(async () => {});
 
 watch(
@@ -1505,6 +1682,43 @@ const goHome = () => router.push({ name: 'Home' });
 .protection-detail {
   font-size: 12px;
   opacity: 0.85;
+}
+
+// === 開套者指定大獎橫幅 (FE-1) ===
+.ichibanDetail__designation-banner {
+  margin: 8px 0;
+}
+
+.designation-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #b45309 0%, #d97706 100%);
+  border-radius: 12px;
+  color: #fff;
+}
+
+.designation-icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+}
+
+.designation-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.designation-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  opacity: 0.9;
+}
+
+.designation-message {
+  font-size: 0.8rem;
+  margin-top: 2px;
+  line-height: 1.4;
 }
 
 /* 扭蛋次數選擇器 */
