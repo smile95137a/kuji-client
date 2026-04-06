@@ -428,11 +428,16 @@ const showDesignationWaitingOverlay = (deadline: string, message: string) => {
   if (waitingPollInterval) clearInterval(waitingPollInterval);
   waitingPollInterval = setInterval(async () => {
     await executeApi({
-      fn: () => getLotterySession(kujiId.value),
+      // 後端 session API 目前不回傳 isDesignationComplete，
+      // 改用 browse API 的 designatedWinningNumbers 判斷指定是否完成
+      fn: () => getBrowseLotteryById(kujiId.value),
       showCatchDialog: false,
       showFailDialog: false,
-      onSuccess: (data: SessionResponse | null) => {
-        if (data?.isDesignationComplete === true || data?.designationDeadline === null) {
+      onSuccess: (data: any) => {
+        if (
+          data?.session?.isDesignationComplete === true ||
+          (Array.isArray(data?.designatedWinningNumbers) && data.designatedWinningNumbers.length > 0)
+        ) {
           stopWaitingOverlay();
           reload();
         }
@@ -488,16 +493,17 @@ const kujiSubTitle = computed(() => detail.value?.description || '');
 const breadcrumbCategory = computed(() => detail.value?.categoryName || '商城');
 const isOpener = computed(() => !!session.value?.isOpener);
 
-/** 開套者是否已完成指定 — 後端明確訊號，取代 designatedWinningNumbers.length 判斷 */
+/** 開套者是否已完成指定 — 優先使用後端明確訊號，回退到 designatedWinningNumbers 是否已填入 */
 const designationDone = computed(
-  () => session.value?.isDesignationComplete === true,
+  () => session.value?.isDesignationComplete === true || designatedWinningNumbers.value.length > 0,
 );
 
-/** 顯示「請立即指定」橫幅的條件 */
+/** 顯示「請立即指定」橫幅的條件
+ *  注意：後端 browse API 目前不回傳 gameMode，故移除該欄位判斷，
+ *  改以 isScratchMode + isOpener + !designationDone 判斷是否需要顯示。 */
 const showOpenerBanner = computed(
   () =>
     isScratchMode.value &&
-    String(detail.value?.gameMode ?? '').toUpperCase() === 'SCRATCH_PLAYER' &&
     (session.value?.isOpener === true) &&
     !designationDone.value,
 );
@@ -1152,9 +1158,9 @@ const handleDesignatePrize = async (
       return;
     }
 
-    // ✅ 更新 designatedWinningNumbers（從回應中取得）
-    if (designateResult?.designatedWinningNumbers) {
-      designatedWinningNumbers.value = designateResult.designatedWinningNumbers;
+    // ✅ 更新 designatedWinningNumbers（designateResult 為 ApiResponse，資料在 .data 層）
+    if (designateResult?.data?.designatedWinningNumbers) {
+      designatedWinningNumbers.value = designateResult.data.designatedWinningNumbers;
     }
 
     await ichibanInfoDialog({
@@ -1526,12 +1532,13 @@ const reload = async () => {
 
     await refreshSession(); // 🔥 不再用 data.session
 
-    // Proactive SCRATCH_PLAYER waiting / opener check (FE-4 + FE-6)
-    const gameModeForCheck = detail.value?.gameMode as string | undefined;
-    if (gameModeForCheck?.toUpperCase() === 'SCRATCH_PLAYER' && session.value) {
+    // Proactive waiting / opener check (FE-4 + FE-6)
+    // 後端 browse API 目前不回傳 gameMode，改以 isScratchMode 判斷
+    if (isScratchMode.value && session.value) {
       const deadline = session.value.designationDeadline;
       const isOpenerLocal = session.value.isOpener === true;
-      const designationDoneLocal = session.value.isDesignationComplete === true;
+      const designationDoneLocal =
+        session.value.isDesignationComplete === true || designatedWinningNumbers.value.length > 0;
 
       if (!designationDoneLocal && deadline && new Date(deadline) > new Date()) {
         if (!isOpenerLocal && !showWaitingOverlay.value) {
