@@ -16,6 +16,7 @@ import NewsDetail from '@/views/NewsDetail.vue';
 import NotFound from '@/views/NotFound.vue';
 import Login from '@/views/Login.vue';
 import Register from '@/views/Register.vue';
+import ResetPassword from '@/views/ResetPassword.vue';
 import Policy from '@/views/Policy.vue';
 import Privacy from '@/views/Privacy.vue';
 import IchibanList from '@/views/IchibanList.vue';
@@ -97,6 +98,11 @@ export const routes: Array<RouteRecordRaw> = [
         component: Register,
         path: 'register',
         name: 'Register',
+      },
+      {
+        component: ResetPassword,
+        path: 'reset-password',
+        name: 'ResetPassword',
       },
       {
         component: Policy,
