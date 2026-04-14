@@ -4,11 +4,16 @@ import { useRoute, useRouter } from 'vue-router';
 import IchibanKujiCard from '@/components/IchibanKujiCard.vue';
 import BasePagination from '@/components/common/BasePagination.vue';
 import NoData from '@/components/common/NoData.vue';
-import { queryBrowseLotteries, type BrowseCondition } from '@/services/lotteryBrowseService';
+import {
+  queryBrowseLotteries,
+  type BrowseCondition,
+} from '@/services/lotteryBrowseService';
 import { executeApi } from '@/utils/executeApiUtils';
+
 const DEFAULT_SORT = 'latest';
 const DEFAULT_TAG = 'all';
 const DEFAULT_PAGE = 1;
+
 const resetUiState = () => {
   currentSort.value = DEFAULT_SORT;
   currentTag.value = DEFAULT_TAG;
@@ -21,10 +26,11 @@ const route = useRoute();
 const typeToCategory: Record<string, string | 'all'> = {
   kuji: 'OFFICIAL_ICHIBAN',
   gacha: 'GACHA',
-  scratch: 'SCRATCH', // 虛擬類型，由 playMode 決定
+  scratch: 'SCRATCH',
   custom: 'CUSTOM_GACHA',
   card: 'TRADING_CARD',
 };
+
 const typeToTitle: Record<string, string> = {
   kuji: '一番賞',
   gacha: '扭蛋',
@@ -39,7 +45,7 @@ const isScratchItem = (item: any) => {
   return m === 'SCRATCH_MODE' || m === 'SCRATCH_CARD_MODE';
 };
 
-/** 判斷商品是否屬於真正的扭蛋（category=GACHA 且無籤位制 playMode） */
+/** 判斷商品是否屬於真正的扭蛋（category=GACHA 且非刮刮樂 playMode） */
 const isGachaItem = (item: any) => {
   const category = String(item?.category ?? '').toUpperCase();
   return category === 'GACHA' && !isScratchItem(item);
@@ -50,8 +56,7 @@ const pageTitle = computed(() => typeToTitle[currentType.value] ?? '商城');
 const currentType = computed(() => String(route.query.type ?? 'kuji'));
 
 const currentCategory = ref<string>('all');
-
-const currentTag = ref('all');
+const currentTag = ref(DEFAULT_TAG);
 
 const sortTabs = [
   { label: '最新', value: 'latest' },
@@ -60,26 +65,27 @@ const sortTabs = [
   { label: '價格高到低', value: 'priceDesc' },
 ];
 
-const currentSort = ref('latest');
+const currentSort = ref(DEFAULT_SORT);
 
 const pageSize = 12;
-const currentPage = ref(1);
+const currentPage = ref(DEFAULT_PAGE);
 
 /** API data */
-const loading = ref(false);
+const loading = ref(true);
+const hasLoaded = ref(false);
 const errorMsg = ref('');
-const kujiList = ref([]);
+const kujiList = ref<any[]>([]);
 
 /* ------------------------------
  * categories chips (dynamic)
  * ------------------------------ */
 const categories = computed(() => {
-  const map = new Map<string, string>(); // key=category, value=categoryName
+  const map = new Map<string, string>();
 
   for (const item of kujiList.value) {
     const key = item.category;
     const name = item.categoryName || item.category || '其他';
-    if (!map.has(key)) map.set(key, name);
+    if (key && !map.has(key)) map.set(key, name);
   }
 
   const chips = Array.from(map.entries())
@@ -88,10 +94,11 @@ const categories = computed(() => {
 
   return [{ label: '全部', value: 'all' }, ...chips];
 });
+
 const tags = computed(() => {
   const set = new Set<string>();
 
-  for (const item of kujiList.value as any[]) {
+  for (const item of kujiList.value) {
     const arr = Array.isArray(item?.tags) ? item.tags : [];
     for (const t of arr) {
       const s = String(t ?? '').trim();
@@ -110,23 +117,40 @@ const tags = computed(() => {
  * fetch
  * ------------------------------ */
 const fetchList = async () => {
+  loading.value = true;
+  errorMsg.value = '';
+
   const condition: BrowseCondition = {};
-  
-  // 只在初始載入時，如果 URL 有 tag 參數，才加到 condition
+
   const urlTag = route.query.tag;
   if (urlTag && typeof urlTag === 'string' && urlTag !== 'all') {
     condition.theme = urlTag;
   }
-  
-  await executeApi({
-    fn: () => queryBrowseLotteries({ condition }),
-    onSuccess: async (data) => {
-      const arr = Array.isArray(data) ? data : [];
-      kujiList.value = arr.map((x) => {
-        return { ...x.lottery, prizes: x.prizes };
-      });
-    },
-  });
+
+  try {
+    await executeApi({
+      fn: () => queryBrowseLotteries({ condition }),
+      onSuccess: async (data) => {
+        const arr = Array.isArray(data) ? data : [];
+        kujiList.value = arr.map((x: any) => ({
+          ...x.lottery,
+          prizes: x.prizes,
+        }));
+      },
+      onFail: async (error: any) => {
+        console.error('queryBrowseLotteries error:', error);
+        errorMsg.value = '商品載入失敗，請稍後再試';
+        kujiList.value = [];
+      },
+    });
+  } catch (error) {
+    console.error('fetchList error:', error);
+    errorMsg.value = '商品載入失敗，請稍後再試';
+    kujiList.value = [];
+  } finally {
+    loading.value = false;
+    hasLoaded.value = true;
+  }
 };
 
 /* ------------------------------
@@ -137,10 +161,8 @@ const filteredList = computed(() => {
   const type = currentType.value;
 
   if (type === 'scratch') {
-    // 刮刮樂：以 playMode 優先判斷
     list = list.filter((item) => isScratchItem(item));
   } else if (type === 'gacha') {
-    // 扭蛋：category=GACHA 且非刮刮樂 playMode
     list = list.filter((item) => isGachaItem(item));
   } else if (currentCategory.value !== 'all') {
     list = list.filter((item) => item.category === currentCategory.value);
@@ -161,17 +183,17 @@ const sortedList = computed(() => {
 
   switch (currentSort.value) {
     case 'priceAsc':
-      return list.sort((a, b) => a.currentPrice - b.currentPrice);
+      return list.sort((a, b) => (a.currentPrice ?? 0) - (b.currentPrice ?? 0));
     case 'priceDesc':
-      return list.sort((a, b) => b.currentPrice - a.currentPrice);
+      return list.sort((a, b) => (b.currentPrice ?? 0) - (a.currentPrice ?? 0));
     case 'hot':
-      return list.sort((a, b) => a.hotCount - b.hotCount);
+      return list.sort((a, b) => (b.hotCount ?? 0) - (a.hotCount ?? 0));
     case 'latest':
     default:
       return list.sort((a, b) => {
-        const at = a.createdAt;
-        const bt = b.createdAt;
-        return new Date(bt).getTime() - new Date(at).getTime();
+        const at = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+        const bt = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+        return bt - at;
       });
   }
 });
@@ -184,6 +206,19 @@ const pagedList = computed(() => {
   const start = (currentPage.value - 1) * pageSize;
   return sortedList.value.slice(start, start + pageSize);
 });
+
+/* ------------------------------
+ * state display
+ * ------------------------------ */
+const stateMessage = computed(() => {
+  if (loading.value || !hasLoaded.value) return '載入中...';
+  if (errorMsg.value) return errorMsg.value;
+  if (sortedList.value.length === 0) return '目前沒有商品';
+  return '';
+});
+
+const showState = computed(() => !!stateMessage.value);
+const isErrorState = computed(() => !!errorMsg.value);
 
 watch([currentCategory, currentTag, currentSort], () => {
   currentPage.value = 1;
@@ -199,6 +234,7 @@ watch(
   },
   { immediate: true },
 );
+
 watch(
   tags,
   () => {
@@ -217,14 +253,13 @@ watch(
   { immediate: true },
 );
 
-/* ------------------------------
- * 從 URL 讀取主題參數（只在初始時設定）
- * ------------------------------ */
 watch(
   () => route.query.tag,
   (tag) => {
     if (tag && typeof tag === 'string') {
       currentTag.value = tag;
+    } else {
+      currentTag.value = DEFAULT_TAG;
     }
   },
   { immediate: true },
@@ -245,11 +280,10 @@ onMounted(async () => {
 <template>
   <div class="ichibanList">
     <div class="ichibanList__inner">
-      <!-- 標題 -->
       <header class="ichibanList__header">
         <h1 class="ichibanList__title">{{ pageTitle }}</h1>
 
-        <div class="ichibanList__tags" v-if="tags.length > 1">
+        <div v-if="tags.length > 1" class="ichibanList__tags">
           <button
             v-for="t in tags"
             :key="t.value"
@@ -265,7 +299,6 @@ onMounted(async () => {
         </div>
       </header>
 
-      <!-- 排序 tabs -->
       <div class="ichibanList__sortBar">
         <span class="ichibanList__sortLabel">排序</span>
         <div class="ichibanList__sortTabs">
@@ -284,19 +317,14 @@ onMounted(async () => {
         </div>
       </div>
 
-      <!-- Loading / Error / Empty -->
-      <div v-if="loading" class="ichibanList__state">載入中...</div>
       <div
-        v-else-if="errorMsg"
-        class="ichibanList__state ichibanList__state--error"
+        v-if="showState"
+        class="ichibanList__state"
+        :class="{ 'ichibanList__state--error': isErrorState }"
       >
-        {{ errorMsg }}
-      </div>
-      <div v-else-if="sortedList.length === 0" class="ichibanList__state">
-        <NoData message="目前沒有商品" />
+        <NoData :message="stateMessage" />
       </div>
 
-      <!-- 商品列表 -->
       <section v-else class="ichibanList__grid">
         <IchibanKujiCard
           v-for="item in pagedList"
@@ -307,7 +335,6 @@ onMounted(async () => {
         />
       </section>
 
-      <!-- 分頁 -->
       <BasePagination
         v-if="!loading && !errorMsg && sortedList.length > 0"
         class="ichibanList__pagination"

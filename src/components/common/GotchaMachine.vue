@@ -6,7 +6,6 @@
         <div class="balls" ref="ballsRef"></div>
 
         <img class="machine" :src="machineSrc" alt="machine" />
-        <!--  超單純：一個長方形把手 -->
         <div class="handle handle--img" type="button" aria-label="Turn handle">
           <img
             class="handle__img"
@@ -32,9 +31,9 @@
         <div class="prize-ball-container" ref="prizeBallContainerRef"></div>
 
         <div class="prize-reward-container" ref="prizeRewardContainerRef">
-          <div class="prize">
+          <div class="prize prize--center">
             <img
-              class="wiggle"
+              class="prize__img wiggle"
               :src="prize?.prizeImageUrl || ''"
               alt="prize"
               draggable="false"
@@ -47,39 +46,14 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
+import { onBeforeUnmount, onMounted, ref } from 'vue';
 import gsap from 'gsap';
 import { RoughEase } from 'gsap/EasePack';
 import defaultMachineSrc from '@/assets/image/gashapon-machine.png';
 import defaultMachineHangleSrc from '@/assets/image/gashapon-machine-handle.png';
 import defaultMachineHangleaaSrc from '@/assets/image/aa.png';
 
-import demo1Img from '@/assets/image/demo1.jpg';
-
-//  FontAwesome（你的專案需已註冊 <font-awesome-icon> component）
-import { faHandPointer } from '@fortawesome/free-solid-svg-icons';
-
 gsap.registerPlugin(RoughEase);
-
-//  方案 B：inline SVG（不外連）
-const inlineSvgDataUri = (svg: string) =>
-  `data:image/svg+xml;utf8,${encodeURIComponent(svg.trim())}`;
-
-const DEFAULT_POINTER_SVG = inlineSvgDataUri(`
-<svg xmlns="http://www.w3.org/2000/svg" width="240" height="240" viewBox="0 0 240 240">
-  <defs>
-    <filter id="s" x="-50%" y="-50%" width="200%" height="200%">
-      <feDropShadow dx="0" dy="8" stdDeviation="6" flood-color="#000" flood-opacity=".35"/>
-    </filter>
-  </defs>
-
-  <path filter="url(#s)"
-    d="M92 42c0-14 12-24 26-24s26 10 26 24v70l10-10c8-8 20-8 28 0s8 20 0 28l-36 36c-10 10-22 16-36 16H98c-18 0-32-14-32-32V84c0-12 10-22 22-22s22 10 22 22v-42z"
-    fill="#ffffff" stroke="#1b1b22" stroke-width="10" stroke-linejoin="round"/>
-
-  <path d="M118 36c6 0 12 4 12 10" stroke="#000" stroke-opacity=".18" stroke-width="8" stroke-linecap="round"/>
-</svg>
-`);
 
 const props = withDefaults(
   defineProps<{
@@ -102,21 +76,18 @@ const emit = defineEmits<{
 const appRef = ref<HTMLElement | null>(null);
 const machineRef = ref<HTMLElement | null>(null);
 const ballsRef = ref<HTMLElement | null>(null);
-const shineRef = ref<HTMLElement | null>(null);
 const prizeBallContainerRef = ref<HTMLElement | null>(null);
 const prizeRewardContainerRef = ref<HTMLElement | null>(null);
 
-const prize = ref(null);
+const prize = ref<any>(null);
 
 // ----- internal state -----
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 const SPEED = () => props.speed;
 
-//  不用 vh/vw：用 px（由視窗大小換算）
-const unitPx = () => Math.max(6, window.innerHeight / 100); // 以前的 1vh ≈ innerHeight/100
+// 不用 vh/vw：用 px（由視窗大小換算）
+const unitPx = () => Math.max(6, window.innerHeight / 100);
 const v = (n: number) => Math.round(n * unitPx());
-const cx = () => Math.round(window.innerWidth / 2);
-const cy = () => Math.round(window.innerHeight / 2);
 
 let balls: any[] = [];
 let prizeBall: any = null;
@@ -132,10 +103,7 @@ let cleanupFns: Array<() => void> = [];
 
 let isRunning = false;
 
-let shineTween: gsap.core.Tween | null = null;
-let shinePulseTween: gsap.core.Tween | null = null;
-
-/**  紅白扭蛋配色（上白下紅） */
+/** 紅白扭蛋配色（上白下紅） */
 const BALL_THEME = { top: '#FFFFFF', bottom: '#E84545', outline: '#7A0E0E' };
 
 const tweak = (hex: string, amt: number) => {
@@ -152,18 +120,18 @@ const tweak = (hex: string, amt: number) => {
 const confetti = (
   $parent: HTMLElement,
   {
-    count = 100,
+    count = 120,
     x = 50,
     y = 50,
-    randX = 10,
-    randY = 10,
+    randX = 4,
+    randY = 4,
     speedX = 0,
-    speedY = -2,
-    speedRandX = 0.5,
-    speedRandY = 0.5,
-    gravity = 0.01,
+    speedY = -2.8,
+    speedRandX = 1.8,
+    speedRandY = 1.4,
+    gravity = 0.085,
     size = 10,
-    sizeRand = 5,
+    sizeRand = 6,
   }: any = {},
 ) => {
   const $container = document.createElement('div');
@@ -181,9 +149,7 @@ const confetti = (
       size: size + Math.random() * sizeRand * 2 - sizeRand,
     };
 
-    $particle.style.backgroundColor = `hsl(${
-      Math.random() * 360
-    }deg, 80%, 60%)`;
+    $particle.style.backgroundColor = `hsl(${Math.random() * 360}deg, 85%, 62%)`;
     $particle.style.setProperty('--rx', String(Math.random() * 2 - 1));
     $particle.style.setProperty('--ry', String(Math.random() * 2 - 1));
     $particle.style.setProperty('--rz', String(Math.random() * 2 - 1));
@@ -194,10 +160,12 @@ const confetti = (
 
   const update = () => {
     particles.forEach((config, i) => {
-      if (config.y > 100) {
+      if (config.y > 110 || config.x < -15 || config.x > 115) {
         particles.splice(i, 1);
         config.dom.remove();
+        return;
       }
+
       config.dom.style.setProperty('--size', config.size);
       config.dom.style.left = config.x + '%';
       config.dom.style.top = config.y + '%';
@@ -249,7 +217,7 @@ const createBalls = () => {
 
     const $ball = document.createElement('figure');
 
-    const light = Math.floor(Math.random() * 10 - 5); // 紅白乾淨
+    const light = Math.floor(Math.random() * 10 - 5);
     $ball.classList.add('ball');
     $ball.setAttribute('data-id', String(++id));
     $ball.style.setProperty('--size', `${sizePx}px`);
@@ -331,16 +299,14 @@ const jitter = () => {
   balls.forEach(({ dom, rotate }: any, i: number) => {
     const tl = gsap.timeline({ repeat: -1, delay: -i * 0.05 });
 
-    // reset base
     gsap.set(dom, { x: 0, y: 0, rotateZ: rotate, scaleX: 1, scaleY: 1 });
 
-    const xMax = v(4); // 左右位移最大
-    const yMin = v(2); // 上抬最小
-    const yMax = v(6); // 上抬最大
-    const rotMax = 12; // 旋轉擺動最大（度）
-    const squashMax = 0.03; // 微微壓扁/回彈
-
-    const duration = 0.1 + Math.random() * 0.14; // 0.10 ~ 0.24
+    const xMax = v(4);
+    const yMin = v(2);
+    const yMax = v(6);
+    const rotMax = 12;
+    const squashMax = 0.03;
+    const duration = 0.1 + Math.random() * 0.14;
 
     const lift = r(yMin, yMax);
     const slip = r(-xMax, xMax);
@@ -374,6 +340,7 @@ const jitter = () => {
 
     $$jitters.push(tl);
   });
+
   if ($machine) {
     const tl = gsap.timeline({ repeat: -1 });
 
@@ -441,53 +408,56 @@ const hideHint = () => {
   gsap.to($pointer, { opacity: 0, duration: 0.6, ease: 'none' });
 };
 
-const startShineSpin = () => {
-  if (!shineRef.value) return;
-
-  shineTween?.kill();
-  shinePulseTween?.kill();
-
-  gsap.set(shineRef.value, { rotation: 0, transformOrigin: '50% 50%' });
-
-  shineTween = gsap.to(shineRef.value, {
-    rotation: 360,
-    duration: 6,
-    ease: 'none',
-    repeat: -1,
-  });
-
-  shinePulseTween = gsap.to(shineRef.value, {
-    scale: 1.03,
-    duration: 1.25,
-    ease: 'sine.inOut',
-    yoyo: true,
-    repeat: -1,
-  });
-};
-
 const pop = () => {
   if (!$app || !$machine || !prizeRewardContainerRef.value) return;
 
-  confetti($app, {
-    speedY: -0.5,
-    speedRandY: 1,
-    speedRandX: 0.75,
-    gravity: 0.02,
-    y: 50,
-    randX: 6,
-    randY: 6,
-    size: 8,
-    sizeRand: 4,
-    count: 128,
-  });
-
   const $reward = prizeRewardContainerRef.value;
   const $prizeWrap = $reward.querySelector('.prize') as HTMLElement | null;
+  const $prizeImg = $reward.querySelector('.prize__img') as HTMLElement | null;
 
-  if ($prizeWrap) gsap.set($prizeWrap, { scale: 0 });
-  gsap.to($reward, { opacity: 1, duration: 0.25 });
-  if ($prizeWrap)
-    gsap.to($prizeWrap, { scale: 1, duration: 0.5, ease: 'back.out' });
+  confetti($reward, {
+    count: 160,
+    x: 50,
+    y: 50,
+    randX: 3,
+    randY: 3,
+    speedX: 0,
+    speedY: -3.2,
+    speedRandX: 2.2,
+    speedRandY: 1.6,
+    gravity: 0.09,
+    size: 10,
+    sizeRand: 7,
+  });
+
+  gsap.set($reward, { opacity: 1 });
+  if ($prizeWrap) {
+    gsap.set($prizeWrap, {
+      scale: 0.3,
+      opacity: 0,
+      xPercent: -50,
+      yPercent: -50,
+    });
+
+    gsap.to($prizeWrap, {
+      scale: 1,
+      opacity: 1,
+      duration: 0.65,
+      ease: 'back.out(1.8)',
+    });
+  }
+
+  if ($prizeImg) {
+    gsap.fromTo(
+      $prizeImg,
+      { scale: 0.92 },
+      {
+        scale: 1,
+        duration: 0.45,
+        ease: 'power2.out',
+      },
+    );
+  }
 
   if (prizeBall?.dom) gsap.to(prizeBall.dom, { opacity: 0, duration: 0.15 });
 
@@ -537,7 +507,6 @@ const pickup = () => {
     rotate: -180,
     duration: 1,
   })
-
     .to(prizeBall.dom, {
       duration: 0.1,
       scaleX: 2.1,
@@ -623,7 +592,7 @@ const start = async () => {
       rotate: prizeBall.rotate + 10,
     });
 
-    if (balls[3])
+    if (balls[3]) {
       gsap.to(balls[3].dom, {
         x: v(1),
         y: v(1),
@@ -631,7 +600,9 @@ const start = async () => {
         ease: 'none',
         rotate: balls[3].rotate - 5,
       });
-    if (balls[4])
+    }
+
+    if (balls[4]) {
       gsap.to(balls[4].dom, {
         x: -v(1),
         y: v(1),
@@ -639,7 +610,9 @@ const start = async () => {
         ease: 'none',
         rotate: balls[4].rotate - 5,
       });
-    if (balls[5])
+    }
+
+    if (balls[5]) {
       gsap.to(balls[5].dom, {
         x: v(1),
         y: v(1),
@@ -647,6 +620,7 @@ const start = async () => {
         ease: 'none',
         rotate: balls[5].rotate - 5,
       });
+    }
 
     tl.to(prizeBall.dom, {
       y: v(2) + DROP_OFFSET,
@@ -695,8 +669,13 @@ const resetRound = async () => {
 
   if (prizeBallContainerRef.value) prizeBallContainerRef.value.innerHTML = '';
 
-  if (prizeRewardContainerRef.value)
+  if (prizeRewardContainerRef.value) {
     gsap.set(prizeRewardContainerRef.value, { opacity: 0 });
+    const $prizeWrap = prizeRewardContainerRef.value.querySelector('.prize');
+    if ($prizeWrap) {
+      gsap.set($prizeWrap, { scale: 1, opacity: 1, clearProps: 'transform' });
+    }
+  }
 
   const gameLayer = $app.querySelector('.game-layer') as HTMLElement | null;
   if (gameLayer) {
@@ -716,6 +695,7 @@ const resetRound = async () => {
   setTimeout(() => {
     if (!isRunning) showHint();
   }, 450 * SPEED());
+
   if (prize.value) emit('got-prize', prize.value);
 };
 
@@ -770,13 +750,13 @@ const init = async () => {
   $balls.innerHTML = '';
   createBalls();
 
-  gsap.set($machine, { y: v(50) });
+  gsap.set($machine, { y: 0 });
   gsap.set($pointer, { opacity: 0 });
 
-  if (prizeRewardContainerRef.value)
+  if (prizeRewardContainerRef.value) {
     gsap.set(prizeRewardContainerRef.value, { opacity: 0 });
+  }
 
-  startShineSpin();
   setTimeout(prepare, 500 * SPEED());
 };
 
@@ -796,15 +776,6 @@ const cleanup = () => {
   $$jitters = [];
 
   try {
-    shineTween?.kill();
-  } catch {}
-  try {
-    shinePulseTween?.kill();
-  } catch {}
-  shineTween = null;
-  shinePulseTween = null;
-
-  try {
     if (appRef.value)
       gsap.killTweensOf(Array.from(appRef.value.querySelectorAll('*')));
   } catch {}
@@ -818,11 +789,14 @@ onBeforeUnmount(() => cleanup());
 @import url('https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c&display=swap');
 
 .gotcha {
+  position: relative;
+  overflow: visible;
+
   .confetti {
     position: absolute;
-    inset: 0;
-    overflow: hidden;
-    z-index: 10;
+    inset: -8%;
+    overflow: visible;
+    z-index: 999;
     pointer-events: none;
 
     span {
@@ -831,7 +805,9 @@ onBeforeUnmount(() => cleanup());
       position: absolute;
       width: calc(var(--size) * 1px);
       height: calc(var(--size) * 1px);
+      border-radius: 2px;
       animation: rotate linear calc(var(--rs) * 1s) infinite both;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
     }
   }
 
@@ -849,11 +825,12 @@ onBeforeUnmount(() => cleanup());
       .machine {
         position: relative;
         z-index: 1;
-        max-height: 640px; /*  不用 vh */
+        max-height: 640px;
         max-width: min(520px, 100%);
         pointer-events: none;
         filter: drop-shadow(0 18px 34px rgba(0, 0, 0, 0.35));
       }
+
       .backboard {
         z-index: 0;
         width: 120px;
@@ -862,8 +839,6 @@ onBeforeUnmount(() => cleanup());
         left: 48%;
         position: absolute;
         border-radius: 16px;
-
-        /*  炎神：金光高光 + 熔岩橘主色(#E45800) + 深紅陰影 */
         background: radial-gradient(
           circle at 28% 26%,
           #ffe3a6 0%,
@@ -871,7 +846,6 @@ onBeforeUnmount(() => cleanup());
           #e45800 55%,
           #9b1c00 100%
         );
-
         filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.25));
       }
 
@@ -882,7 +856,6 @@ onBeforeUnmount(() => cleanup());
         width: 70%;
         height: 34.5%;
         transform: translateX(-50%);
-        // z-index: 999;
       }
 
       .handle {
@@ -890,34 +863,30 @@ onBeforeUnmount(() => cleanup());
         border: 0;
         padding: 0;
         margin: 0;
-
         z-index: 6;
         position: absolute;
         left: 17.5%;
         top: 67%;
-
         cursor: pointer;
         transition: transform 120ms ease;
+
         &--img {
           background: transparent;
-          width: 62px; /* 你可以調整 */
-          height: 62px; /* 你可以調整 */
+          width: 62px;
+          height: 62px;
           display: grid;
           place-items: center;
         }
       }
 
       .pointer {
-        --pScale: 0.2; /*  你要的 0.2 */
-
+        --pScale: 0.2;
         position: absolute;
         top: 78%;
         left: 20%;
         z-index: 7;
         pointer-events: none;
         opacity: 0;
-
-        /* 原本是用 height 控整體大小；改用固定 px */
         width: 140px;
         height: 140px;
 
@@ -937,54 +906,53 @@ onBeforeUnmount(() => cleanup());
   .ui-layer {
     position: absolute;
     inset: 0;
-    z-index: 1;
+    z-index: 30;
     pointer-events: none;
+    overflow: visible;
 
     .prize-container {
       position: absolute;
       inset: 0;
+      overflow: visible;
 
       .prize-ball-container {
         position: absolute;
         inset: 0;
+        z-index: 20;
+        overflow: visible;
       }
 
       .prize-reward-container {
         position: absolute;
         inset: 0;
-        z-index: 1;
+        z-index: 50;
+        overflow: visible;
+        opacity: 0;
 
-        & > * {
+        .prize {
           position: absolute;
-          inset: 0;
+          left: 50%;
+          top: 50%;
+          transform: translate(-50%, -50%);
           display: flex;
           align-items: center;
           justify-content: center;
+          pointer-events: none;
         }
 
-        .shine {
-          width: 720px;
-          height: 720px;
-          border-radius: 999px;
-          background: conic-gradient(
-            from 0deg,
-            rgba(255, 255, 255, 0) 0 10%,
-            rgba(255, 255, 255, 0.22) 12% 14%,
-            rgba(255, 255, 255, 0) 16% 28%,
-            rgba(255, 255, 255, 0.18) 30% 32%,
-            rgba(255, 255, 255, 0) 34% 46%,
-            rgba(255, 255, 255, 0.2) 48% 50%,
-            rgba(255, 255, 255, 0) 52% 100%
-          );
-          filter: blur(1px) drop-shadow(0 18px 30px rgba(0, 0, 0, 0.22));
-          opacity: 0.95;
+        .prize--center {
+          width: min(72vw, 420px);
+          max-width: 420px;
         }
 
-        .prize img {
-          height: 520px;
-          max-width: 92%;
+        .prize__img {
+          display: block;
+          width: 100%;
+          max-width: 420px;
+          max-height: min(48vh, 420px);
           object-fit: contain;
-          filter: drop-shadow(0 18px 30px rgba(0, 0, 0, 0.35));
+          filter: drop-shadow(0 20px 36px rgba(0, 0, 0, 0.35));
+          transform-origin: center center;
         }
       }
     }
@@ -993,8 +961,8 @@ onBeforeUnmount(() => cleanup());
   .ball {
     --size: 64px;
     --outline: #7a0e0e;
-    --color1: #e84545; /* 下半紅 */
-    --color2: #ffffff; /* 上半白 */
+    --color1: #e84545;
+    --color2: #ffffff;
 
     width: var(--size);
     height: var(--size);
@@ -1066,7 +1034,6 @@ onBeforeUnmount(() => cleanup());
   }
 }
 
-/*  不用 vh：改成 px */
 @keyframes click {
   0% {
     transform: rotate(-30deg) translateY(0px);
@@ -1079,30 +1046,15 @@ onBeforeUnmount(() => cleanup());
   }
 }
 
-@keyframes pointerPulse {
-  0% {
-    transform: scale(0.92);
-    opacity: 0.55;
-  }
-  60% {
-    transform: scale(1.12);
-    opacity: 0.95;
-  }
-  100% {
-    transform: scale(0.92);
-    opacity: 0.55;
-  }
-}
-
 @keyframes wiggle {
   0% {
-    transform: rotate(-5deg);
+    transform: rotate(-4deg);
   }
   50% {
-    transform: rotate(5deg);
+    transform: rotate(4deg);
   }
   100% {
-    transform: rotate(-5deg);
+    transform: rotate(-4deg);
   }
 }
 

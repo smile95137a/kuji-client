@@ -99,7 +99,10 @@
                 </div>
 
                 <!-- 開套者指定大獎橫幅 (FE-1) -->
-                <div v-if="showOpenerBanner" class="ichibanDetail__designation-banner">
+                <div
+                  v-if="showOpenerBanner"
+                  class="ichibanDetail__designation-banner"
+                >
                   <div class="designation-badge">
                     <span class="designation-icon" aria-hidden="true">
                       <font-awesome-icon :icon="['fas', 'trophy']" />
@@ -110,7 +113,11 @@
                         您是開套者，請先指定大獎號碼才能開始抽獎。
                       </div>
                     </div>
-                    <KujiButton variant="primary" size="sm" @click="triggerDesignationFromSession">
+                    <KujiButton
+                      variant="primary"
+                      size="sm"
+                      @click="triggerDesignationFromSession"
+                    >
                       立即指定
                     </KujiButton>
                   </div>
@@ -212,14 +219,18 @@
             <div class="grand-prize-icon" aria-hidden="true">🏆</div>
             <div class="grand-prize-content">
               <div class="grand-prize-title">中獎號碼公告</div>
-              <div v-for="(group, idx) in grandPrizeDisplay" :key="idx" class="grand-prize-item">
-                <strong class="grand-prize-numbers">{{ group.numbers.join('、') }}</strong>
+              <div
+                v-for="(group, idx) in grandPrizeDisplay"
+                :key="idx"
+                class="grand-prize-item"
+              >
+                <strong class="grand-prize-numbers">{{
+                  group.numbers.join('、')
+                }}</strong>
                 <span class="grand-prize-arrow">→</span>
                 <span class="grand-prize-name">{{ group.prizeName }}</span>
               </div>
-              <div class="grand-prize-hint">
-                刮中以上號碼即可獲得對應大獎！
-              </div>
+              <div class="grand-prize-hint">刮中以上號碼即可獲得對應大獎！</div>
             </div>
           </div>
         </div>
@@ -436,7 +447,8 @@ const showDesignationWaitingOverlay = (deadline: string, message: string) => {
       onSuccess: (data: any) => {
         if (
           data?.session?.isDesignationComplete === true ||
-          (Array.isArray(data?.designatedWinningNumbers) && data.designatedWinningNumbers.length > 0)
+          (Array.isArray(data?.designatedWinningNumbers) &&
+            data.designatedWinningNumbers.length > 0)
         ) {
           stopWaitingOverlay();
           reload();
@@ -495,7 +507,9 @@ const isOpener = computed(() => !!session.value?.isOpener);
 
 /** 開套者是否已完成指定 — 優先使用後端明確訊號，回退到 designatedWinningNumbers 是否已填入 */
 const designationDone = computed(
-  () => session.value?.isDesignationComplete === true || designatedWinningNumbers.value.length > 0,
+  () =>
+    session.value?.isDesignationComplete === true ||
+    designatedWinningNumbers.value.length > 0,
 );
 
 /** 顯示「請立即指定」橫幅的條件
@@ -504,7 +518,7 @@ const designationDone = computed(
 const showOpenerBanner = computed(
   () =>
     isScratchMode.value &&
-    (session.value?.isOpener === true) &&
+    session.value?.isOpener === true &&
     !designationDone.value,
 );
 
@@ -766,7 +780,7 @@ const ticketNoById = computed<Record<string, number>>(() => {
 
 const activeCardNumbers = computed<number[]>(() => {
   return activeCards.value
-    .map((id) => ticketNoById.value[id])
+    .map((id) => ticketNoById.value[String(id)])
     .filter((n) => Number.isFinite(n) && n > 0);
 });
 
@@ -790,20 +804,27 @@ const grandPrizeNumbers = computed<number[]>(() => {
 
 /** 刮刮樂大獎資訊顯示文字 */
 const grandPrizeDisplay = computed(() => {
-  if (!isScratchMode.value || !designatedWinningNumbers.value.length) return null;
-  
+  if (!isScratchMode.value || !designatedWinningNumbers.value.length)
+    return null;
+
   // 按 prizeId 分組
-  const grouped = designatedWinningNumbers.value.reduce((acc, item) => {
-    if (!acc[item.prizeId]) {
-      acc[item.prizeId] = {
-        prizeName: item.prizeName,
-        prizeLevel: item.prizeLevel,
-        numbers: [],
-      };
-    }
-    acc[item.prizeId].numbers.push(item.revealedNumber);
-    return acc;
-  }, {} as Record<string, { prizeName: string; prizeLevel: string; numbers: number[] }>);
+  const grouped = designatedWinningNumbers.value.reduce(
+    (acc, item) => {
+      if (!acc[item.prizeId]) {
+        acc[item.prizeId] = {
+          prizeName: item.prizeName,
+          prizeLevel: item.prizeLevel,
+          numbers: [],
+        };
+      }
+      acc[item.prizeId].numbers.push(item.revealedNumber);
+      return acc;
+    },
+    {} as Record<
+      string,
+      { prizeName: string; prizeLevel: string; numbers: number[] }
+    >,
+  );
 
   return Object.values(grouped);
 });
@@ -834,19 +855,22 @@ const handleScratchCardSelect = async (ticketId: string) => {
   const ok = await ensureCanDraw();
   if (!ok) return;
 
-  // Pre-flight: block draw while waiting overlay is visible (FE-4 FR-FE-009)
   if (showWaitingOverlay.value) return;
 
-  if (!availableTicketIds.value.includes(ticketId)) return;
+  const normalizedTicketId = String(ticketId);
 
-  const idx = activeCards.value.indexOf(ticketId);
+  if (!availableTicketIds.value.includes(normalizedTicketId)) return;
+
+  const idx = activeCards.value.findIndex(
+    (id) => String(id) === normalizedTicketId,
+  );
+
   if (idx >= 0) {
     activeCards.value.splice(idx, 1);
   } else {
-    activeCards.value.push(ticketId);
+    activeCards.value.push(normalizedTicketId);
   }
 
-  // 有選格子就展開面板；全部取消就關閉
   isScratchPanelOpen.value = activeCards.value.length > 0;
 };
 
@@ -935,7 +959,8 @@ const handleScratch = async (ticketIdOverride?: string) => {
       if ((data as DesignationPendingResponse)?.awaitingDesignation === true) {
         showDesignationWaitingOverlay(
           (data as DesignationPendingResponse).openerDeadline,
-          (data as DesignationPendingResponse).message || '開套者正在指定大獎位置，請稍候',
+          (data as DesignationPendingResponse).message ||
+            '開套者正在指定大獎位置，請稍候',
         );
         return;
       }
@@ -1160,7 +1185,8 @@ const handleDesignatePrize = async (
 
     // ✅ 更新 designatedWinningNumbers（designateResult 為 ApiResponse，資料在 .data 層）
     if (designateResult?.data?.designatedWinningNumbers) {
-      designatedWinningNumbers.value = designateResult.data.designatedWinningNumbers;
+      designatedWinningNumbers.value =
+        designateResult.data.designatedWinningNumbers;
     }
 
     await ichibanInfoDialog({
@@ -1355,7 +1381,9 @@ const handleExchange = async (payload: {
         // v4.0: DrawBatchResponse.results
         const drawResults: DrawResult[] = Array.isArray(data?.results)
           ? data.results
-          : Array.isArray(data) ? data : [];
+          : Array.isArray(data)
+            ? data
+            : [];
 
         // ✅ 新增：處理 protectionEndTime
         if (data?.protectionEndTime && session.value) {
@@ -1392,7 +1420,7 @@ const handleExchange = async (payload: {
             remain,
             count: drawnCount,
             totalPrice,
-            items: drawResults.map(r => ({
+            items: drawResults.map((r) => ({
               id: r.prizeId ?? '',
               name: r.prizeName ?? '',
               image: r.prizeImageUrl ?? '',
@@ -1433,7 +1461,9 @@ const handleExchange = async (payload: {
         // v4.0: DrawBatchResponse.results
         const drawResults: DrawResult[] = Array.isArray(data?.results)
           ? data.results
-          : Array.isArray(data) ? data : [];
+          : Array.isArray(data)
+            ? data
+            : [];
 
         // ✅ 新增：處理 protectionEndTime
         if (data?.protectionEndTime && session.value) {
@@ -1523,9 +1553,11 @@ const reload = async () => {
         detail.value = data?.lottery ?? null;
         prizesData.value = Array.isArray(data?.prizes) ? data.prizes : [];
         ticketData.value = Array.isArray(data?.tickets) ? data.tickets : [];
-        
+
         // ✅ 新增：取得 designatedWinningNumbers（刮刮樂大獎中獎號碼）
-        designatedWinningNumbers.value = Array.isArray(data?.designatedWinningNumbers)
+        designatedWinningNumbers.value = Array.isArray(
+          data?.designatedWinningNumbers,
+        )
           ? data.designatedWinningNumbers
           : [];
       },
@@ -1542,12 +1574,20 @@ const reload = async () => {
       const deadline = session.value.designationDeadline;
       const isOpenerLocal = session.value.isOpener === true;
       const designationDoneLocal =
-        session.value.isDesignationComplete === true || designatedWinningNumbers.value.length > 0;
+        session.value.isDesignationComplete === true ||
+        designatedWinningNumbers.value.length > 0;
 
-      if (!designationDoneLocal && deadline && new Date(deadline) > new Date()) {
+      if (
+        !designationDoneLocal &&
+        deadline &&
+        new Date(deadline) > new Date()
+      ) {
         if (!isOpenerLocal && !showWaitingOverlay.value) {
           // Non-opener: proactively show waiting overlay
-          showDesignationWaitingOverlay(deadline, '開套者正在指定大獎位置，請稍候。');
+          showDesignationWaitingOverlay(
+            deadline,
+            '開套者正在指定大獎位置，請稍候。',
+          );
         }
         // Opener: showOpenerBanner computed handles banner display reactively
       }
