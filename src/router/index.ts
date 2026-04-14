@@ -38,6 +38,7 @@ import ProfileEdit from '@/views/member/ProfileEdit.vue';
 import PrizeBox from '@/views/member/PrizeBox.vue';
 import OrderHistory from '@/views/member/OrderHistory.vue';
 import OrderDetail from '@/views/member/OrderDetail.vue';
+import ReferralCode from '@/views/member/ReferralCode.vue';
 
 /** ✅ 新增：測試 Dialog 頁面 */
 import DemoDialogs from '@/views/DemoDialogs.vue';
@@ -205,6 +206,12 @@ export const routes: Array<RouteRecordRaw> = [
             path: 'notifications',
             name: 'MemberNotifications',
             component: Notifications,
+            meta: { requiresAuth: true },
+          },
+          {
+            path: 'referral',
+            name: 'ReferralCode',
+            component: ReferralCode,
             meta: { requiresAuth: true },
           },
         ],

@@ -1,6 +1,6 @@
 // src/composables/useReferralCodeValidator.ts
 import { ref } from 'vue';
-import { validateReferralCode } from '@/services/AuthService';
+import { validateCode } from '@/services/referralService';
 
 /**
  * 推薦碼即時驗證 composable。
@@ -48,17 +48,20 @@ export function useReferralCodeValidator() {
     debounceTimer = setTimeout(async () => {
       abortController = new AbortController();
       try {
-        const res = await validateReferralCode(code.trim(), abortController.signal);
-        const data = (res as any)?.data;
-        isValid.value = data?.isValid ?? false;
-        ownerName.value = data?.ownerName;
+        const data = await validateCode(code.trim(), abortController.signal);
+        isValid.value = data?.valid ?? false;
+        ownerName.value = data?.referrerNickname;
 
         if (!isValid.value) {
-          const errorCode: string | undefined = data?.errorCode;
-          if (errorCode === 'REFERRAL_CODE_EXPIRED') {
+          const reason = data?.reason;
+          if (reason === 'CODE_EXPIRED') {
             validationError.value = '推薦碼已過期';
-          } else if (errorCode === 'REFERRAL_CODE_MAXED') {
-            validationError.value = '推薦碼已達使用上限';
+          } else if (reason === 'CODE_DISABLED') {
+            validationError.value = '推薦碼已停用';
+          } else if (reason === 'SELF_REFERRAL') {
+            validationError.value = '不能使用自己的推薦碼';
+          } else if (reason === 'ALREADY_USED') {
+            validationError.value = '已套用過推薦碼';
           } else {
             validationError.value = '推薦碼無效';
           }
