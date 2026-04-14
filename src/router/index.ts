@@ -1,5 +1,14 @@
 // src/router/index.ts
 import { createRouter, createWebHistory, RouteRecordRaw } from 'vue-router';
+import { watch } from 'vue';
+import { useAuthStore } from '@/stores/useAuthStore';
+
+// Extend RouteMeta to include requiresAuth
+declare module 'vue-router' {
+  interface RouteMeta {
+    requiresAuth?: boolean;
+  }
+}
 import FrontLayout from '@/layouts/FrontLayout.vue';
 import Home from '@/views/Home.vue';
 import News from '@/views/News.vue';
@@ -219,6 +228,27 @@ const router = createRouter({
     }
     return { top: 0 };
   },
+});
+
+// Bug Fix #4: Router guard — requiresAuth meta was set but never enforced
+router.beforeEach(async (to, _from, next) => {
+  const authStore = useAuthStore();
+
+  // Wait for silent refresh to complete on first load (avoids false redirects on F5)
+  if (authStore.isInitializing) {
+    await new Promise<void>((resolve) => {
+      const stop = watch(
+        () => authStore.isInitializing,
+        (val) => { if (!val) { stop(); resolve(); } }
+      );
+    });
+  }
+
+  if (to.meta.requiresAuth && !authStore.isLogin) {
+    next({ name: 'Login', query: { redirect: to.fullPath } });
+  } else {
+    next();
+  }
 });
 
 export default router;

@@ -115,11 +115,10 @@ import loginLogin from '@/assets/image/login_logo.png';
 import Card from '@/components/common/MCard.vue';
 
 import { useForm } from 'vee-validate';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import * as yup from 'yup';
 
 import { executeApi } from '@/utils/executeApiUtils';
-import { saveState } from '@/utils/Localstorage';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { forgotPassword, login } from '@/services/AuthService';
 import { useOverlayStore } from '@/stores/overlay';
@@ -127,6 +126,7 @@ import { ichibanForgotPasswordDialog } from '@/utils/dialog/ichibanForgotPasswor
 import { ichibanInfoDialog } from '@/utils/dialog/ichibanInfoDialog';
 
 const router = useRouter();
+const route = useRoute();
 const overlay = useOverlayStore();
 const authStore = useAuthStore();
 
@@ -151,30 +151,11 @@ const [email] = defineField('email');
 const [password] = defineField('password');
 
 const persistAuth = (data: any) => {
-  const accessToken = data?.accessToken;
-  const refreshToken = data?.refreshToken;
-  const user = data?.user;
-
-  if (accessToken) saveState('kujiToken', accessToken);
-  if (refreshToken) saveState('refreshKujiToken', refreshToken);
-
-  saveState('kujiTokenType', 'Bearer');
-
-  if (user) {
-    const { password: _password, ...safeUser } = user;
-    saveState('kujiUser', safeUser);
-  }
-
   authStore.setAuth({
-    accessToken,
-    refreshToken,
-    tokenType: 'Bearer',
-    user: user
-      ? (() => {
-          const { password: _password, ...safeUser } = user;
-          return safeUser;
-        })()
-      : undefined,
+    accessToken: data?.accessToken,
+    refreshToken: data?.refreshToken,
+    tokenType: data?.tokenType ?? 'Bearer',
+    user: data?.user,
   });
 };
 
@@ -196,7 +177,8 @@ const onSubmit = handleSubmit(
       showSuccessDialog: true,
       onSuccess: async (data: any) => {
         persistAuth(data);
-        await router.push('/');
+        const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/';
+        await router.replace(redirect);
       },
     });
   },

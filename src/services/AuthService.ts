@@ -1,6 +1,7 @@
 // services/authService.ts
 import { api } from './FrontAPI';
 import { loadState } from '@/utils/Localstorage';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 const basePath = '/auth';
 
@@ -8,10 +9,14 @@ interface RequestData {
   [key: string]: any;
 }
 
-/** Token Utils */
-export const getAuthToken = () => loadState<any>('kujiToken');
-export const getRefreshToken = () => loadState<any>('refreshKujiToken');
-export const getTokenType = () => loadState<any>('kujiTokenType') || 'Bearer';
+/**
+ * Token Utils
+ * getAuthToken reads from Pinia store (memory-only, XSS-safe).
+ * getRefreshToken reads from localStorage (only refresh token is persisted).
+ */
+export const getAuthToken = () => useAuthStore().token;
+export const getRefreshToken = () => loadState<string>('refreshKujiToken') || '';
+export const getTokenType = () => useAuthStore().tokenType || 'Bearer';
 
 /** 註冊 */
 export const register = async (req: RequestData): Promise<ApiResponse<any>> => {

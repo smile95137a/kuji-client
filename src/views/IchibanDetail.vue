@@ -1392,7 +1392,11 @@ const handleExchange = async (payload: {
             remain,
             count: drawnCount,
             totalPrice,
-            items: drawResults,
+            items: drawResults.map(r => ({
+              id: r.prizeId ?? '',
+              name: r.prizeName ?? '',
+              image: r.prizeImageUrl ?? '',
+            })),
           });
 
           // 免單彈窗

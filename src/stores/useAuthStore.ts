@@ -1,6 +1,7 @@
 // src/stores/useAuthStore.ts
 import { defineStore } from 'pinia';
 import { computed, ref } from 'vue';
+import axios from 'axios';
 
 import { loadState, saveState } from '@/utils/Localstorage';
 
@@ -11,32 +12,46 @@ export interface AuthUser {
   email?: string;
   nickname?: string;
   phoneNumber?: string;
+  provider?: 'EMAIL' | 'GOOGLE';
+  status?: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
   roles?: UserRole[];
+  goldCoins?: number;
+  bonusCoins?: number;
+  referralCode?: string | null;
+  avatarUrl?: string | null;
   [key: string]: any;
 }
 
-export interface AuthResLike {
-  accessToken?: string;
+export interface AuthRes {
+  accessToken: string;
   refreshToken?: string;
-  tokenType?: string; // 可選，不傳就預設 Bearer
+  tokenType?: string;
+  expiresIn?: number;
   user?: AuthUser;
   [key: string]: any;
 }
 
-/** LocalStorage keys（你專案既有） */
-const LS_TOKEN = 'kujiToken';
+/**
+ * LocalStorage keys
+ * ⚠️ accessToken is intentionally NOT stored in localStorage (XSS protection).
+ *    It lives only in Pinia memory and is re-acquired via silentRefresh on page load.
+ */
 const LS_REFRESH = 'refreshKujiToken';
-const LS_TOKEN_TYPE = 'kujiTokenType';
 const LS_USER = 'kujiUser';
 
 export const useAuthStore = defineStore('auth', () => {
   // ======================
   // state
   // ======================
-  const token = ref<string>(loadState<string>(LS_TOKEN) || '');
+
+  /** accessToken: memory-only — never written to localStorage */
+  const token = ref<string>('');
   const refreshToken = ref<string>(loadState<string>(LS_REFRESH) || '');
-  const tokenType = ref<string>(loadState<string>(LS_TOKEN_TYPE) || 'Bearer');
+  const tokenType = ref<string>('Bearer');
   const user = ref<AuthUser | null>(loadState<AuthUser>(LS_USER) || null);
+
+  /** True while initAuth's silentRefresh is in progress (prevents false router guard rejections) */
+  const isInitializing = ref<boolean>(false);
 
   // ======================
   // getters
@@ -45,60 +60,83 @@ export const useAuthStore = defineStore('auth', () => {
 
   const authHeader = computed(() => {
     if (!token.value) return {};
-    return {
-      Authorization: `${tokenType.value || 'Bearer'} ${token.value}`,
-    };
+    return { Authorization: `${tokenType.value} ${token.value}` };
   });
 
   // ======================
-  // actions (only state)
+  // actions
   // ======================
 
-  /** 進站還原（例如 App.vue onMounted 呼叫） */
-  const initAuth = () => {
-    token.value = loadState<string>(LS_TOKEN) || '';
-    refreshToken.value = loadState<string>(LS_REFRESH) || '';
-    tokenType.value = loadState<string>(LS_TOKEN_TYPE) || 'Bearer';
-    user.value = loadState<AuthUser>(LS_USER) || null;
-  };
-
   /**
-   * 登入成功後，把後端 AuthRes 丟進來就好
-   * ex: authStore.setAuth(res.data)
+   * Call after login / register / google oauth success.
+   * Writes accessToken to memory only; refreshToken + user go to localStorage.
    */
-  const setAuth = (res: AuthResLike) => {
-    const accessToken = res?.accessToken || '';
-    const rfToken = res?.refreshToken || '';
-    const type = res?.tokenType || 'Bearer';
+  const setAuth = (res: AuthRes) => {
+    token.value = res.accessToken || '';
+    tokenType.value = res.tokenType || 'Bearer';
 
-    token.value = accessToken;
-    refreshToken.value = rfToken;
-    tokenType.value = type;
+    if (res.refreshToken) {
+      refreshToken.value = res.refreshToken;
+      saveState(LS_REFRESH, res.refreshToken);
+    }
 
-    saveState(LS_TOKEN, accessToken);
-    saveState(LS_REFRESH, rfToken);
-    saveState(LS_TOKEN_TYPE, type);
-
-    if (res?.user) {
+    if (res.user) {
       user.value = res.user;
       saveState(LS_USER, res.user);
     }
   };
 
-  /** 登出清空 */
+  /**
+   * Silent refresh: uses the stored refreshToken to obtain a new accessToken.
+   * Uses raw axios (not the api instance) to avoid triggering the 401 interceptor loop.
+   * Returns true on success, false on failure (also calls logout on failure).
+   */
+  const silentRefresh = async (): Promise<boolean> => {
+    const rt = loadState<string>(LS_REFRESH);
+    if (!rt) return false;
+
+    try {
+      const res = await axios.post(
+        `${import.meta.env.VITE_BASE_API_URL}/api/auth/refresh`,
+        { refreshToken: rt },
+        { headers: { 'Content-Type': 'application/json' } }
+      );
+
+      if (res.data?.success && res.data?.data?.accessToken) {
+        setAuth(res.data.data);
+        return true;
+      }
+      logout();
+      return false;
+    } catch {
+      logout();
+      return false;
+    }
+  };
+
+  /**
+   * Called once in App.vue onMounted.
+   * Immediately restores user from localStorage (no UI flash),
+   * then silently refreshes the accessToken.
+   */
+  const initAuth = async (): Promise<void> => {
+    isInitializing.value = true;
+    user.value = loadState<AuthUser>(LS_USER) || null;
+    await silentRefresh();
+    isInitializing.value = false;
+  };
+
+  /** Clear all auth state from memory and localStorage */
   const logout = () => {
     token.value = '';
     refreshToken.value = '';
     tokenType.value = 'Bearer';
     user.value = null;
 
-    localStorage.removeItem(LS_TOKEN);
     localStorage.removeItem(LS_REFRESH);
-    localStorage.removeItem(LS_TOKEN_TYPE);
     localStorage.removeItem(LS_USER);
   };
 
-  /** 需要手動塞 Header 時使用 */
   const getAuthHeader = () => authHeader.value;
 
   return {
@@ -107,6 +145,7 @@ export const useAuthStore = defineStore('auth', () => {
     refreshToken,
     tokenType,
     user,
+    isInitializing,
 
     // getters
     isLogin,
@@ -115,6 +154,7 @@ export const useAuthStore = defineStore('auth', () => {
     // actions
     initAuth,
     setAuth,
+    silentRefresh,
     logout,
     getAuthHeader,
   };
