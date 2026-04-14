@@ -64,3 +64,18 @@ export const recyclePrizeBoxItems = async (
     throw e;
   }
 };
+
+/**
+ * 前台 - 查詢賞品盒操作紀錄 GET /prize-box/history
+ */
+export const getPrizeBoxHistory = async (
+  req?: RequestData,
+): Promise<ApiResponse<any>> => {
+  try {
+    const res = await api.get(`${basePath}/history`, { params: req });
+    return res.data;
+  } catch (e) {
+    console.error('PrizeBox - getPrizeBoxHistory error:', e);
+    throw e;
+  }
+};
