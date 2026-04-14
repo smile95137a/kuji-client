@@ -41,18 +41,12 @@
         <template v-if="t.isAvailable">
           <div class="scratchGrid__badge" v-if="t.isActive">已選擇</div>
 
-          <div class="scratchGrid__ticketNo">
-            {{ t.ticketNumber }}
-          </div>
+          <div class="scratchGrid__ticketNo"></div>
 
           <div class="scratchGrid__circle" aria-hidden="true">
             <span class="scratchGrid__circleCore">
               <img :src="weblogo" alt="" class="scratchGrid__circleLogo" />
             </span>
-          </div>
-
-          <div class="scratchGrid__hintText">
-            {{ t.isActive ? '已加入' : '點我選擇' }}
           </div>
         </template>
 
@@ -61,7 +55,6 @@
           <div class="scratchGrid__num">
             {{ t.revealedNumber ?? t.ticketNumber }}
           </div>
-          <div class="scratchGrid__scratchedText">已刮開</div>
         </template>
       </button>
     </div>
@@ -99,11 +92,12 @@ const normalizedCards = computed(() => {
     .map((t) => {
       const status = String(t.status ?? '').toUpperCase();
       const id = String(t.id ?? '');
+      const ticketNumber = Number(t.ticketNumber ?? 0) || 0;
 
       return {
         ...t,
         id,
-        ticketNumber: Number(t.ticketNumber ?? 0) || 0,
+        ticketNumber,
         isAvailable: status === 'AVAILABLE',
         isActive: activeCardSet.value.has(id),
       };
@@ -126,7 +120,6 @@ const getCellTitle = (t: (typeof normalizedCards.value)[number]) => {
 
 const emitSelect = (id: string) => emit('select', String(id));
 </script>
-
 <style scoped lang="scss">
 $wine-base: #5c0505;
 $wine-950: #120101;
