@@ -26,7 +26,7 @@
               <p class="login__text">電子信箱</p>
               <input
                 class="login__form-input"
-                v-model="email"
+                v-model="emailField"
                 :class="{
                   'login__form-input--error': submitted && errors.email,
                 }"
@@ -47,7 +47,7 @@
                 <input
                   :type="showPassword ? 'text' : 'password'"
                   class="login__form-input login__form-input--password"
-                  v-model="password"
+                  v-model="passwordField"
                   :class="{
                     'login__form-input--error': submitted && errors.password,
                   }"
@@ -84,8 +84,14 @@
             </div>
 
             <div class="login__btns">
-              <button type="submit" class="login__btn">登入</button>
+              <button type="submit" class="login__btn" :disabled="isLoading">
+                {{ isLoading ? '登入中…' : '登入' }}
+              </button>
             </div>
+
+            <p v-if="errorMessage" class="login__text login__text--error" style="text-align:center;margin-top:8px">
+              {{ errorMessage }}
+            </p>
           </form>
 
           <div class="login__other">
@@ -115,20 +121,20 @@ import loginLogin from '@/assets/image/login_logo.png';
 import Card from '@/components/common/MCard.vue';
 
 import { useForm } from 'vee-validate';
-import { useRoute, useRouter } from 'vue-router';
+import { useRouter } from 'vue-router';
 import * as yup from 'yup';
 
 import { executeApi } from '@/utils/executeApiUtils';
-import { useAuthStore } from '@/stores/useAuthStore';
-import { forgotPassword, login } from '@/services/AuthService';
+import { forgotPassword } from '@/services/AuthService';
 import { useOverlayStore } from '@/stores/overlay';
 import { ichibanForgotPasswordDialog } from '@/utils/dialog/ichibanForgotPasswordDialog';
 import { ichibanInfoDialog } from '@/utils/dialog/ichibanInfoDialog';
+import { useLogin } from '@/composables/useLogin';
 
 const router = useRouter();
-const route = useRoute();
 const overlay = useOverlayStore();
-const authStore = useAuthStore();
+
+const { email, password, isLoading, errorMessage, submitLogin } = useLogin();
 
 const submitted = ref(false);
 const showPassword = ref(false);
@@ -140,47 +146,19 @@ const schema = yup.object({
 
 const { handleSubmit, errors, defineField } = useForm({
   validationSchema: schema,
-  initialValues: {
-    email: '',
-    password: '',
-  },
+  initialValues: { email: '', password: '' },
   validateOnMount: false,
 });
 
-const [email] = defineField('email');
-const [password] = defineField('password');
-
-const persistAuth = (data: any) => {
-  authStore.setAuth({
-    accessToken: data?.accessToken,
-    refreshToken: data?.refreshToken,
-    tokenType: data?.tokenType ?? 'Bearer',
-    user: data?.user,
-  });
-};
+const [emailField] = defineField('email');
+const [passwordField] = defineField('password');
 
 const onSubmit = handleSubmit(
   async (values) => {
     submitted.value = true;
-
-    await executeApi({
-      fn: async () =>
-        await login({
-          email: values.email,
-          password: values.password,
-        }),
-      successTitle: '登入成功',
-      successMessage: '歡迎回來！',
-      errorTitle: '登入失敗',
-      errorMessage: '帳號或密碼錯誤，請重新輸入',
-      showFailDialog: true,
-      showSuccessDialog: true,
-      onSuccess: async (data: any) => {
-        persistAuth(data);
-        const redirect = typeof route.query.redirect === 'string' ? route.query.redirect : '/';
-        await router.replace(redirect);
-      },
-    });
+    email.value = values.email;
+    password.value = values.password;
+    await submitLogin();
   },
   async () => {
     submitted.value = true;
@@ -194,9 +172,9 @@ const forwardRegistration = () => {
 const handleOauthLogin = async (provider: string) => {
   console.log('oauth login provider:', provider);
 };
+
 const handleForgotPassword = async () => {
   overlay.open();
-
   try {
     const inputEmail = await ichibanForgotPasswordDialog({
       title: '忘記密碼',
@@ -228,8 +206,7 @@ const handleForgotPassword = async () => {
     await executeApi({
       fn: async () => forgotPassword({ email: targetEmail }),
       successTitle: '已送出重設申請',
-      successMessage:
-        '若此 Email 存在，我們會寄送重設密碼連結給你（請留意垃圾郵件）。',
+      successMessage: '若此 Email 存在，我們會寄送重設密碼連結給你（請留意垃圾郵件）。',
       errorTitle: '送出失敗',
       errorMessage: '目前無法送出重設申請，請稍後再試或聯繫客服。',
       showSuccessDialog: true,
