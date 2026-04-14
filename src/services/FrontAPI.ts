@@ -1,6 +1,6 @@
 // services/frontend/FrontAPI.ts
 import axios, { AxiosError, AxiosInstance, AxiosHeaders } from 'axios';
-import { removeAllState, saveState } from '@/utils/Localstorage';
+import { removeAllState } from '@/utils/Localstorage';
 import { getAuthToken, getRefreshToken, getTokenType } from './AuthService';
 
 export const api: AxiosInstance = axios.create({
@@ -46,7 +46,7 @@ api.interceptors.response.use(
     }
 
     const url = originalRequest?.url || '';
-    if (url.includes('/admin/auth/refresh-token')) {
+    if (url.includes('/auth/refresh')) {
       removeAllState();
       window.location.href = '/login';
       return Promise.reject(error);
@@ -88,7 +88,7 @@ api.interceptors.response.use(
 
     try {
       const refreshRes = await axios.post(
-        `${import.meta.env.VITE_BASE_API_URL}/api/admin/auth/refresh-token`,
+        `${import.meta.env.VITE_BASE_API_URL}/api/auth/refresh`,
         { refreshToken: rt },
         { headers: { 'Content-Type': 'application/json' } }
       );
@@ -99,21 +99,18 @@ api.interceptors.response.use(
       }
 
       const newAccessToken = payload?.data?.accessToken;
-      const newRefreshToken = payload?.data?.refreshToken;
-      const newTokenType = payload?.data?.tokenType || 'Bearer';
-      const newExpiresIn = payload?.data?.expiresIn ?? 0;
-
       if (!newAccessToken) throw new Error('no accessToken');
 
-      // 更新 localStorage
-      saveState('token', newAccessToken);
-      if (newRefreshToken) saveState('refreshToken', newRefreshToken);
-      saveState('tokenType', newTokenType);
-      saveState('expiresIn', newExpiresIn);
+      // Bug Fix #1+#2: Use authStore.setAuth() instead of manual localStorage writes.
+      // accessToken goes to Pinia memory only; refreshToken + user go to localStorage.
+      const { useAuthStore } = await import('@/stores/useAuthStore');
+      const authStore = useAuthStore();
+      authStore.setAuth(payload.data);
 
       resolveQueue(newAccessToken);
 
-      // 重送原請求
+      // Retry the original request with the new token
+      const newTokenType = payload.data?.tokenType || 'Bearer';
       const hdrs = AxiosHeaders.from(originalRequest.headers || {});
       hdrs.set('Authorization', `${newTokenType} ${newAccessToken}`);
       originalRequest.headers = hdrs;
@@ -121,7 +118,9 @@ api.interceptors.response.use(
       return api(originalRequest);
     } catch (err) {
       resolveQueue(null);
-      removeAllState();
+      // Use authStore.logout() to cleanly clear Pinia memory + localStorage
+      const { useAuthStore } = await import('@/stores/useAuthStore');
+      useAuthStore().logout();
       window.location.href = '/login';
       return Promise.reject(err);
     } finally {

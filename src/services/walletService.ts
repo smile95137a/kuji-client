@@ -1,7 +1,7 @@
 // services/walletService.ts
 import { api } from './FrontAPI';
 
-const basePath = '/api/wallet';
+const basePath = '/wallet'; // Bug Fix #3: removed extra /api prefix (FrontAPI baseURL already includes /api)
 
 interface RequestData {
   [key: string]: any;
