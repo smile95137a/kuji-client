@@ -41,7 +41,7 @@ export const updateMe = async (data: RequestData): Promise<any> => {
 };
 
 /**
- * 前台 - 上傳頭像 POST /user/avatar
+ * 前台 - 上傳頭像 POST /user/me/avatar
  * 後端回：{ imageUrl }
  */
 export const uploadAvatar = async (file: File): Promise<any> => {
@@ -49,7 +49,7 @@ export const uploadAvatar = async (file: File): Promise<any> => {
     const form = new FormData();
     form.append('file', file);
 
-    const res = await api.post(`${basePath}/avatar`, form, {
+    const res = await api.post(`${basePath}/me/avatar`, form, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
@@ -101,6 +101,26 @@ export const uploadAvatarThenUpdateMe = async (file: File): Promise<any> => {
     return updateRes;
   } catch (e) {
     console.error('User - uploadAvatarThenUpdateMe error:', e);
+    throw e;
+  }
+};
+
+// ─── Password ────────────────────────────────────────────────────────────────
+
+export interface ChangePasswordReq {
+  currentPassword: string;
+  newPassword: string;
+  confirmNewPassword: string;
+}
+
+/**
+ * 前台 - 修改密碼 POST /user/me/change-password
+ */
+export const changePassword = async (req: ChangePasswordReq): Promise<void> => {
+  try {
+    await api.post(`${basePath}/me/change-password`, req);
+  } catch (e) {
+    console.error('User - changePassword error:', e);
     throw e;
   }
 };

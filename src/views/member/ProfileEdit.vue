@@ -289,6 +289,9 @@
         <button class="profileEdit__btn" type="submit">儲存</button>
       </div>
     </form>
+
+    <!-- Change Password (EMAIL users only) -->
+    <ChangePasswordSection />
   </section>
 </template>
 
@@ -301,6 +304,7 @@ import * as yup from 'yup';
 import { executeApi } from '@/utils/executeApiUtils';
 import { getMe, updateMe, uploadAvatar } from '@/services/userService';
 import { getAllCities, getDistrictsByCity } from '@/services/districtService';
+import ChangePasswordSection from '@/components/member/ChangePasswordSection.vue';
 
 type Option = { value: string; label: string };
 
