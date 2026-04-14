@@ -196,36 +196,39 @@
         <p class="orderDetail__sectionHint">收件人與地址</p>
       </div>
 
-      <div class="orderDetail__infoGrid">
-        <div class="orderDetail__infoBlock">
-          <p class="orderDetail__k">收件人</p>
-          <p class="orderDetail__v">{{ order?.recipientName || '-' }}</p>
-        </div>
-        <div class="orderDetail__infoBlock">
-          <p class="orderDetail__k">電話</p>
-          <p class="orderDetail__v">{{ order?.recipientPhone || '-' }}</p>
-        </div>
-        <div class="orderDetail__infoBlock orderDetail__infoBlock--full">
-          <p class="orderDetail__k">地址</p>
-          <p class="orderDetail__v">{{ order?.recipientAddress || '-' }}</p>
-        </div>
-      </div>
+      <!-- PENDING: show form -->
+      <ShippingInfoForm
+        v-if="order?.shippingStatus === 'PENDING'"
+        :is-submitting="isSubmitting"
+        :error-msg="submitError"
+        @submit="onShippingSubmit"
+      />
+
+      <!-- Non-PENDING: show display -->
+      <ShippingInfoDisplay
+        v-else
+        :recipient-name="order?.recipientName"
+        :recipient-phone="order?.recipientPhone"
+        :recipient-address="order?.recipientAddress"
+      />
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue';
+import { computed, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { getOrderDetail } from '@/services/orderService';
-import { executeApi } from '@/utils/executeApiUtils';
+import { useOrderDetail } from '@/composables/useOrderDetail';
+import ShippingInfoForm from '@/components/order/ShippingInfoForm.vue';
+import ShippingInfoDisplay from '@/components/order/ShippingInfoDisplay.vue';
 
 const route = useRoute();
 const router = useRouter();
 
-const orderId = computed(() => String(route.params.orderId || ''));
+const orderIdVal = computed(() => String(route.params.orderId || ''));
 
-const order = ref<any>(null);
+const { order, isLoading, isSubmitting, error, submitError, fetchDetail, submitShipping } =
+  useOrderDetail(orderIdVal.value);
 
 const items = computed(() => (order.value?.items ? order.value.items : []));
 
@@ -258,51 +261,17 @@ const badgeClass = (s: any) => {
 
 const goBack = () => router.back();
 
-const normalizeOrderDetail = (raw: any) => {
-  const data = raw?.data?.data ?? raw?.data ?? raw;
-  if (!data) return null;
+async function onShippingSubmit(form: {
+  recipientName: string;
+  recipientPhone: string;
+  city: string;
+  district: string;
+  address: string;
+}) {
+  await submitShipping(form);
+}
 
-  return {
-    id: data.id,
-    orderNo: data.orderNo,
-    userId: data.userId,
-    userNickname: data.userNickname,
-    userEmail: data.userEmail,
-
-    storeId: data.storeId,
-    storeName: data.storeName,
-
-    totalItems: data.totalItems,
-
-    shippingMethod: data.shippingMethod,
-    shippingMethodName: data.shippingMethodName,
-
-    shippingStatus: data.shippingStatus,
-    shippingStatusName: data.shippingStatusName,
-
-    recipientName: data.recipientName,
-    recipientPhone: data.recipientPhone,
-    recipientAddress: data.recipientAddress,
-
-    createdAt: data.createdAt,
-    updatedAt: data.updatedAt,
-
-    items: Array.isArray(data.items) ? data.items : [],
-  };
-};
-
-const loadOrderDetail = async () => {
-  if (!orderId.value) return;
-
-  await executeApi<any>({
-    fn: () => getOrderDetail(orderId.value),
-    onSuccess: (raw) => {
-      order.value = normalizeOrderDetail(raw);
-    },
-  });
-};
-
-onMounted(loadOrderDetail);
+onMounted(fetchDetail);
 </script>
 
 <style scoped lang="scss">
