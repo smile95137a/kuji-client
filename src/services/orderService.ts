@@ -32,3 +32,26 @@ export const getOrderDetail = async (
     throw e;
   }
 };
+
+/** 前台 - 補填收件資訊 POST /order/{orderId}/shipping-info */
+export interface ShippingInfoReq {
+  recipientName: string;
+  recipientPhone: string;
+  city: string;
+  district: string;
+  address: string;
+  zipCode?: string;
+}
+
+export const submitShippingInfo = async (
+  orderId: string,
+  req: ShippingInfoReq,
+): Promise<ApiResponse<any>> => {
+  try {
+    const res = await api.post(`${basePath}/${orderId}/shipping-info`, req);
+    return res.data;
+  } catch (e) {
+    console.error('Order - submitShippingInfo error:', e);
+    throw e;
+  }
+};
