@@ -15,18 +15,26 @@
 </template>
 
 <script setup lang="ts">
+import { ref, onMounted } from 'vue';
 import BannerSwiper from '@/components/BannerSwiper.vue';
 import BulletMarquee from '@/components/BulletMarquee.vue';
 import HotTopicsSection from '@/components/HotTopicsSection.vue';
 import GachaView from '@/components/GachaView.vue';
 import OfficialIchibanView from '@/components/OfficialIchibanView.vue';
+import { getActiveMarquees } from '@/services/marqueeService';
 
-const marqueeMessages = [
-  '今日一番賞 A賞 剩餘 2 個',
-  'B賞 皮卡丘玻璃杯補貨完成！',
-  '每抽只要 NT$280，抽到賺到～',
-  'Last One 賞 皮卡丘特別版公仔 還在等你',
-];
+const marqueeMessages = ref<string[]>([]);
+
+onMounted(async () => {
+  try {
+    const res = await getActiveMarquees();
+    if (res?.success && Array.isArray(res.data)) {
+      marqueeMessages.value = res.data.map((m: any) => m.content ?? '');
+    }
+  } catch {
+    // 載入失敗時保持空陣列，不顯示跑馬燈
+  }
+});
 </script>
 
 <style scoped lang="scss">

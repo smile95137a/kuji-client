@@ -14,7 +14,7 @@ export const getPublishedNews = async (
   req?: RequestData
 ): Promise<ApiResponse<any>> => {
   try {
-    const res = await api.get(`${basePath}`, {
+    const res = await api.get(`${basePath}/list`, {
       params: req ?? undefined,
     });
     return res.data;
