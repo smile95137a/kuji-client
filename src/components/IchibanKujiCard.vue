@@ -17,6 +17,14 @@
         />
       </div>
 
+      <!-- Status overlay: SOLD_OUT / INACTIVE -->
+      <div v-if="isSoldOut" class="kuji-card__status-overlay kuji-card__status-overlay--sold-out">
+        <span>售完</span>
+      </div>
+      <div v-else-if="isInactive" class="kuji-card__status-overlay kuji-card__status-overlay--inactive">
+        <span>已下架</span>
+      </div>
+
       <!-- Bottom overlay -->
       <div class="kuji-card__overlay">
         <!-- Status box -->
@@ -110,14 +118,19 @@ const resolvedImgSrc = computed(() => {
 });
 
 const resolvedRemainingPrizes = computed(() => {
-  const n = props.item?.remainingPrizes;
+  const n = props.item?.remainingTickets ?? props.item?.remainingPrizes;
   return ~~n;
 });
 
 const resolvedTotalPrizes = computed(() => {
-  const n = props.item?.totalPrizes;
+  const n = props.item?.totalTickets ?? props.item?.totalPrizes;
   return ~~n;
 });
+
+const isSoldOut = computed(() =>
+  props.item?.status === 'SOLD_OUT' || resolvedRemainingPrizes.value === 0
+);
+const isInactive = computed(() => props.item?.status === 'INACTIVE');
 
 const resolvedTagText = computed(() => {
   return props.item?.storeName || 'KUJI';
@@ -235,6 +248,28 @@ const formatNumber = (n: number) => new Intl.NumberFormat('en-US').format(n);
 
   &__banner {
     position: relative;
+  }
+
+  &__status-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px 12px 0 0;
+    font-size: 28px;
+    font-weight: 900;
+    letter-spacing: 4px;
+    color: #fff;
+    pointer-events: none;
+
+    &--sold-out {
+      background: rgba(0, 0, 0, 0.55);
+    }
+
+    &--inactive {
+      background: rgba(80, 80, 80, 0.65);
+    }
   }
 
   &__banner-frame {

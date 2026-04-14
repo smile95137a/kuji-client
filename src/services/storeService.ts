@@ -21,7 +21,7 @@ export interface StoreDetail extends Store {
 
 export const getStores = async (): Promise<ApiResponse<Store[]>> => {
   try {
-    const res = await api.get(basePath);
+    const res = await api.get(`${basePath}/list`);
     return res.data;
   } catch (e) {
     console.error('Store - getStores error:', e);
