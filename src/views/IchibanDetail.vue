@@ -125,18 +125,27 @@
 
                 <!-- 扭蛋次數選擇（1-10），僅 GACHA 模式顯示 -->
                 <div v-if="isGacha" class="ichibanDetail__gachaCount">
-                  <span class="ichibanDetail__gachaCountLabel">次數：</span>
+                  <div class="ichibanDetail__gachaCountHead">
+                    <span class="ichibanDetail__gachaCountLabel">扭蛋次數</span>
+                    <span class="ichibanDetail__gachaCountHint"
+                      >選擇一次要扭幾顆</span
+                    >
+                  </div>
+
                   <div class="ichibanDetail__gachaCountBtns">
                     <button
                       v-for="n in [1, 2, 3, 5, 10]"
                       :key="n"
+                      type="button"
                       :class="[
                         'ichibanDetail__gachaCountBtn',
                         { 'is-active': gachaCount === n },
                       ]"
                       @click="gachaCount = n"
                     >
-                      {{ n }}
+                      <span class="ichibanDetail__gachaCountBtnNumber">{{
+                        n
+                      }}</span>
                     </button>
                   </div>
                 </div>
@@ -1519,13 +1528,6 @@ const hitHotCount = async () => {
   });
 };
 
-onUnmounted(() => {
-  if (waitingPollInterval) {
-    clearInterval(waitingPollInterval);
-    waitingPollInterval = null;
-  }
-});
-
 onMounted(async () => {});
 
 watch(
@@ -1749,8 +1751,26 @@ const handleScratch = async (ticketIdOverride?: string) => {
   await reload();
 };
 </script>
-
 <style scoped lang="scss">
+$wine-base: #5c0505;
+$wine-950: #120101;
+$wine-900: #1c0202;
+$wine-850: #260303;
+$wine-800: #320404;
+$wine-700: #470505;
+$wine-600: #5c0505;
+$wine-500: #7a1016;
+$wine-400: #9b2430;
+$wine-300: #bc4658;
+
+$rose-100: #fff5f5;
+$rose-200: #ffe8ea;
+$rose-300: #f4c6cc;
+$rose-400: #e4a3ad;
+
+$gold-300: #efd6a0;
+$gold-400: #d9b56c;
+
 /* 保護期提示樣式 */
 .ichibanDetail__protection {
   margin: 16px 0;
@@ -1794,7 +1814,7 @@ const handleScratch = async (ticketIdOverride?: string) => {
   opacity: 0.85;
 }
 
-// === 開套者指定大獎橫幅 (FE-1) ===
+/* 開套者指定大獎橫幅 */
 .ichibanDetail__designation-banner {
   margin: 8px 0;
 }
@@ -1833,50 +1853,169 @@ const handleScratch = async (ticketIdOverride?: string) => {
 
 /* 扭蛋次數選擇器 */
 .ichibanDetail__gachaCount {
+  margin: 16px 0 18px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid rgba($gold-400, 0.28);
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba($wine-300, 0.18) 0%,
+      rgba($wine-300, 0) 34%
+    ),
+    linear-gradient(145deg, $wine-950 0%, $wine-850 42%, $wine-700 100%);
+  box-shadow:
+    0 14px 30px rgba($wine-950, 0.26),
+    inset 0 1px 0 rgba(#fff, 0.08),
+    inset 0 0 0 1px rgba($gold-300, 0.08);
+}
+
+.ichibanDetail__gachaCountHead {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
-  margin-bottom: 12px;
-}
-
-.ichibanDetail__gachaCountLabel {
-  font-size: 14px;
-  color: #666;
-  white-space: nowrap;
-}
-
-.ichibanDetail__gachaCountBtns {
-  display: flex;
-  gap: 8px;
+  margin-bottom: 14px;
   flex-wrap: wrap;
 }
 
+.ichibanDetail__gachaCountLabel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: linear-gradient(
+    135deg,
+    rgba($gold-300, 0.22),
+    rgba($gold-400, 0.12)
+  );
+  border: 1px solid rgba($gold-300, 0.4);
+  color: $gold-300;
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  box-shadow: inset 0 1px 0 rgba(#fff, 0.12);
+}
+
+.ichibanDetail__gachaCountHint {
+  font-size: 12px;
+  color: rgba($rose-200, 0.86);
+  letter-spacing: 0.02em;
+}
+
+.ichibanDetail__gachaCountBtns {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
 .ichibanDetail__gachaCountBtn {
-  min-width: 40px;
-  height: 36px;
-  padding: 0 10px;
-  border: 1.5px solid #ddd;
-  border-radius: 8px;
-  background: #fff;
-  font-size: 14px;
-  font-weight: 600;
+  position: relative;
+  min-height: 58px;
+  padding: 10px 8px;
+  border: 1px solid rgba($gold-300, 0.18);
+  border-radius: 16px;
+  background: linear-gradient(
+    180deg,
+    rgba($wine-400, 0.16) 0%,
+    rgba($wine-800, 0.9) 100%
+  );
+  color: $rose-100;
   cursor: pointer;
-  transition: all 0.15s;
-  color: #333;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    border-color 0.18s ease,
+    background 0.18s ease,
+    color 0.18s ease;
+  box-shadow:
+    0 8px 18px rgba($wine-950, 0.22),
+    inset 0 1px 0 rgba(#fff, 0.06);
+
+  &::before {
+    content: '';
+    position: absolute;
+    inset: 1px;
+    border-radius: 15px;
+    background: linear-gradient(
+      180deg,
+      rgba(#fff, 0.08) 0%,
+      rgba(#fff, 0.02) 30%,
+      rgba(#fff, 0) 100%
+    );
+    pointer-events: none;
+  }
 
   &:hover {
-    border-color: var(--color-primary, #e75480);
-    color: var(--color-primary, #e75480);
+    transform: translateY(-2px);
+    border-color: rgba($gold-300, 0.48);
+    color: #fff;
+    box-shadow:
+      0 12px 24px rgba($wine-950, 0.28),
+      0 0 0 1px rgba($gold-300, 0.12),
+      inset 0 1px 0 rgba(#fff, 0.1);
+  }
+
+  &:active {
+    transform: translateY(0);
   }
 
   &.is-active {
-    border-color: var(--color-primary, #e75480);
-    background: var(--color-primary, #e75480);
+    border-color: rgba($gold-300, 0.72);
+    background:
+      radial-gradient(
+        circle at top,
+        rgba($gold-300, 0.3) 0%,
+        rgba($gold-300, 0.08) 25%,
+        rgba($gold-300, 0) 55%
+      ),
+      linear-gradient(180deg, $wine-400 0%, $wine-600 48%, $wine-800 100%);
     color: #fff;
+    box-shadow:
+      0 14px 28px rgba($wine-950, 0.34),
+      0 0 0 1px rgba($gold-300, 0.2),
+      0 0 18px rgba($gold-400, 0.18),
+      inset 0 1px 0 rgba(#fff, 0.18);
+
+    .ichibanDetail__gachaCountBtnNumber {
+      color: $gold-300;
+      text-shadow: 0 0 14px rgba($gold-400, 0.22);
+    }
+
+    .ichibanDetail__gachaCountBtnUnit {
+      color: $rose-100;
+    }
   }
 }
 
-/* ✅ 刮刮樂大獎提示（中獎號碼公告） */
+.ichibanDetail__gachaCountBtnNumber {
+  position: relative;
+  z-index: 1;
+  font-size: 22px;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+}
+
+.ichibanDetail__gachaCountBtnUnit {
+  position: relative;
+  z-index: 1;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 700;
+  color: rgba($rose-200, 0.85);
+  letter-spacing: 0.08em;
+}
+
+/* 刮刮樂大獎提示 */
 .ichibanDetail__grandPrizeBanner {
   padding: 14px 18px;
   margin-bottom: 16px;
@@ -1942,5 +2081,47 @@ const handleScratch = async (ticketIdOverride?: string) => {
   color: #8b6914;
   font-style: italic;
   margin-top: 4px;
+}
+
+@media (max-width: 768px) {
+  .ichibanDetail__gachaCount {
+    padding: 14px;
+    border-radius: 16px;
+  }
+
+  .ichibanDetail__gachaCountBtns {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .ichibanDetail__gachaCountBtn {
+    min-height: 54px;
+  }
+
+  .ichibanDetail__gachaCountBtnNumber {
+    font-size: 20px;
+  }
+
+  .designation-badge,
+  .protection-badge,
+  .grand-prize-announcement {
+    flex-direction: row;
+  }
+}
+
+@media (max-width: 480px) {
+  .ichibanDetail__gachaCountHead {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ichibanDetail__gachaCountBtns {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .designation-badge,
+  .protection-badge,
+  .grand-prize-announcement {
+    flex-direction: column;
+  }
 }
 </style>

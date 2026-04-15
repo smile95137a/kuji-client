@@ -57,7 +57,7 @@ const props = withDefaults(
   }>(),
   {
     speed: 0.65,
-  }
+  },
 );
 
 const emit = defineEmits<{
