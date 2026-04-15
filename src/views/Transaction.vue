@@ -1,4 +1,8 @@
-<!-- src/views/Transaction.vue -->
+<!-- src/views/Transaction.vue
+     用途：公開靜態資訊頁面 — 展示平台的交易條款、代幣說明、退款與安全政策。
+     ❌ 不是個人帳務的交易記錄（那是 member/TransactionHistory.vue）。
+     路由：/transaction（公開，不需登入），位於 FrontLayout 底下。
+-->
 <template>
   <div class="transaction">
     <!-- Hero -->

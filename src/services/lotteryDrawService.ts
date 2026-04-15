@@ -3,44 +3,37 @@ import { api } from './FrontAPI';
 
 const basePath = '/lottery/draw';
 
-interface RequestData {
-  [key: string]: any;
+// ── Request types ─────────────────────────────────────────────────
+
+export interface DrawReq {
+  count: number;       // 抽幾張（1~10，不可超過剩餘籤數）
+  tickets?: string[];  // 指定票券 UUID 陣列（可選；不傳 = 後端隨機選）
 }
 
-/** 前台 - 執行抽獎 POST /lottery/draw/{lotteryId}/draw
- * ticketNumber: null = 隨機抽
- * drawCount: 連抽次數（預設 1）
- */
-export const drawLottery = async (
-  lotteryId: string,
-  data: any,
-): Promise<ApiResponse<any>> => {
-  try {
-    const res = await api.post(`${basePath}/${lotteryId}/draw`, data);
-    return res.data;
-  } catch (e) {
-    console.error('LotteryDraw - drawLottery error:', e);
-    throw e;
-  }
-};
+// ── Response types ────────────────────────────────────────────────
 
 /** 單筆抽獎結果 */
 export interface DrawResult {
   success: boolean;
   ticketId?: string;
-  ticketNumber?: string;           // ⚠️ string 非 number，格式如 "042"
-  revealedNumber?: number | null; // SCRATCH_MODE 才有值
+  ticketNumber?: string;           // string，格式如 "042"（非 number）
+  revealedNumber?: number | null;  // SCRATCH_MODE 才有值
   prizeId?: string;
   prizeLevel?: string;
   prizeName?: string;
   prizeImageUrl?: string;
   isGrandPrize?: boolean;
+  goldSpent: number;         // 本次扣除金幣
+  bonusSpent: number;        // 本次扣除紅利
+  remainingGold: number;     // 剩餘金幣（每筆結果都更新）
+  remainingBonus: number;    // 剩餘紅利
+  prizeBoxId?: string;       // 已放入獎品盒的 ID
   triggeredFreeDraw?: boolean;
   refundAmount?: number;
   message?: string;
 }
 
-/** 抽獎批次回應（v4.0 Breaking Change：不再是裸陣列） */
+/** 抽獎批次回應（不再是裸陣列） */
 export interface DrawBatchResponse {
   playMode: string;  // 'LOTTERY_MODE' | 'SCRATCH_MODE' | 'SCRATCH_CARD_MODE'
   gameMode: string;  // 'RANDOM' | 'SCRATCH_STORE' | 'SCRATCH_PLAYER'
@@ -74,7 +67,7 @@ export interface DesignationPendingResponse {
   openerDeadline: string;      // ISO-8601 countdown target
 }
 
-/** ✅ 新增：已指定的大獎中獎號碼 */
+/** 已指定的大獎中獎號碼 */
 export interface DesignatedWinningNumber {
   revealedNumber: number;
   prizeId: string;
@@ -83,14 +76,14 @@ export interface DesignatedWinningNumber {
   prizeImageUrl: string | null;
 }
 
-/** ✅ 新增：指定大獎回應 */
+/** 指定大獎回應 */
 export interface DesignateResponse {
   success: boolean;
   message: string;
   designatedWinningNumbers: DesignatedWinningNumber[];
 }
 
-/** ✅ 新增：場次資訊 */
+/** 場次資訊 */
 export interface SessionResponse {
   sessionId: string;
   isOpener: boolean;
@@ -103,17 +96,16 @@ export interface SessionResponse {
   status: string; // 'ACTIVE' | 'EXPIRED'
   canDraw?: boolean;
   cannotDrawReason?: string | null;
-  // ─── NEW FIELDS (015-scratch-lottery-prize-rules) ───────────────────────────
   /** ISO-8601; null = no active designation window or already done */
   designationDeadline?: string | null;
   /** true = opener has designated prize numbers; default false for backwards compat */
   isDesignationComplete: boolean;
 }
 
-/** ✅ 新增：籤位資訊 */
+/** 籤位資訊 */
 export interface LotteryTicketRes {
   id: string;
-  ticketNumber: number;
+  ticketNumber: string;  // string 格式如 "042"（非 number）
   status: 'AVAILABLE' | 'DRAWN' | 'LOCKED' | string;
   revealedNumber?: number | null;
   prizeId?: string;
@@ -126,7 +118,7 @@ export interface LotteryTicketRes {
   drawnAt?: string;
 }
 
-/** ✅ 新增：籤位列表回應（含 session 和 designatedWinningNumbers） */
+/** 籤位列表回應（含 session 和 designatedWinningNumbers） */
 export interface TicketListResponse {
   tickets: LotteryTicketRes[];
   session: SessionResponse | null;
@@ -139,6 +131,22 @@ export interface PrizeDesignation {
   revealedNumber: number;
   prizeId: string;
 }
+
+// ── API functions ────────────────────────────────────────────────
+
+/** 前台 - 執行抽獎 POST /lottery/draw/{lotteryId}/draw */
+export const drawLottery = async (
+  lotteryId: string,
+  data: DrawReq,
+): Promise<ApiResponse<DrawBatchResponse | DesignationRequiredResponse | DesignationPendingResponse>> => {
+  try {
+    const res = await api.post(`${basePath}/${lotteryId}/draw`, data);
+    return res.data;
+  } catch (e) {
+    console.error('LotteryDraw - drawLottery error:', e);
+    throw e;
+  }
+};
 
 export const designatePrizePositions = async (
   lotteryId: string,
@@ -158,12 +166,9 @@ export const designatePrizePositions = async (
  */
 export const getLotterySession = async (
   lotteryId: string,
-  req?: RequestData,
 ): Promise<ApiResponse<SessionResponse | null>> => {
   try {
-    const res = await api.get(`${basePath}/${lotteryId}/session`, {
-      params: req ?? undefined,
-    });
+    const res = await api.get(`${basePath}/${lotteryId}/session`);
     return res.data;
   } catch (e) {
     console.error('LotteryDraw - getLotterySession error:', e);
