@@ -174,8 +174,25 @@ onBeforeUnmount(() => {
   window.removeEventListener('keydown', onKeydown);
 });
 </script>
-
 <style scoped lang="scss">
+$wine-base: #5c0505;
+$wine-950: #120101;
+$wine-900: #1a0202;
+$wine-850: #240303;
+$wine-800: #2f0404;
+$wine-700: #430606;
+$wine-600: #5c0505;
+$wine-500: #791015;
+$wine-400: #982430;
+$wine-300: #bc4d5d;
+
+$rose-100: #fff6f7;
+$rose-200: #ffe7ea;
+$rose-300: #f4c7cf;
+$rose-400: #dea1ab;
+
+$text-soft: rgba(255, 235, 238, 0.72);
+
 .floating-drawer {
   position: fixed;
   right: 24px;
@@ -188,7 +205,6 @@ onBeforeUnmount(() => {
     opacity 0.25s ease,
     transform 0.25s ease;
 
-  /* 有捲動時才顯示 */
   &--visible {
     opacity: 1;
     pointer-events: auto;
@@ -202,7 +218,7 @@ onBeforeUnmount(() => {
     gap: 12px;
   }
 
-  /* 抽屜 icon 區塊：在按鈕左邊，深色膠囊 */
+  /* 左側展開膠囊 */
   &__drawer {
     position: relative;
     display: inline-flex;
@@ -210,9 +226,16 @@ onBeforeUnmount(() => {
     gap: 8px;
     padding: 8px 12px;
     border-radius: 999px;
-    background: rgba(25, 15, 11, 0.96); /* 深咖啡黑 */
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
-    border: 1px solid rgba(229, 166, 87, 0.28); /* 金邊 */
+    background: linear-gradient(
+      135deg,
+      rgba(26, 2, 2, 0.96) 0%,
+      rgba(47, 4, 4, 0.95) 52%,
+      rgba(92, 5, 5, 0.92) 100%
+    );
+    border: 1px solid rgba(244, 199, 207, 0.2);
+    box-shadow:
+      0 10px 28px rgba(18, 1, 1, 0.5),
+      inset 0 1px 0 rgba(255, 246, 247, 0.08);
     backdrop-filter: blur(10px);
     transform: translateX(10px);
     opacity: 0;
@@ -222,22 +245,25 @@ onBeforeUnmount(() => {
       opacity 0.22s ease;
   }
 
-  /* 展開時顯示膠囊 */
   &__drawer--open {
     transform: translateX(0);
     opacity: 1;
     pointer-events: auto;
   }
 
-  /* 裡面每顆小圓按鈕 */
+  /* 小圓按鈕 */
   &__iconBtn {
     width: 36px;
     height: 36px;
     border-radius: 999px;
-    border: 1px solid rgba(255, 255, 255, 0.16);
+    border: 1px solid rgba(255, 246, 247, 0.14);
     padding: 0;
     margin: 0;
-    background: rgba(255, 255, 255, 0.04);
+    background: linear-gradient(
+      180deg,
+      rgba(255, 246, 247, 0.08) 0%,
+      rgba(255, 246, 247, 0.03) 100%
+    );
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -249,21 +275,26 @@ onBeforeUnmount(() => {
       border-color 0.18s ease;
 
     &:hover {
-      background: rgba(255, 255, 255, 0.12);
-      border-color: rgba(229, 166, 87, 0.7);
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+      background: linear-gradient(
+        180deg,
+        rgba(188, 77, 93, 0.24) 0%,
+        rgba(121, 16, 21, 0.2) 100%
+      );
+      border-color: rgba(244, 199, 207, 0.42);
+      box-shadow:
+        0 6px 14px rgba(18, 1, 1, 0.32),
+        inset 0 1px 0 rgba(255, 246, 247, 0.08);
       transform: translateY(-1px);
     }
 
     &:active {
       transform: translateY(1px) scale(0.96);
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+      box-shadow: 0 2px 8px rgba(18, 1, 1, 0.28);
     }
   }
 
-  /* drawer 裡的 font-awesome icon 本身 */
   &__icon {
-    color: #ffffff;
+    color: $rose-100;
     font-size: 16px;
     transform: translateX(12px);
     opacity: 0;
@@ -272,17 +303,16 @@ onBeforeUnmount(() => {
       opacity 0.2s ease;
   }
 
-  /* label 小標籤文字 */
   &__label {
     font-size: 12px;
-    color: #e5a657;
+    color: $rose-300;
     margin-left: 4px;
     padding-left: 8px;
-    border-left: 1px solid rgba(229, 166, 87, 0.4);
+    border-left: 1px solid rgba(244, 199, 207, 0.25);
     white-space: nowrap;
+    letter-spacing: 0.04em;
   }
 
-  /* icon 展開時的滑出動畫 */
   &__drawer--open &__icon {
     transform: translateX(0);
     opacity: 1;
@@ -291,14 +321,16 @@ onBeforeUnmount(() => {
   &__drawer--open &__iconBtn:nth-of-type(1) &__icon {
     transition-delay: 0.02s;
   }
+
   &__drawer--open &__iconBtn:nth-of-type(2) &__icon {
     transition-delay: 0.06s;
   }
+
   &__drawer--open &__iconBtn:nth-of-type(3) &__icon {
     transition-delay: 0.1s;
   }
 
-  /* 觸發按鈕本體（右下圓球） */
+  /* 右下主按鈕 */
   &__trigger {
     position: relative;
     cursor: pointer;
@@ -311,12 +343,19 @@ onBeforeUnmount(() => {
     border: none;
     padding: 0;
     outline: none;
-    background: linear-gradient(135deg, #b43325 0%, #e5a657 50%, #fff2d6 100%);
-    box-shadow:
-      0 8px 20px rgba(180, 51, 37, 0.55),
-      0 0 0 1px rgba(255, 245, 230, 0.75);
-    color: #fff;
     overflow: hidden;
+    color: $rose-100;
+    background: linear-gradient(
+      135deg,
+      $wine-950 0%,
+      $wine-700 38%,
+      $wine-500 70%,
+      $wine-300 100%
+    );
+    box-shadow:
+      0 10px 24px rgba(47, 4, 4, 0.42),
+      0 0 0 1px rgba(255, 246, 247, 0.22),
+      inset 0 1px 0 rgba(255, 246, 247, 0.18);
     transition:
       transform 0.15s ease,
       box-shadow 0.15s ease,
@@ -325,35 +364,41 @@ onBeforeUnmount(() => {
     &:hover {
       transform: translateY(-1px) scale(1.03);
       box-shadow:
-        0 12px 26px rgba(180, 51, 37, 0.7),
-        0 0 0 1px rgba(255, 247, 235, 0.9);
-      filter: brightness(1.04);
+        0 14px 28px rgba(47, 4, 4, 0.5),
+        0 0 0 1px rgba(255, 246, 247, 0.3),
+        inset 0 1px 0 rgba(255, 246, 247, 0.22);
+      filter: brightness(1.05);
     }
 
     &:active {
       transform: translateY(1px) scale(0.97);
       box-shadow:
-        0 4px 12px rgba(180, 51, 37, 0.55),
-        0 0 0 1px rgba(255, 243, 226, 0.7);
+        0 6px 14px rgba(47, 4, 4, 0.42),
+        0 0 0 1px rgba(255, 246, 247, 0.18);
       filter: brightness(0.98);
     }
   }
 
-  /* 外圈淡淡光暈 */
+  /* 外圈柔光 */
   &__triggerGlow {
     position: absolute;
     inset: -8px;
     border-radius: inherit;
-    background: radial-gradient(
-      circle at 30% 20%,
-      rgba(255, 255, 255, 0.9),
-      transparent 60%
-    );
-    opacity: 0.75;
+    background:
+      radial-gradient(
+        circle at 30% 25%,
+        rgba(255, 246, 247, 0.5),
+        transparent 42%
+      ),
+      radial-gradient(
+        circle at 70% 75%,
+        rgba(188, 77, 93, 0.26),
+        transparent 48%
+      );
+    opacity: 0.95;
     pointer-events: none;
   }
 
-  /* 觸發按鈕裡的 icon */
   &__triggerIcon {
     position: absolute;
     top: 50%;
@@ -367,10 +412,10 @@ onBeforeUnmount(() => {
       opacity 0.3s ease;
     font-size: 20px;
     line-height: 1;
-    color: #fffdf7;
+    color: $rose-100;
+    text-shadow: 0 1px 6px rgba(18, 1, 1, 0.35);
   }
 
-  /* 關閉 icon */
   &__triggerIcon--close {
     opacity: 0;
     transform: translate(-50%, -50%) rotate(0deg) scale(0.8);
@@ -381,7 +426,6 @@ onBeforeUnmount(() => {
     opacity: 1;
   }
 
-  /* 齒輪 icon */
   &__triggerIcon--gear {
     opacity: 1;
     transform: translate(-50%, -50%) rotate(0deg) scale(1);
@@ -393,7 +437,6 @@ onBeforeUnmount(() => {
   }
 }
 
-/* 窄螢幕：給一點距離邊緣，標籤收起來 */
 @media (max-width: 768px) {
   .floating-drawer {
     right: 16px;
@@ -405,7 +448,7 @@ onBeforeUnmount(() => {
     }
 
     &__label {
-      display: none; /* 手機只留 icon */
+      display: none;
     }
   }
 }

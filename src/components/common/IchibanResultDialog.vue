@@ -56,7 +56,7 @@
               class="prize"
             >
               <div class="prize__image">
-                <img :src="item.prizeImageUrl" alt="prize" />
+                <img :src="item?.prizeImageUrl || weblogo" alt="prize" />
               </div>
               <p class="prize__name">{{ item.prizeName }}</p>
             </div>
