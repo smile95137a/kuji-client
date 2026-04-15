@@ -12,7 +12,7 @@ export const getActiveBanners = async (
   req?: RequestData
 ): Promise<ApiResponse<any>> => {
   try {
-    const res = await api.get(`${basePath}/list`, {
+    const res = await api.get(`${basePath}/carousel`, {
       params: req ?? undefined,
     });
     return res.data;
