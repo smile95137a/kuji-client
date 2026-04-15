@@ -5,8 +5,60 @@ import { useAuthStore } from '@/stores/useAuthStore';
 
 const basePath = '/auth';
 
-interface RequestData {
-  [key: string]: any;
+// ── Response types ──────────────────────────────────────────────
+
+export interface AuthUserRes {
+  id: string;
+  email: string;
+  nickname: string;
+  avatarUrl: string | null;
+  provider: 'EMAIL' | 'GOOGLE';
+  status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
+  goldCoins: number;
+  bonusCoins: number;
+  referralCode: string | null;
+  createdAt: string;
+}
+
+export interface AuthRes {
+  accessToken: string;
+  refreshToken: string;
+  expiresIn: number;
+  tokenType: 'Bearer';
+  user: AuthUserRes;
+}
+
+// ── Request types ────────────────────────────────────────────────
+
+export interface AuthRegisterReq {
+  email: string;
+  password: string;
+  confirmPassword: string;
+  nickname?: string;
+  referralCode?: string;
+}
+
+export interface AuthLoginReq {
+  email: string;
+  password: string;
+}
+
+export interface AuthGoogleReq {
+  idToken: string;
+}
+
+export interface RefreshTokenReq {
+  refreshToken: string;
+}
+
+export interface ForgotPasswordReq {
+  email: string;
+}
+
+export interface ResetPasswordReq {
+  token: string;
+  newPassword: string;
+  confirmPassword: string;
 }
 
 /**
@@ -19,7 +71,7 @@ export const getRefreshToken = () => loadState<string>('refreshKujiToken') || ''
 export const getTokenType = () => useAuthStore().tokenType || 'Bearer';
 
 /** 註冊 */
-export const register = async (req: RequestData): Promise<ApiResponse<any>> => {
+export const register = async (req: AuthRegisterReq): Promise<ApiResponse<AuthRes>> => {
   try {
     const res = await api.post(`${basePath}/register`, req ?? undefined);
     return res.data;
@@ -30,7 +82,7 @@ export const register = async (req: RequestData): Promise<ApiResponse<any>> => {
 };
 
 /** 登入 */
-export const login = async (req: RequestData): Promise<ApiResponse<any>> => {
+export const login = async (req: AuthLoginReq): Promise<ApiResponse<AuthRes>> => {
   try {
     const res = await api.post(`${basePath}/login`, req ?? undefined);
     return res.data;
@@ -42,8 +94,8 @@ export const login = async (req: RequestData): Promise<ApiResponse<any>> => {
 
 /** Google OAuth 登入（前端拿到 Google ID Token 後送出） */
 export const loginWithGoogle = async (
-  req: RequestData,
-): Promise<ApiResponse<any>> => {
+  req: AuthGoogleReq,
+): Promise<ApiResponse<AuthRes>> => {
   try {
     const res = await api.post(`${basePath}/google`, req ?? undefined);
     return res.data;
@@ -55,8 +107,8 @@ export const loginWithGoogle = async (
 
 /** 刷新 Token（refresh token 本身不用 access token） */
 export const refreshToken = async (
-  req?: RequestData,
-): Promise<ApiResponse<any>> => {
+  req?: RefreshTokenReq,
+): Promise<ApiResponse<AuthRes>> => {
   try {
     const payload = req ?? { refreshToken: getRefreshToken() };
     const res = await api.post(`${basePath}/refresh`, payload ?? undefined);
@@ -69,7 +121,7 @@ export const refreshToken = async (
 
 /** 忘記密碼（寄信） */
 export const forgotPassword = async (
-  req: RequestData,
+  req: ForgotPasswordReq,
 ): Promise<ApiResponse<any>> => {
   try {
     const res = await api.post(`${basePath}/forgot-password`, req ?? undefined);
@@ -82,7 +134,7 @@ export const forgotPassword = async (
 
 /** 重設密碼（用 token） */
 export const resetPassword = async (
-  req: RequestData,
+  req: ResetPasswordReq,
 ): Promise<ApiResponse<any>> => {
   try {
     const res = await api.post(`${basePath}/reset-password`, req ?? undefined);

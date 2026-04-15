@@ -3,21 +3,33 @@ import { api } from './FrontAPI';
 
 const basePath = '/recharge';
 
-interface RequestData {
-  [key: string]: any;
+export interface RechargeReq {
+  planId: string;
+}
+
+export type RechargeStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
+
+export interface RechargeRes {
+  id: string;
+  planId: string;
+  planName: string;
+  amount: number;
+  goldCoins: number;
+  bonusCoins: number;
+  status: RechargeStatus;
+  paymentUrl: string | null;
+  completedAt: string | null;
+  createdAt: string;
 }
 
 /**
  * 前台 - 建立儲值請求（測試模式：直接完成）
  * POST /api/recharge
- * req: RechargeReq
- *  - planId: string
- *  - paymentMethod?: string (如果你有)
- *  - ...其他欄位依後端 RechargeReq
+ * ⚠️ 目前為測試模式：後端直接設為 COMPLETED，金幣立即到帳，paymentUrl = null
  */
 export const createRechargeRequest = async (
-  req: RequestData,
-): Promise<ApiResponse<any>> => {
+  req: RechargeReq,
+): Promise<ApiResponse<RechargeRes>> => {
   try {
     const res = await api.post(`${basePath}`, req ?? null);
     return res.data;
