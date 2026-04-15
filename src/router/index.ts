@@ -16,6 +16,7 @@ import NewsDetail from '@/views/NewsDetail.vue';
 import NotFound from '@/views/NotFound.vue';
 import Login from '@/views/Login.vue';
 import Register from '@/views/Register.vue';
+import ResetPassword from '@/views/ResetPassword.vue';
 import Policy from '@/views/Policy.vue';
 import Privacy from '@/views/Privacy.vue';
 import IchibanList from '@/views/IchibanList.vue';
@@ -39,9 +40,6 @@ import PrizeBox from '@/views/member/PrizeBox.vue';
 import OrderHistory from '@/views/member/OrderHistory.vue';
 import OrderDetail from '@/views/member/OrderDetail.vue';
 import ReferralCode from '@/views/member/ReferralCode.vue';
-
-/** ✅ 新增：測試 Dialog 頁面 */
-import DemoDialogs from '@/views/DemoDialogs.vue';
 
 export const routes: Array<RouteRecordRaw> = [
   {
@@ -99,6 +97,11 @@ export const routes: Array<RouteRecordRaw> = [
         name: 'Register',
       },
       {
+        component: ResetPassword,
+        path: 'reset-password',
+        name: 'ResetPassword',
+      },
+      {
         component: Policy,
         path: 'policy',
         name: 'Policy',
@@ -137,13 +140,6 @@ export const routes: Array<RouteRecordRaw> = [
         path: 'ichiban/:id',
         name: 'IchibanDetail',
         component: IchibanDetail,
-      },
-
-      /** ✅ 新增：測試 Dialog 路由（開發用） */
-      {
-        path: 'demo-dialogs',
-        name: 'DemoDialogs',
-        component: DemoDialogs,
       },
 
       {

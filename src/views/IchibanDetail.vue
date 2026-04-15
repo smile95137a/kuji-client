@@ -309,8 +309,10 @@
       :show="showWaitingOverlay"
       :opener-deadline="waitingOpenerDeadline"
       :message="waitingMessage"
+      :lottery-id="kujiId"
       @close="onWaitingOverlayClose"
       @expired="onWaitingOverlayExpired"
+      @designation-complete="onDesignationComplete"
     />
   </div>
 </template>
@@ -420,13 +422,8 @@ const designationResolve = ref<((numbers: number[]) => void) | null>(null);
 const showWaitingOverlay = ref(false);
 const waitingOpenerDeadline = ref('');
 const waitingMessage = ref('');
-let waitingPollInterval: ReturnType<typeof setInterval> | null = null;
 
 const stopWaitingOverlay = () => {
-  if (waitingPollInterval) {
-    clearInterval(waitingPollInterval);
-    waitingPollInterval = null;
-  }
   showWaitingOverlay.value = false;
 };
 
@@ -434,34 +431,18 @@ const showDesignationWaitingOverlay = (deadline: string, message: string) => {
   waitingOpenerDeadline.value = deadline;
   waitingMessage.value = message;
   showWaitingOverlay.value = true;
-
-  // 30-second polling: auto-close when opener completes designation
-  if (waitingPollInterval) clearInterval(waitingPollInterval);
-  waitingPollInterval = setInterval(async () => {
-    await executeApi({
-      // 後端 session API 目前不回傳 isDesignationComplete，
-      // 改用 browse API 的 designatedWinningNumbers 判斷指定是否完成
-      fn: () => getBrowseLotteryById(kujiId.value),
-      showCatchDialog: false,
-      showFailDialog: false,
-      onSuccess: (data: any) => {
-        if (
-          data?.session?.isDesignationComplete === true ||
-          (Array.isArray(data?.designatedWinningNumbers) &&
-            data.designatedWinningNumbers.length > 0)
-        ) {
-          stopWaitingOverlay();
-          reload();
-        }
-      },
-    });
-  }, 30_000);
+  // Actual polling is handled by DesignationWaitingOverlay via useSessionPoller
 };
 
 const onWaitingOverlayClose = () => {
   stopWaitingOverlay();
   // Do NOT reload — user dismissed voluntarily. Guard in handleScratchCardSelect
   // ensures scratch calls continue to hit the API and be re-intercepted if needed.
+};
+
+const onDesignationComplete = async () => {
+  stopWaitingOverlay();
+  await reload();
 };
 
 const onWaitingOverlayExpired = async () => {

@@ -6,14 +6,13 @@ import RegisterMainSection from '@/components/register/RegisterMainSection.vue';
 import RegisterOtherSection from '@/components/register/RegisterOtherSection.vue';
 
 import { useForm } from 'vee-validate';
-import { useRouter, useRoute } from 'vue-router';
+import { useRoute } from 'vue-router';
 import * as yup from 'yup';
 
-import { executeApi } from '@/utils/executeApiUtils';
-import { register } from '@/services/AuthService';
+import { useRegister } from '@/composables/useRegister';
 
-const router = useRouter();
 const route = useRoute();
+const registerStore = useRegister();
 
 /**  送出後才顯示錯誤 */
 const submitted = ref(false);
@@ -71,6 +70,7 @@ onMounted(() => {
   const refCode = route.query.ref;
   if (refCode && typeof refCode === 'string' && refCode.trim()) {
     setFieldValue('referralCode', refCode.trim());
+    registerStore.referralCode.value = refCode.trim();
   }
 });
 
@@ -79,36 +79,22 @@ const onSubmit = handleSubmit(
     submitted.value = true;
     isSubmitting.value = true;
 
-    const payload = {
-      email: values.email,
+    registerStore.email.value = values.email;
+    registerStore.password.value = values.password;
+    registerStore.confirmPassword.value = values.confirmPassword;
+    registerStore.nickname.value = values.nickname;
+    registerStore.referralCode.value = values.referralCode?.trim() ?? '';
+
+    await registerStore.submitRegister({
       phoneNumber: values.phoneNumber,
-      password: values.password,
-      confirmPassword: values.confirmPassword,
-      nickname: values.nickname,
       lineId: values.lineId,
-
-      referralCode: values.referralCode?.trim()
-        ? values.referralCode.trim()
-        : undefined,
-
       addressName: values.addressName?.trim() || undefined,
       zipCode: values.zipCode?.trim() || undefined,
       city: values.city || undefined,
       area: values.area || undefined,
       address: values.address?.trim() || undefined,
-    };
-
-    await executeApi({
-      fn: () => register(payload),
-      successTitle: '註冊成功',
-      successMessage: '註冊成功，請登入',
-      errorTitle: '註冊失敗',
-      errorMessage: '註冊失敗，請稍後再試',
-      showSuccessDialog: true,
-      onSuccess: async () => {
-        await router.push({ name: 'Login' });
-      },
     });
+
     isSubmitting.value = false;
   },
   async () => {

@@ -28,7 +28,7 @@ export const drawLottery = async (
 export interface DrawResult {
   success: boolean;
   ticketId?: string;
-  ticketNumber?: number;
+  ticketNumber?: string;           // ⚠️ string 非 number，格式如 "042"
   revealedNumber?: number | null; // SCRATCH_MODE 才有值
   prizeId?: string;
   prizeLevel?: string;
@@ -66,11 +66,12 @@ export interface DesignationRequiredResponse {
   grandPrizes: GrandPrizeInfo[];
 }
 
-/** awaitingDesignation 攔截回應（非開套玩家等待中） */
+/** awaitingDesignation / designationPending 攔截回應（非開套玩家等待中） */
 export interface DesignationPendingResponse {
-  awaitingDesignation: true;  // discriminant literal type
-  message: string;            // human-readable hint from backend
-  openerDeadline: string;     // ISO-8601 countdown target
+  awaitingDesignation?: true;  // backward-compat discriminant
+  designationPending?: true;   // spec-aligned discriminant
+  message: string;             // human-readable hint from backend
+  openerDeadline: string;      // ISO-8601 countdown target
 }
 
 /** ✅ 新增：已指定的大獎中獎號碼 */

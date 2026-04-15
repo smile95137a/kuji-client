@@ -88,7 +88,7 @@ import {
 import 'swiper/css';
 import 'swiper/css/pagination';
 import 'swiper/css/effect-coverflow';
-import { getCarouselBanners } from '@/services/bannerService';
+import { getActiveBanners } from '@/services/bannerService';
 import { executeApi } from '@/utils/executeApiUtils';
 import { getBannerTag } from '@/utils/timeUtils';
 
@@ -162,7 +162,7 @@ onBeforeUnmount(() => {
 
 const loadBanners = async () => {
   await executeApi<any>({
-    fn: async () => getCarouselBanners(),
+    fn: async () => getActiveBanners(),
     onSuccess: (data) => {
       banners.value = data;
     },
