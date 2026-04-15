@@ -2,18 +2,44 @@
 import { App, createApp, h } from 'vue';
 import ScratchCardDialog from '@/components/common/ScratchCardDialog.vue';
 
+type ScratchCardItem = {
+  imageSrc: string;
+  imageAlt?: string;
+  grade?: string;
+  idleText?: string;
+  revealText?: string;
+  threshold?: number;
+  revealedNumber?: number | null;
+};
+
+type ScratchCardDialogOptions = {
+  title?: string;
+
+  // 多張模式
+  cards?: ScratchCardItem[];
+
+  // 單張模式
+  imageSrc?: string;
+  imageAlt?: string;
+  idleText?: string;
+  revealText?: string;
+  threshold?: number;
+  grade?: string;
+  revealedNumber?: number | null;
+};
+
 /**
- *  await 版本的 ScratchCardDialog
- * 使用方式：
- *   const ok = await scratchCardDialog({
- *     title: '每日刮刮樂',
- *     imageSrc: 'xxx.png',
- *     revealText: '🎉 恭喜獲得 50 元折扣券！',
- *   });
- *   // ok === true 代表有刮到完成
- *   // ok === false 代表關閉 / 取消
+ * await 版本 ScratchCardDialog
+ * - 單張模式：傳 imageSrc / revealText ...
+ * - 多張模式：傳 cards
+ *
+ * 回傳：
+ * - true：完成整個刮卡流程（包含 skip / skipAll 完成）
+ * - false：使用者主動關閉 / 取消
  */
-export function scratchCardDialog(options: any): Promise<boolean> {
+export function scratchCardDialog(
+  options: ScratchCardDialogOptions,
+): Promise<boolean> {
   return new Promise<boolean>((resolve) => {
     const container = document.createElement('div');
     document.body.appendChild(container);
@@ -54,30 +80,47 @@ export function scratchCardDialog(options: any): Promise<boolean> {
         };
       },
       render() {
+        const vm = this as any;
+
         return h(ScratchCardDialog, {
-          modelValue: (this as any).visible,
+          modelValue: vm.visible,
           'onUpdate:modelValue': (val: boolean) => {
-            (this as any).visible = val;
-            // 如果 dialog 被關掉（點遮罩 / 關閉按鈕），當作取消
+            vm.visible = val;
             if (!val) {
               cancelAndClose();
             }
           },
+
           title: options.title,
-          imageSrc: options.imageSrc,
+
+          // 多張模式
+          cards: options.cards,
+
+          // 單張模式
+          imageSrc: options.imageSrc ?? '',
           imageAlt: options.imageAlt,
           idleText: options.idleText,
           revealText: options.revealText,
-          threshold: options.threshold,
+          threshold: options.threshold ?? 45,
           grade: options.grade,
-          /** 後端回傳的 revealedNumber，兩張卡片動畫後展示 */
           revealedNumber: options.revealedNumber ?? null,
-          // 刮到「完成」的事件
-          onRevealed: () => {
+
+          /**
+           * revealed:
+           * 每一張刮開 / skipOne / skipAll 時都可能觸發
+           * 這裡不要直接 close，不然多張模式第一張就被關掉
+           */
+          onRevealed: () => {},
+
+          /**
+           * finish:
+           * 多張模式全部完成，或 skipAll 完整結束後才真正 resolve(true)
+           * 單張模式也會走這裡
+           */
+          onFinish: () => {
             confirmAndClose();
           },
 
-          // 按取消按鈕
           onCancel: () => {
             cancelAndClose();
           },

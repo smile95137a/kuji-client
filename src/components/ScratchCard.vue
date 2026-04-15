@@ -147,15 +147,17 @@ const props = withDefaults(
     revealedNumber?: number | null;
   }>(),
   {
-    imageAlt: 'Scratch card prize',
+    imageAlt: '',
     size: 320,
-    idleText: '🎁 Scratch for a surprise!',
-    revealText: '🎉 You got a $50 Apple gift card!',
+    idleText: '',
+    revealText: '',
     threshold: 45,
     grade: '',
   },
 );
-
+const emit = defineEmits<{
+  (e: 'revealed'): void;
+}>();
 // 依照 grade 切換 cover 顏色 class
 const gradeClass = computed(() => {
   const g = (props.grade || '').toUpperCase();
@@ -436,15 +438,32 @@ const reveal = () => {
   const targetEl =
     coverContainerRef.value || prizeImageRef.value || textRef.value;
 
-  if (!targetEl) return;
+  if (!targetEl) {
+    window.setTimeout(() => {
+      emit('revealed');
+    }, 2000);
+    return;
+  }
 
   const rect = targetEl.getBoundingClientRect();
 
-  //  以「圖的中間」當作爆炸中心
   const originX = (rect.left + rect.width / 2) / window.innerWidth;
   const originY = (rect.top + rect.height) / window.innerHeight;
 
+  console.log('[ScratchCard] reveal() start', {
+    revealedNumber: props.revealedNumber,
+    revealText: props.revealText,
+    originX,
+    originY,
+  });
+
   fireConfettiBurstTopWide(originX, originY);
+
+  // 撒花後 2 秒通知外層切下一張
+  window.setTimeout(() => {
+    console.log('[ScratchCard] emitted revealed after confetti 2s');
+    emit('revealed');
+  }, 2000);
 };
 
 const onCoverTransitionEnd = (event: TransitionEvent) => {
