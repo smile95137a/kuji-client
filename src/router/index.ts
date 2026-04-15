@@ -41,9 +41,6 @@ import OrderHistory from '@/views/member/OrderHistory.vue';
 import OrderDetail from '@/views/member/OrderDetail.vue';
 import ReferralCode from '@/views/member/ReferralCode.vue';
 
-/** ✅ 新增：測試 Dialog 頁面 */
-import DemoDialogs from '@/views/DemoDialogs.vue';
-
 export const routes: Array<RouteRecordRaw> = [
   {
     path: '/',
@@ -143,13 +140,6 @@ export const routes: Array<RouteRecordRaw> = [
         path: 'ichiban/:id',
         name: 'IchibanDetail',
         component: IchibanDetail,
-      },
-
-      /** ✅ 新增：測試 Dialog 路由（開發用） */
-      {
-        path: 'demo-dialogs',
-        name: 'DemoDialogs',
-        component: DemoDialogs,
       },
 
       {
