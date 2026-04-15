@@ -1,3 +1,4 @@
+<!-- src/components/common/GotchaMachine.vue -->
 <template>
   <div ref="appRef" class="gotcha">
     <div class="game-layer">
@@ -6,6 +7,7 @@
         <div class="balls" ref="ballsRef"></div>
 
         <img class="machine" :src="machineSrc" alt="machine" />
+
         <div class="handle handle--img" type="button" aria-label="Turn handle">
           <img
             class="handle__img"
@@ -26,29 +28,32 @@
       </div>
     </div>
 
-    <div class="ui-layer">
-      <div class="prize-container">
-        <div class="prize-ball-container" ref="prizeBallContainerRef"></div>
+    <Teleport to="body">
+      <div class="ui-layer ui-layer--teleported">
+        <div class="prize-container">
+          <div class="prize-ball-container" ref="prizeBallContainerRef"></div>
 
-        <div class="prize-reward-container" ref="prizeRewardContainerRef">
-          <div class="prize prize--center">
-            <img
-              class="prize__img wiggle"
-              :src="prize?.prizeImageUrl || ''"
-              alt="prize"
-              draggable="false"
-            />
+          <div class="prize-reward-container" ref="prizeRewardContainerRef">
+            <div class="prize prize--center">
+              <img
+                class="prize__img wiggle"
+                :src="prize?.prizeImageUrl || ''"
+                alt="prize"
+                draggable="false"
+              />
+            </div>
           </div>
         </div>
       </div>
-    </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { onBeforeUnmount, onMounted, ref } from 'vue';
+import { onBeforeUnmount, onMounted, ref, nextTick } from 'vue';
 import gsap from 'gsap';
 import { RoughEase } from 'gsap/EasePack';
+import canvasConfetti from 'canvas-confetti';
 import defaultMachineSrc from '@/assets/image/gashapon-machine.png';
 import defaultMachineHangleSrc from '@/assets/image/gashapon-machine-handle.png';
 import defaultMachineHangleaaSrc from '@/assets/image/aa.png';
@@ -70,7 +75,7 @@ const props = withDefaults(
 );
 
 const emit = defineEmits<{
-  (e: 'got-prize', prize): void;
+  (e: 'got-prize', prize: any): void;
 }>();
 
 const appRef = ref<HTMLElement | null>(null);
@@ -81,11 +86,8 @@ const prizeRewardContainerRef = ref<HTMLElement | null>(null);
 
 const prize = ref<any>(null);
 
-// ----- internal state -----
 const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 const SPEED = () => props.speed;
-
-// 不用 vh/vw：用 px（由視窗大小換算）
 const unitPx = () => Math.max(6, window.innerHeight / 100);
 const v = (n: number) => Math.round(n * unitPx());
 
@@ -100,11 +102,34 @@ let $pointer: HTMLElement | null = null;
 
 let $$jitters: gsap.core.Timeline[] = [];
 let cleanupFns: Array<() => void> = [];
-
 let isRunning = false;
 
-/** 紅白扭蛋配色（上白下紅） */
 const BALL_THEME = { top: '#FFFFFF', bottom: '#E84545', outline: '#7A0E0E' };
+
+const MULTI_CONFETTI_COLORS = [
+  '#fffbeb',
+  '#fef3c7',
+  '#fde68a',
+  '#facc15',
+  '#eab308',
+  '#fbbf24',
+  '#f59e0b',
+  '#fed7aa',
+  '#fdba74',
+  '#fb923c',
+  '#f97316',
+  '#ea580c',
+  '#c2410c',
+  '#9a3412',
+  '#78350f',
+  '#f5f5dc',
+  '#fef9c3',
+  '#fefce8',
+  '#d4af37',
+  '#b8860b',
+  '#a16207',
+  '#854d0e',
+];
 
 const tweak = (hex: string, amt: number) => {
   const n = parseInt(hex.slice(1), 16);
@@ -117,69 +142,114 @@ const tweak = (hex: string, amt: number) => {
   return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, '0')}`;
 };
 
-const confetti = (
-  $parent: HTMLElement,
-  {
-    count = 120,
-    x = 50,
-    y = 50,
-    randX = 4,
-    randY = 4,
-    speedX = 0,
-    speedY = -2.8,
-    speedRandX = 1.8,
-    speedRandY = 1.4,
-    gravity = 0.085,
-    size = 10,
-    sizeRand = 6,
-  }: any = {},
-) => {
-  const $container = document.createElement('div');
-  $container.classList.add('confetti');
-  const particles: any[] = [];
-
-  for (let i = 0; i < count; i++) {
-    const $particle = document.createElement('span');
-    const settings = {
-      dom: $particle,
-      x: x + Math.random() * randX * 2 - randX,
-      y: y + Math.random() * randY * 2 - randY,
-      speedX: speedX + Math.random() * speedRandX * 2 - speedRandX,
-      speedY: speedY + Math.random() * speedRandY * 2 - speedRandY,
-      size: size + Math.random() * sizeRand * 2 - sizeRand,
+const getAppViewportRect = () => {
+  const rect = appRef.value?.getBoundingClientRect();
+  if (!rect) {
+    return {
+      left: 0,
+      top: 0,
+      width: window.innerWidth,
+      height: window.innerHeight,
+      centerX: window.innerWidth / 2,
+      centerY: window.innerHeight / 2,
     };
-
-    $particle.style.backgroundColor = `hsl(${Math.random() * 360}deg, 85%, 62%)`;
-    $particle.style.setProperty('--rx', String(Math.random() * 2 - 1));
-    $particle.style.setProperty('--ry', String(Math.random() * 2 - 1));
-    $particle.style.setProperty('--rz', String(Math.random() * 2 - 1));
-    $particle.style.setProperty('--rs', String(Math.random() * 2 + 0.5));
-    particles.push(settings);
-    $container.appendChild($particle);
   }
 
-  const update = () => {
-    particles.forEach((config, i) => {
-      if (config.y > 110 || config.x < -15 || config.x > 115) {
-        particles.splice(i, 1);
-        config.dom.remove();
-        return;
-      }
+  return {
+    left: rect.left,
+    top: rect.top,
+    width: rect.width,
+    height: rect.height,
+    centerX: rect.left + rect.width / 2,
+    centerY: rect.top + rect.height / 2,
+  };
+};
 
-      config.dom.style.setProperty('--size', config.size);
-      config.dom.style.left = config.x + '%';
-      config.dom.style.top = config.y + '%';
-      config.x += config.speedX;
-      config.y += config.speedY;
-      config.speedY += gravity;
-    });
+const positionPrizeRewardAtAppCenter = () => {
+  if (!prizeRewardContainerRef.value) return;
+  const reward = prizeRewardContainerRef.value.querySelector(
+    '.prize',
+  ) as HTMLElement | null;
+  if (!reward) return;
 
-    if (particles.length) requestAnimationFrame(update);
-    else $container.remove();
+  const { centerX, centerY } = getAppViewportRect();
+
+  gsap.set(reward, {
+    left: centerX,
+    top: centerY,
+    xPercent: -50,
+    yPercent: -50,
+  });
+};
+
+const fireConfettiBurstTopWide = (originX: number, originY: number) => {
+  const base = {
+    colors: MULTI_CONFETTI_COLORS,
+    zIndex: 10000,
+    shapes: ['circle', 'square'] as ('circle' | 'square')[],
   };
 
-  update();
-  $parent.insertAdjacentElement('beforeend', $container);
+  canvasConfetti({
+    ...base,
+    origin: {
+      x: Math.min(0.95, Math.max(0.05, originX)),
+      y: Math.min(0.95, Math.max(0.05, originY - 0.05)),
+    },
+    particleCount: 260,
+    spread: 100,
+    startVelocity: 65,
+    decay: 0.88,
+    ticks: 200,
+    gravity: 0.8,
+    scalar: 0.9,
+  });
+
+  setTimeout(() => {
+    canvasConfetti({
+      ...base,
+      origin: {
+        x: Math.min(0.95, Math.max(0.05, originX - 0.25)),
+        y: Math.min(0.95, Math.max(0.05, originY - 0.1)),
+      },
+      particleCount: 160,
+      spread: 70,
+      angle: 60,
+      startVelocity: 55,
+      gravity: 1.0,
+      scalar: 0.8,
+    });
+
+    canvasConfetti({
+      ...base,
+      origin: {
+        x: Math.min(0.95, Math.max(0.05, originX + 0.25)),
+        y: Math.min(0.95, Math.max(0.05, originY - 0.1)),
+      },
+      particleCount: 160,
+      spread: 70,
+      angle: 120,
+      startVelocity: 55,
+      gravity: 1.0,
+      scalar: 0.8,
+    });
+  }, 180);
+
+  setTimeout(() => {
+    canvasConfetti({
+      ...base,
+      origin: {
+        x: Math.min(0.95, Math.max(0.05, originX)),
+        y: Math.max(0.05, originY - 0.12),
+      },
+      particleCount: 200,
+      spread: 80,
+      startVelocity: 45,
+      decay: 0.92,
+      ticks: 180,
+      gravity: 1.1,
+      scalar: 0.5,
+    });
+  }, 350);
 };
 
 const addAnimClass = ($e: Element | string, clazz: string) => {
@@ -408,35 +478,44 @@ const hideHint = () => {
   gsap.to($pointer, { opacity: 0, duration: 0.6, ease: 'none' });
 };
 
-const pop = () => {
-  if (!$app || !$machine || !prizeRewardContainerRef.value) return;
+const hideMachine = () => {
+  if (!$machine) return;
+  gsap.killTweensOf($machine);
+  gsap.set($machine, {
+    opacity: 0,
+    visibility: 'hidden',
+  });
+};
+
+const showMachine = () => {
+  if (!$machine) return;
+  gsap.killTweensOf($machine);
+  gsap.set($machine, {
+    visibility: 'visible',
+  });
+  gsap.to($machine, {
+    opacity: 1,
+    duration: 0.35,
+    ease: 'power2.out',
+  });
+};
+
+const pop = async () => {
+  if (!prizeRewardContainerRef.value) return;
+
+  await nextTick();
+  positionPrizeRewardAtAppCenter();
 
   const $reward = prizeRewardContainerRef.value;
   const $prizeWrap = $reward.querySelector('.prize') as HTMLElement | null;
   const $prizeImg = $reward.querySelector('.prize__img') as HTMLElement | null;
 
-  confetti($reward, {
-    count: 160,
-    x: 50,
-    y: 50,
-    randX: 3,
-    randY: 3,
-    speedX: 0,
-    speedY: -3.2,
-    speedRandX: 2.2,
-    speedRandY: 1.6,
-    gravity: 0.09,
-    size: 10,
-    sizeRand: 7,
-  });
-
   gsap.set($reward, { opacity: 1 });
+
   if ($prizeWrap) {
     gsap.set($prizeWrap, {
       scale: 0.3,
       opacity: 0,
-      xPercent: -50,
-      yPercent: -50,
     });
 
     gsap.to($prizeWrap, {
@@ -459,25 +538,34 @@ const pop = () => {
     );
   }
 
-  if (prizeBall?.dom) gsap.to(prizeBall.dom, { opacity: 0, duration: 0.15 });
+  if (prizeBall?.dom) {
+    gsap.to(prizeBall.dom, { opacity: 0, duration: 0.15 });
+  }
 
-  gsap.fromTo(
-    $machine,
-    { y: 0 },
-    { y: -8, duration: 0.12, yoyo: true, repeat: 3, ease: 'power1.inOut' },
-  );
+  hideMachine();
 
-  setTimeout(() => resetRound(), 3000 * SPEED());
+  const targetEl = $prizeWrap || $prizeImg || $reward;
+  const rect = targetEl.getBoundingClientRect();
+
+  const originX = (rect.left + rect.width / 2) / window.innerWidth;
+  const originY = (rect.top + rect.height * 0.85) / window.innerHeight;
+
+  fireConfettiBurstTopWide(originX, originY);
+
+  const RESULT_STAY_MS = 5500;
+
+  setTimeout(() => {
+    showMachine();
+  }, RESULT_STAY_MS * SPEED());
+
+  setTimeout(() => resetRound(), RESULT_STAY_MS * SPEED());
 };
 
-const pickup = () => {
+const pickup = async () => {
   if (!prizeBall?.dom || !prizeBallContainerRef.value || !$app) return;
 
   const fromRect = prizeBall.dom.getBoundingClientRect();
-  const layerRect = prizeBallContainerRef.value.getBoundingClientRect();
-
-  const startX = Math.round(fromRect.left - layerRect.left);
-  const startY = Math.round(fromRect.top - layerRect.top);
+  const { centerX, centerY } = getAppViewportRect();
 
   prizeBallContainerRef.value.appendChild(prizeBall.dom);
 
@@ -492,13 +580,15 @@ const pickup = () => {
   prizeBall.dom.style.left = '0';
   prizeBall.dom.style.top = '0';
 
-  gsap.set(prizeBall.dom, { x: startX, y: startY, rotate });
-
-  gsap.to(prizeBallContainerRef.value, { x: -v(4), y: -v(4), duration: 1 });
+  gsap.set(prizeBall.dom, {
+    x: Math.round(fromRect.left),
+    y: Math.round(fromRect.top),
+    rotate,
+  });
 
   const tl = gsap.timeline();
-  const targetX = Math.round(layerRect.width / 2 - prizeBall.size / 2);
-  const targetY = Math.round(layerRect.height / 2 - prizeBall.size / 2);
+  const targetX = Math.round(centerX - prizeBall.size / 2);
+  const targetY = Math.round(centerY - prizeBall.size / 2);
 
   tl.to(prizeBall.dom, {
     x: targetX,
@@ -506,6 +596,7 @@ const pickup = () => {
     scale: 2,
     rotate: -180,
     duration: 1,
+    ease: 'power2.out',
   })
     .to(prizeBall.dom, {
       duration: 0.1,
@@ -542,7 +633,9 @@ const pickup = () => {
       scaleX: 1.6,
       scaleY: 2.4,
       ease: 'power1.out',
-      onComplete: pop,
+      onComplete: () => {
+        void pop();
+      },
     })
     .to(prizeBall.dom, {
       duration: 0.1,
@@ -656,24 +749,33 @@ const start = async () => {
   });
 
   await delay(250);
-  pickup();
+  await pickup();
 };
 
 const resetRound = async () => {
   if (!$app || !$balls || !$handle || !$pointer) return;
 
+  showMachine();
   await stopJittering();
+
   try {
     gsap.killTweensOf(Array.from($balls.querySelectorAll('.ball')));
   } catch {}
 
-  if (prizeBallContainerRef.value) prizeBallContainerRef.value.innerHTML = '';
+  if (prizeBallContainerRef.value) {
+    prizeBallContainerRef.value.innerHTML = '';
+    gsap.set(prizeBallContainerRef.value, { clearProps: 'all' });
+  }
 
   if (prizeRewardContainerRef.value) {
     gsap.set(prizeRewardContainerRef.value, { opacity: 0 });
     const $prizeWrap = prizeRewardContainerRef.value.querySelector('.prize');
     if ($prizeWrap) {
-      gsap.set($prizeWrap, { scale: 1, opacity: 1, clearProps: 'transform' });
+      gsap.set($prizeWrap, {
+        scale: 1,
+        opacity: 1,
+        clearProps: 'transform',
+      });
     }
   }
 
@@ -687,6 +789,9 @@ const resetRound = async () => {
 
   $balls.innerHTML = '';
   createBalls();
+
+  await nextTick();
+  positionPrizeRewardAtAppCenter();
 
   isRunning = false;
   ($handle as any).style.cursor = 'pointer';
@@ -735,6 +840,10 @@ const prepare = () => {
   });
 };
 
+const handleResize = () => {
+  positionPrizeRewardAtAppCenter();
+};
+
 const init = async () => {
   $app = appRef.value;
   $machine = machineRef.value;
@@ -750,12 +859,22 @@ const init = async () => {
   $balls.innerHTML = '';
   createBalls();
 
-  gsap.set($machine, { y: 0 });
+  gsap.set($machine, {
+    y: 0,
+    opacity: 1,
+    visibility: 'visible',
+  });
   gsap.set($pointer, { opacity: 0 });
+
+  await nextTick();
+  positionPrizeRewardAtAppCenter();
 
   if (prizeRewardContainerRef.value) {
     gsap.set(prizeRewardContainerRef.value, { opacity: 0 });
   }
+
+  window.addEventListener('resize', handleResize);
+  cleanupFns.push(() => window.removeEventListener('resize', handleResize));
 
   setTimeout(prepare, 500 * SPEED());
 };
@@ -776,12 +895,28 @@ const cleanup = () => {
   $$jitters = [];
 
   try {
-    if (appRef.value)
+    if (appRef.value) {
       gsap.killTweensOf(Array.from(appRef.value.querySelectorAll('*')));
+    }
+  } catch {}
+
+  try {
+    if (prizeBallContainerRef.value) {
+      gsap.killTweensOf(
+        Array.from(prizeBallContainerRef.value.querySelectorAll('*')),
+      );
+    }
+    if (prizeRewardContainerRef.value) {
+      gsap.killTweensOf(
+        Array.from(prizeRewardContainerRef.value.querySelectorAll('*')),
+      );
+    }
   } catch {}
 };
 
-onMounted(() => init());
+onMounted(() => {
+  void init();
+});
 onBeforeUnmount(() => cleanup());
 </script>
 
@@ -902,136 +1037,149 @@ onBeforeUnmount(() => cleanup());
       }
     }
   }
+}
 
-  .ui-layer {
+.ball {
+  --size: 64px;
+  --outline: #7a0e0e;
+  --color1: #e84545;
+  --color2: #ffffff;
+
+  width: var(--size);
+  height: var(--size);
+  border-radius: 999px;
+  position: absolute;
+  overflow: hidden;
+
+  box-shadow:
+    0 0 0 6px var(--outline),
+    0 10px 18px rgba(0, 0, 0, 0.25),
+    inset 0 8px 14px rgba(255, 255, 255, 0.18),
+    inset 0 -12px 18px rgba(0, 0, 0, 0.18);
+
+  background:
+    radial-gradient(
+      circle at 28% 22%,
+      rgba(255, 255, 255, 0.92),
+      rgba(255, 255, 255, 0) 38%
+    ),
+    radial-gradient(
+      circle at 70% 78%,
+      rgba(0, 0, 0, 0.22),
+      rgba(0, 0, 0, 0) 52%
+    ),
+    conic-gradient(
+      from 210deg,
+      rgba(255, 255, 255, 0.14),
+      rgba(255, 255, 255, 0) 18%,
+      rgba(255, 255, 255, 0.1) 42%,
+      rgba(255, 255, 255, 0) 70%
+    ),
+    linear-gradient(to bottom, var(--color2) 0 48%, var(--color1) 52% 100%);
+
+  transform: translateZ(0);
+
+  &::before {
+    content: '';
+    position: absolute;
+    left: -8%;
+    right: -8%;
+    top: 48%;
+    height: 10%;
+    background: linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.35),
+      rgba(0, 0, 0, 0.22)
+    );
+    filter: blur(3px);
+    opacity: 0.55;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    top: 8%;
+    right: 10%;
+    width: 26%;
+    height: 70%;
+    border-radius: 999px;
+    background: linear-gradient(
+      to bottom,
+      rgba(255, 255, 255, 0.65),
+      rgba(255, 255, 255, 0.08) 55%,
+      rgba(255, 255, 255, 0)
+    );
+    transform: rotate(12deg);
+    opacity: 0.85;
+  }
+}
+
+.ui-layer--teleported {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  pointer-events: none;
+  overflow: visible;
+
+  .prize-container {
     position: absolute;
     inset: 0;
-    z-index: 30;
-    pointer-events: none;
+    overflow: visible;
+  }
+
+  .prize-ball-container {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
     overflow: visible;
 
-    .prize-container {
-      position: absolute;
-      inset: 0;
-      overflow: visible;
-
-      .prize-ball-container {
-        position: absolute;
-        inset: 0;
-        z-index: 20;
-        overflow: visible;
-      }
-
-      .prize-reward-container {
-        position: absolute;
-        inset: 0;
-        z-index: 50;
-        overflow: visible;
-        opacity: 0;
-
-        .prize {
-          position: absolute;
-          left: 50%;
-          top: 50%;
-          transform: translate(-50%, -50%);
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          pointer-events: none;
-        }
-
-        .prize--center {
-          width: min(72vw, 420px);
-          max-width: 420px;
-        }
-
-        .prize__img {
-          display: block;
-          width: 100%;
-          max-width: 420px;
-          max-height: min(48vh, 420px);
-          object-fit: contain;
-          filter: drop-shadow(0 20px 36px rgba(0, 0, 0, 0.35));
-          transform-origin: center center;
-        }
-      }
+    .ball {
+      will-change: transform, opacity;
     }
   }
 
-  .ball {
-    --size: 64px;
-    --outline: #7a0e0e;
-    --color1: #e84545;
-    --color2: #ffffff;
-
-    width: var(--size);
-    height: var(--size);
-    border-radius: 999px;
+  .prize-reward-container {
     position: absolute;
-    overflow: hidden;
-
-    box-shadow:
-      0 0 0 6px var(--outline),
-      0 10px 18px rgba(0, 0, 0, 0.25),
-      inset 0 8px 14px rgba(255, 255, 255, 0.18),
-      inset 0 -12px 18px rgba(0, 0, 0, 0.18);
-
-    background:
-      radial-gradient(
-        circle at 28% 22%,
-        rgba(255, 255, 255, 0.92),
-        rgba(255, 255, 255, 0) 38%
-      ),
-      radial-gradient(
-        circle at 70% 78%,
-        rgba(0, 0, 0, 0.22),
-        rgba(0, 0, 0, 0) 52%
-      ),
-      conic-gradient(
-        from 210deg,
-        rgba(255, 255, 255, 0.14),
-        rgba(255, 255, 255, 0) 18%,
-        rgba(255, 255, 255, 0.1) 42%,
-        rgba(255, 255, 255, 0) 70%
-      ),
-      linear-gradient(to bottom, var(--color2) 0 48%, var(--color1) 52% 100%);
-
-    transform: translateZ(0);
-
-    &::before {
-      content: '';
-      position: absolute;
-      left: -8%;
-      right: -8%;
-      top: 48%;
-      height: 10%;
-      background: linear-gradient(
-        to bottom,
-        rgba(255, 255, 255, 0.35),
-        rgba(0, 0, 0, 0.22)
-      );
-      filter: blur(3px);
-      opacity: 0.55;
-    }
-
-    &::after {
-      content: '';
-      position: absolute;
-      top: 8%;
-      right: 10%;
-      width: 26%;
-      height: 70%;
-      border-radius: 999px;
-      background: linear-gradient(
-        to bottom,
-        rgba(255, 255, 255, 0.65),
-        rgba(255, 255, 255, 0.08) 55%,
-        rgba(255, 255, 255, 0)
-      );
-      transform: rotate(12deg);
-      opacity: 0.85;
-    }
+    inset: 0;
+    z-index: 50;
+    overflow: visible;
+    opacity: 0;
   }
+
+  .prize {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    will-change: transform, opacity, left, top;
+  }
+
+  .prize--center {
+    width: min(72vw, 420px);
+    max-width: 420px;
+  }
+
+  .prize__img {
+    display: block;
+    width: 100%;
+    max-width: 420px;
+    max-height: min(48vh, 420px);
+    object-fit: contain;
+    filter: drop-shadow(0 20px 36px rgba(0, 0, 0, 0.35));
+    transform-origin: center center;
+    will-change: transform, opacity;
+    animation: wiggle 1.8s ease-in-out infinite;
+  }
+}
+
+.dim {
+  filter: brightness(0.72) blur(1px);
+  transition: filter 0.25s ease;
+}
+
+.wiggle {
+  animation: wiggle 1.8s ease-in-out infinite;
 }
 
 @keyframes click {
