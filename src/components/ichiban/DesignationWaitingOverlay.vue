@@ -1,68 +1,53 @@
 <script setup lang="ts">
-import { ref, computed, watch, onUnmounted } from 'vue';
+import { watch } from 'vue';
 import KujiButton from '@/components/common/KujiButton.vue';
+import { useProtectionTimer } from '@/composables/useProtectionTimer';
+import { useSessionPoller } from '@/composables/useSessionPoller';
 
 const props = defineProps<{
   show: boolean;
+  /** ISO-8601 countdown target; empty string = no deadline */
   openerDeadline: string;
   message: string;
+  /** Lottery ID used for session polling */
+  lotteryId?: string;
 }>();
 
 const emit = defineEmits<{
   (e: 'close'): void;
   (e: 'expired'): void;
+  /** Emitted when the opener completes designation (detected via polling) */
+  (e: 'designationComplete'): void;
 }>();
 
-const remainingSeconds = ref(0);
-let countdownTimer: ReturnType<typeof setInterval> | null = null;
+// Countdown timer for the opener's deadline
+const { displayTime, isExpired, start: startCountdown, stop: stopCountdown } =
+  useProtectionTimer();
 
-const displayTime = computed(() => {
-  const mins = Math.floor(remainingSeconds.value / 60).toString().padStart(2, '0');
-  const secs = (remainingSeconds.value % 60).toString().padStart(2, '0');
-  return `${mins}:${secs}`;
+watch(isExpired, (val) => {
+  if (val && props.show) emit('expired');
 });
 
-const stopTimer = () => {
-  if (countdownTimer) {
-    clearInterval(countdownTimer);
-    countdownTimer = null;
-  }
-};
-
-const tick = () => {
-  remainingSeconds.value -= 1;
-  if (remainingSeconds.value <= 0) {
-    stopTimer();
-    emit('expired');
-  }
-};
-
-const startTimer = () => {
-  stopTimer();
-  remainingSeconds.value = Math.max(
-    0,
-    Math.floor((new Date(props.openerDeadline).getTime() - Date.now()) / 1000),
-  );
-  if (remainingSeconds.value <= 0) {
-    emit('expired');
-    return;
-  }
-  countdownTimer = setInterval(tick, 1000);
-};
+// Session poller: 3-second interval, stops when isDesignationComplete = true
+const { startPolling, stopPolling } = useSessionPoller(
+  { get value() { return props.lotteryId ?? ''; } },
+);
 
 watch(
   () => props.show,
   (val) => {
     if (val) {
-      startTimer();
+      if (props.openerDeadline) startCountdown(props.openerDeadline);
+      if (props.lotteryId) {
+        startPolling(() => emit('designationComplete'));
+      }
     } else {
-      stopTimer();
+      stopCountdown();
+      stopPolling();
     }
   },
   { immediate: true },
 );
-
-onUnmounted(() => stopTimer());
 </script>
 
 <template>
