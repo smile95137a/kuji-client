@@ -273,7 +273,7 @@
     <IchibanDrawPanel
       v-if="!isScratchMode"
       :is-open="isDrawPanelOpen"
-      :remaining="detail?.remainingPrizes ?? 0"
+      :remaining="detail?.remainingDraws ?? 0"
       :active-cards="activeCards"
       :active-card-numbers="activeCardNumbers"
       @close="closeDrawPanel"

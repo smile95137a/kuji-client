@@ -118,12 +118,12 @@ const resolvedImgSrc = computed(() => {
 });
 
 const resolvedRemainingPrizes = computed(() => {
-  const n = props.item?.remainingTickets ?? props.item?.remainingPrizes;
+  const n = props.item?.remainingTickets ?? props.item?.remainingPrizes ?? props.item?.remainingDraws;
   return ~~n;
 });
 
 const resolvedTotalPrizes = computed(() => {
-  const n = props.item?.totalTickets ?? props.item?.totalPrizes;
+  const n = props.item?.totalTickets ?? props.item?.totalPrizes ?? props.item?.totalDraws;
   return ~~n;
 });
 
