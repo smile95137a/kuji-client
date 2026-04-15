@@ -11,15 +11,17 @@ export type WalletTransactionType =
   | 'ADMIN_ADJUST'   // 後台調整
   | 'EXPIRE';        // 點數到期
 
-/** 訂單狀態 */
+/** 訂單狀態
+ *  注意：'SHIPPING'（非 SHIPPED）；'CANCELED'（非 CANCELLED）
+ */
 export type OrderStatus =
-  | 'PENDING'
-  | 'PAID'
-  | 'PROCESSING'
-  | 'SHIPPED'
-  | 'DELIVERED'
-  | 'CANCELLED'
-  | 'REFUNDED';
+  | 'PENDING'      // 待處理
+  | 'PAID'         // 已付款
+  | 'PROCESSING'   // 處理中
+  | 'SHIPPING'     // 出貨中
+  | 'DELIVERED'    // 已送達
+  | 'CANCELED'     // 已取消
+  | 'REFUNDED';    // 已退款
 
 /** 一番賞 / 扭蛋 遊玩模式 */
 export type PlayMode =

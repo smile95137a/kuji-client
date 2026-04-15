@@ -282,7 +282,7 @@
     <IchibanDrawPanel
       v-if="!isScratchMode"
       :is-open="isDrawPanelOpen"
-      :remaining="detail?.remainingPrizes"
+      :remaining="detail?.remainingDraws ?? 0"
       :active-cards="activeCards"
       :active-card-numbers="activeCardNumbers"
       @close="closeDrawPanel"
@@ -428,6 +428,7 @@ const designationResolve = ref<((numbers: number[]) => void) | null>(null);
  * DesignationWaiting overlay state (T003)
  * ----------------------------- */
 // === DesignationWaiting overlay state ===
+let waitingPollInterval: ReturnType<typeof setInterval> | null = null;
 const showWaitingOverlay = ref(false);
 const waitingOpenerDeadline = ref('');
 const waitingMessage = ref('');
