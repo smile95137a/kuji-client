@@ -7,6 +7,7 @@ import './assets/styles/main.scss';
 // Router / Store
 import router from '@/router';
 import { createPinia } from 'pinia';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 // FontAwesome
 import { library } from '@fortawesome/fontawesome-svg-core';
@@ -25,9 +26,17 @@ Object.values(solidIcons).forEach((icon: any) => {
   if (icon?.iconName) library.add(icon);
 });
 
+const pinia = createPinia();
 const app = createApp(App);
 
 // Global component
 app.component('font-awesome-icon', FontAwesomeIcon);
 
-app.use(createPinia()).use(router).mount('#app');
+app.use(pinia);
+
+// Kick off silent refresh BEFORE router is used.
+// initAuth() synchronously sets isInitializing = true so the router guard
+// will wait for the refresh before making auth decisions.
+useAuthStore().initAuth();
+
+app.use(router).mount('#app');

@@ -40,6 +40,7 @@ import PrizeBox from '@/views/member/PrizeBox.vue';
 import OrderHistory from '@/views/member/OrderHistory.vue';
 import OrderDetail from '@/views/member/OrderDetail.vue';
 import ReferralCode from '@/views/member/ReferralCode.vue';
+import VerifyEmail from '@/views/VerifyEmail.vue';
 
 export const routes: Array<RouteRecordRaw> = [
   {
@@ -100,6 +101,12 @@ export const routes: Array<RouteRecordRaw> = [
         component: ResetPassword,
         path: 'reset-password',
         name: 'ResetPassword',
+      },
+      {
+        // Public route: no requiresAuth — user arrives here from verification email link
+        component: VerifyEmail,
+        path: 'verify-email',
+        name: 'VerifyEmail',
       },
       {
         component: Policy,
@@ -240,9 +247,13 @@ router.beforeEach(async (to, _from, next) => {
   // Wait for silent refresh to complete on first load (avoids false redirects on F5)
   if (authStore.isInitializing) {
     await new Promise<void>((resolve) => {
+      // immediate: true ensures the callback fires right away if isInitializing
+      // is already false by the time the watch is registered (edge case on fast
+      // networks where silentRefresh completes before the guard re-runs).
       const stop = watch(
         () => authStore.isInitializing,
-        (val) => { if (!val) { stop(); resolve(); } }
+        (val) => { if (!val) { stop(); resolve(); } },
+        { immediate: true }
       );
     });
   }

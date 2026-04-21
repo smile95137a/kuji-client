@@ -145,6 +145,45 @@ export const resetPassword = async (
   }
 };
 
+/** 登出（server-side token revoke）。失敗時靜默 — 永遠不會阻塞登出流程 */
+export const logoutApi = async (): Promise<void> => {
+  try {
+    await api.post(`${basePath}/logout`);
+  } catch (e) {
+    console.warn('Auth - logout API error (degraded):', e);
+  }
+};
+
+/** Email 驗證（GET /auth/verify-email?token=xxx） */
+export const verifyEmail = async (token: string): Promise<ApiResponse<any>> => {
+  try {
+    const res = await api.get(`${basePath}/verify-email`, { params: { token } });
+    return res.data;
+  } catch (e) {
+    console.error('Auth - verifyEmail error:', e);
+    throw e;
+  }
+};
+
+/**
+ * 重新發送驗證信（POST /auth/resend-verification）
+ * accessToken: 未驗證用戶的暫存 token（後端登入失敗時可能附帶），用於 Authorization header。
+ * 若 authStore 已有 token，攔截器會自動附加，不需手動傳入。
+ */
+export const resendVerification = async (accessToken?: string): Promise<ApiResponse<any>> => {
+  try {
+    const config =
+      accessToken && !useAuthStore().token
+        ? { headers: { Authorization: `Bearer ${accessToken}` } }
+        : undefined;
+    const res = await api.post(`${basePath}/resend-verification`, undefined, config);
+    return res.data;
+  } catch (e) {
+    console.error('Auth - resendVerification error:', e);
+    throw e;
+  }
+};
+
 /**
  * 驗證推薦碼是否有效。
  * 後端回傳 HTTP 200 + { isValid: boolean, ownerName?: string }。

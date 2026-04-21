@@ -330,3 +330,48 @@
     padding: 28px 18px;
   }
 }
+
+/* ========== Email 未驗證狀態 ========== */
+.login__notVerified {
+  margin-top: 10px;
+  text-align: center;
+}
+
+.login__resendRow {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.login__resendBtn {
+  height: 42px;
+  padding: 0 24px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.7);
+  background: transparent;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+
+  &:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.15);
+  }
+
+  &:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+}
+
+.login__text--resendOk {
+  color: #a8f0c0;
+  margin-top: 8px;
+  font-weight: 600;
+}
+
+.login__btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}

@@ -362,6 +362,7 @@ import {
 import { randomDrawLottery } from '@/services/lotteryRandomService';
 import { executeApi } from '@/utils/executeApiUtils';
 import { useOverlayStore } from '@/stores/overlay';
+import { useAuthStore } from '@/stores/useAuthStore';
 import { ichibanInfoDialog } from '@/utils/dialog/ichibanInfoDialog';
 import { gachaTearDialog } from '@/utils/dialog/kujiRevealStripDialog';
 import { ichibanResultDialog } from '@/utils/dialog/ichibanResultDialog';
@@ -371,6 +372,7 @@ import { gotchaDialog } from '@/utils/dialog/gotchaDialog';
 import { getLotterySession } from '@/services/lotteryDrawService';
 
 const overlay = useOverlayStore();
+const authStore = useAuthStore();
 
 /* -----------------------------
  * Route
@@ -879,6 +881,20 @@ const closeScratchPanel = () => {
  * Actions（全部 await ensureCanDraw）
  * ----------------------------- */
 const ensureCanDraw = async () => {
+  if (!authStore.isLogin) {
+    try {
+      overlay.open('ichiban-info', false);
+      await ichibanInfoDialog({
+        title: '請先登入',
+        content: '需要登入才能進行此操作，請先登入您的帳號。',
+      });
+    } finally {
+      overlay.close();
+    }
+    goLogin();
+    return false;
+  }
+
   if (!canDraw.value) {
     try {
       overlay.open('ichiban-info', false);
@@ -1113,7 +1129,7 @@ const triggerDesignationFromSession = async () => {
   }
 
   await executeApi({
-    fn: () => drawLottery(kujiId.value, { count: 1, ticket: [probeTicketId] }),
+    fn: () => drawLottery(kujiId.value, { count: 1, tickets: [probeTicketId] }),
     onSuccess: async (data: any) => {
       if (data?.designationRequired === true) {
         await handleDesignatePrize(
@@ -1242,7 +1258,7 @@ const handleExchange = async (payload: {
       fn: () =>
         drawLottery(kujiId.value, {
           count: safeCount,
-          ticket: safeTickets,
+          tickets: safeTickets,
         }),
       onSuccess: async (data: any) => {
         // v4.0: DrawBatchResponse.results
@@ -1322,7 +1338,7 @@ const handleExchange = async (payload: {
       fn: () =>
         drawLottery(kujiId.value, {
           count: safeCount,
-          ticket: safeTickets,
+          tickets: safeTickets,
         }),
       onSuccess: async (data: any) => {
         // v4.0: DrawBatchResponse.results
@@ -1419,13 +1435,15 @@ const reload = async () => {
       onSuccess: async (data) => {
         detail.value = data?.lottery ?? null;
         prizesData.value = Array.isArray(data?.prizes) ? data.prizes : [];
-        ticketData.value = Array.isArray(data?.tickets) ? data.tickets : [];
+        ticketData.value = Array.isArray(data?.tickets)
+          ? data.tickets.map((t) => ({ ...t, ticketNumber: Number(t.ticketNumber) }))
+          : [];
 
         // ✅ 新增：取得 designatedWinningNumbers（刮刮樂大獎中獎號碼）
         designatedWinningNumbers.value = Array.isArray(
-          data?.designatedWinningNumbers,
+          data?.designatedNumbers,
         )
-          ? data.designatedWinningNumbers
+          ? (data.designatedNumbers as DesignatedWinningNumber[])
           : [];
       },
       onFail: async () => {
@@ -1585,7 +1603,7 @@ const drawScratchTicket = async (
   try {
     const res: any = await drawLottery(kujiId.value, {
       count: 1,
-      ticket: [selectedTicketId],
+      tickets: [selectedTicketId],
     });
 
     const data = res?.data ?? res;

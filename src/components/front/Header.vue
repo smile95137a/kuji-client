@@ -202,6 +202,7 @@ import {
 
 import { useRouter, useRoute, type RouteLocationRaw } from 'vue-router';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { logoutApi } from '@/services/AuthService';
 
 import weblogo from '@/assets/image/weblogo.png';
 import headerBg from '@/assets/image/header_bg.jpg';
@@ -259,11 +260,8 @@ const goMemberCenter = () => {
 };
 
 const handleLogout = async () => {
-  if (typeof authStore.logout === 'function') {
-    await authStore.logout();
-  } else {
-    authStore.token = '';
-  }
+  await logoutApi(); // server-side token revoke (內部已衜含低降處理，失敗不阻塞)
+  authStore.logout();
   router.push({ name: 'Home' });
 };
 

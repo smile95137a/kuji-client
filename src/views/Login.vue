@@ -84,12 +84,44 @@
             </div>
 
             <div class="login__btns">
-              <button type="submit" class="login__btn" :disabled="isLoading">
+              <button type="submit" class="login__btn" :disabled="isLoading || isAccountLocked">
                 {{ isLoading ? '登入中…' : '登入' }}
               </button>
             </div>
 
-            <p v-if="errorMessage" class="login__text login__text--error" style="text-align:center;margin-top:8px">
+            <!-- Email 未驗證：顯示重送按鈕 -->
+            <div v-if="isEmailNotVerified" class="login__notVerified">
+              <p class="login__text login__text--error" style="text-align:center">
+                {{ errorMessage }}
+              </p>
+              <div class="login__resendRow">
+                <button
+                  type="button"
+                  class="login__resendBtn"
+                  :disabled="resendCooldown > 0 || resendLoading"
+                  @click="sendVerificationEmail"
+                >
+                  {{
+                    resendLoading
+                      ? '發送中…'
+                      : resendCooldown > 0
+                      ? `重新發送（${resendCooldown}s）`
+                      : '重新發送驗證信'
+                  }}
+                </button>
+              </div>
+              <p
+                v-if="resendMessage"
+                class="login__text"
+                :class="resendMessage.includes('已發送') ? 'login__text--resendOk' : 'login__text--error'"
+                style="text-align:center;margin-top:6px"
+              >
+                {{ resendMessage }}
+              </p>
+            </div>
+
+            <!-- 其他登入錯誤（密碼錯誤次數提示 / 鎖定訊息） -->
+            <p v-else-if="errorMessage" class="login__text login__text--error" style="text-align:center;margin-top:8px">
               {{ errorMessage }}
             </p>
           </form>
@@ -134,7 +166,7 @@ import { useLogin } from '@/composables/useLogin';
 const router = useRouter();
 const overlay = useOverlayStore();
 
-const { email, password, isLoading, errorMessage, submitLogin } = useLogin();
+const { email, password, isLoading, errorMessage, isEmailNotVerified, isAccountLocked, resendCooldown, resendLoading, resendMessage, sendVerificationEmail, submitLogin } = useLogin();
 
 const submitted = ref(false);
 const showPassword = ref(false);

@@ -48,13 +48,23 @@ api.interceptors.response.use(
     const url = originalRequest?.url || '';
     if (url.includes('/auth/refresh')) {
       removeAllState();
-      window.location.href = '/login';
+      window.location.href = `${import.meta.env.BASE_URL}login`;
+      return Promise.reject(error);
+    }
+
+    // These auth endpoints carry their own semantics on 401 — do NOT attempt
+    // token refresh (it would fail anyway and cause confusing side-effects).
+    if (
+      url.includes('/auth/login') ||
+      url.includes('/auth/verify-email') ||
+      url.includes('/auth/resend-verification')
+    ) {
       return Promise.reject(error);
     }
 
     if (originalRequest?._retry) {
       removeAllState();
-      window.location.href = '/login';
+      window.location.href = `${import.meta.env.BASE_URL}login`;
       return Promise.reject(error);
     }
     originalRequest._retry = true;
@@ -62,7 +72,7 @@ api.interceptors.response.use(
     const rt = getRefreshToken();
     if (!rt) {
       removeAllState();
-      window.location.href = '/login';
+      window.location.href = `${import.meta.env.BASE_URL}login`;
       return Promise.reject(error);
     }
 
@@ -121,7 +131,7 @@ api.interceptors.response.use(
       // Use authStore.logout() to cleanly clear Pinia memory + localStorage
       const { useAuthStore } = await import('@/stores/useAuthStore');
       useAuthStore().logout();
-      window.location.href = '/login';
+      window.location.href = `${import.meta.env.BASE_URL}login`;
       return Promise.reject(err);
     } finally {
       isRefreshing = false;

@@ -49,7 +49,7 @@ export function useDrawFlow(lotteryId: string | { value: string }) {
 
   async function draw(payload: {
     tickets?: string[];
-    count?: number;
+    count: number;
   }): Promise<DrawFlowResult> {
     if (isDrawing.value) {
       return { type: 'error', message: '抽獎進行中，請稍候' };
