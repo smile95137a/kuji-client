@@ -357,16 +357,24 @@
         </div>
       </div>
     </div>
+
+    <!-- 出貨確認 Dialog -->
+    <PrizeBoxShipDialog
+      :visible="shipDialogOpen"
+      :items="shipDialogItems"
+      @close="shipDialogOpen = false"
+      @success="onShipSuccess"
+    />
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import BasePagination from '@/components/common/BasePagination.vue';
+import PrizeBoxShipDialog from '@/components/member/PrizeBoxShipDialog.vue';
 
 import {
   getMyPrizeBox,
-  shipPrizeBoxItems,
   recyclePrizeBoxItems,
 } from '@/services/prizeBoxService';
 
@@ -484,23 +492,21 @@ const loadPrizeBox = async () => {
   });
 };
 
-const shipByIds = async (ids: string[]) => {
+/** ========== 出貨 Dialog ========== */
+const shipDialogOpen = ref(false);
+const shipDialogItems = ref<any[]>([]);
+
+const openShipDialog = (ids: string[]) => {
   if (!ids.length) return;
+  shipDialogItems.value = rows.value.filter((r) => ids.includes(r.id));
+  shipDialogOpen.value = true;
+};
 
-  loading.value = true;
-
-  await executeApi<any>({
-    fn: () => shipPrizeBoxItems({ prizeBoxIds: ids }),
-    onSuccess: () => {
-      // 最穩：直接 reload，確保狀態與後端一致
-      checkedIds.value = new Set();
-      detailOpen.value = false;
-      loadPrizeBox();
-    },
-    onFinal: () => {
-      loading.value = false;
-    },
-  });
+const onShipSuccess = () => {
+  shipDialogOpen.value = false;
+  checkedIds.value = new Set();
+  detailOpen.value = false;
+  loadPrizeBox();
 };
 
 const recycleByIds = async (ids: string[]) => {
@@ -612,7 +618,7 @@ const openDetail = (row) => {
 
 const shipOne = async (row) => {
   if (row.status !== 'IN_BOX') return;
-  await shipByIds([row.id]);
+  openShipDialog([row.id]);
 };
 
 const recycleOne = async (row) => {
@@ -623,7 +629,7 @@ const recycleOne = async (row) => {
 
 const batchShip = async () => {
   const ids = Array.from(checkedIds.value);
-  await shipByIds(ids);
+  openShipDialog(ids);
 };
 
 const batchRecycle = async () => {

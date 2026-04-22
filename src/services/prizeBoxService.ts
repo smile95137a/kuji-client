@@ -7,6 +7,45 @@ interface RequestData {
   [key: string]: any;
 }
 
+/** 出貨請求（同一家店的獎品） */
+export interface PrizeBoxShipReq {
+  prizeBoxIds: string[];
+  recipientName: string;
+  recipientPhone: string;
+  zipCode?: string;
+  city: string;
+  district: string;
+  address: string;
+  note?: string;
+}
+
+/** 出貨結果 */
+export interface ShipResultRes {
+  orderId?: string;
+  orderCode?: string;
+  status?: string;
+  message?: string;
+}
+
+/** 賞品盒單筆獎品 */
+export interface PrizeBoxItemRes {
+  id: string;
+  userId: string;
+  lotteryId: string;
+  lotteryTitle: string;
+  prizeId: string;
+  prizeName: string;
+  prizeLevel: string;
+  prizeImageUrl: string;
+  storeId: string;
+  storeName: string;
+  status: 'IN_BOX' | 'SHIPPING' | 'DELIVERED' | 'REDEEMED';
+  statusName: string;
+  isRecyclable: boolean;
+  recycleBonus: number;
+  createdAt: string;
+}
+
 /** 前台 - 查詢我的賞品盒 GET /api/prize-box */
 export const getMyPrizeBox = async (): Promise<ApiResponse<any>> => {
   try {
@@ -37,8 +76,8 @@ export const getPrizeBoxSummaryByStore = async (): Promise<
  * req: { prizeBoxIds: string[], ...其他欄位依 PrizeBoxShipReq }
  */
 export const shipPrizeBoxItems = async (
-  req: RequestData,
-): Promise<ApiResponse<any>> => {
+  req: PrizeBoxShipReq,
+): Promise<ApiResponse<ShipResultRes>> => {
   try {
     const res = await api.post(`${basePath}/ship`, req ?? null);
     return res.data;
