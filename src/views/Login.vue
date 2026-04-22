@@ -11,7 +11,7 @@
             <div class="login__auth">
               <div class="login__auth-btn" @click="handleOauthLogin('google')">
                 <div class="login__auth-btn-icon">
-                  <img :src="googleLogo" />
+                  <img :src="googleLogo" alt="Google logo" />
                 </div>
                 <div class="login__auth-btn-text">Google 帳號登入</div>
               </div>
@@ -21,6 +21,14 @@
               <div class="login__divider-line"></div>
               <div class="login__divider-text">或</div>
             </div>
+
+            <p
+              v-if="infoMessage"
+              class="login__text login__text--info"
+              style="text-align:center;margin-bottom:10px"
+            >
+              {{ infoMessage }}
+            </p>
 
             <div class="login__form-inputs">
               <p class="login__text">電子信箱</p>
@@ -147,13 +155,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
 import googleLogo from '@/assets/image/google.svg';
 import loginLogin from '@/assets/image/login_logo.png';
 import Card from '@/components/common/MCard.vue';
 
 import { useForm } from 'vee-validate';
-import { useRouter } from 'vue-router';
+import { useRoute, useRouter } from 'vue-router';
 import * as yup from 'yup';
 
 import { executeApi } from '@/utils/executeApiUtils';
@@ -164,7 +172,9 @@ import { ichibanInfoDialog } from '@/utils/dialog/ichibanInfoDialog';
 import { useLogin } from '@/composables/useLogin';
 
 const router = useRouter();
+const route = useRoute();
 const overlay = useOverlayStore();
+const infoMessage = ref('');
 
 const { email, password, isLoading, errorMessage, isEmailNotVerified, isAccountLocked, resendCooldown, resendLoading, resendMessage, sendVerificationEmail, submitLogin } = useLogin();
 
@@ -184,6 +194,13 @@ const { handleSubmit, errors, defineField } = useForm({
 
 const [emailField] = defineField('email');
 const [passwordField] = defineField('password');
+
+onMounted(() => {
+  if (route.query.action === 'resend') {
+    infoMessage.value =
+      '您的驗證連結已失效，請先登入，再點擊「重新發送驗證信」。';
+  }
+});
 
 const onSubmit = handleSubmit(
   async (values) => {

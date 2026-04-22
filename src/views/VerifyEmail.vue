@@ -26,6 +26,9 @@
         <p class="verifyEmail__desc">
           此驗證連結已失效或已被使用，請重新登入後申請新的驗證信。
         </p>
+        <button class="verifyEmail__btn verifyEmail__btn--primary" @click="goResend">
+          重新發送驗證信
+        </button>
         <button class="verifyEmail__btn verifyEmail__btn--secondary" @click="goLogin">
           前往登入頁
         </button>
@@ -67,6 +70,10 @@ const goLogin = () => {
   } else {
     router.push({ name: 'Login' });
   }
+};
+
+const goResend = () => {
+  router.push({ name: 'Login', query: { action: 'resend' } });
 };
 </script>
 

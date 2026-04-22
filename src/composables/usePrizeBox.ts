@@ -6,6 +6,7 @@ import {
   getPrizeBoxSummaryByStore,
   shipPrizeBoxItems,
   recyclePrizeBoxItems,
+  type PrizeBoxShipReq,
 } from '@/services/prizeBoxService';
 
 export interface PrizeBoxItem {
@@ -73,7 +74,7 @@ export function usePrizeBox() {
     }
   }
 
-  async function ship(req: { prizeBoxIds: string[]; [key: string]: any }): Promise<boolean> {
+  async function ship(req: PrizeBoxShipReq): Promise<boolean> {
     isLoading.value = true;
     error.value = null;
     try {
