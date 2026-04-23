@@ -45,7 +45,36 @@
             </div>
           </section>
 
-          <!-- ② 配送資訊 -->
+          <!-- ② 配送方式 -->
+          <section class="ship-dialog__section">
+            <h3 class="ship-dialog__section-title">配送方式 <span class="req">*</span></h3>
+
+            <div v-if="shippingMethodsLoading" class="ship-dialog__hint">載入配送方式中…</div>
+            <div v-else-if="shippingMethods.length === 0" class="ship-dialog__hint ship-dialog__hint--warn">無可用配送方式，請稍後再試</div>
+            <div v-else class="ship-dialog__shipping-list">
+              <label
+                v-for="method in shippingMethods"
+                :key="method.id"
+                class="ship-dialog__shipping-item"
+                :class="{ 'is-selected': selectedShippingId === method.id }"
+              >
+                <input
+                  type="radio"
+                  name="ship-method"
+                  :value="method.id"
+                  v-model="selectedShippingId"
+                  class="ship-dialog__shipping-radio"
+                />
+                <div class="ship-dialog__shipping-info">
+                  <span class="ship-dialog__shipping-name">{{ method.name }}</span>
+                  <span class="ship-dialog__shipping-desc">{{ method.description }}</span>
+                </div>
+                <span class="ship-dialog__shipping-fee">NT$ {{ method.fee }}</span>
+              </label>
+            </div>
+          </section>
+
+          <!-- ③ 配送資訊 -->
           <section class="ship-dialog__section">
             <h3 class="ship-dialog__section-title">配送資訊</h3>
 
@@ -138,19 +167,9 @@
                 placeholder="路/街/巷/弄/號"
               />
             </div>
-            <div class="ship-dialog__field">
-              <label class="ship-dialog__label" for="ship-note">備註</label>
-              <textarea
-                id="ship-note"
-                class="ship-dialog__input ship-dialog__textarea"
-                v-model.trim="form.note"
-                placeholder="出貨備註（可選填）"
-                rows="2"
-              />
-            </div>
           </section>
 
-          <!-- ③ 費用摘要 -->
+          <!-- ④ 費用摘要 -->
           <section class="ship-dialog__section ship-dialog__section--summary">
             <h3 class="ship-dialog__section-title">費用摘要</h3>
             <div class="ship-dialog__summary-row">
@@ -163,7 +182,10 @@
             </div>
             <div class="ship-dialog__summary-row ship-dialog__summary-row--total">
               <span>運費</span>
-              <span class="ship-dialog__free">免費</span>
+              <span v-if="selectedShipping" :class="selectedShipping.fee === 0 ? 'ship-dialog__free' : ''">
+                {{ selectedShipping.fee === 0 ? '免費' : `NT$ ${selectedShipping.fee}` }}
+              </span>
+              <span v-else class="ship-dialog__hint">請先選擇配送方式</span>
             </div>
           </section>
 
@@ -223,6 +245,10 @@ const {
   isSubmitting,
   error,
   submit,
+  shippingMethods,
+  shippingMethodsLoading,
+  selectedShippingId,
+  selectedShipping,
 } = usePrizeBoxShip(itemsRef);
 
 // 初始化：每次 dialog 打開時重載地址本
@@ -443,6 +469,42 @@ async function onSubmit() {
 .ship-dialog__textarea {
   resize: vertical;
 }
+
+/* 配送方式 */
+.ship-dialog__shipping-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ship-dialog__shipping-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.ship-dialog__shipping-item:hover { border-color: #aac4f0; background: #f5f9ff; }
+.ship-dialog__shipping-item.is-selected { border-color: #2c71e0; background: #f0f5ff; }
+
+.ship-dialog__shipping-radio { flex-shrink: 0; width: 16px; height: 16px; accent-color: #2c71e0; cursor: pointer; }
+
+.ship-dialog__shipping-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.ship-dialog__shipping-name { font-size: 14px; font-weight: 600; color: #1a1a1a; }
+.ship-dialog__shipping-desc { font-size: 12px; color: #888; }
+
+.ship-dialog__shipping-fee { font-size: 14px; font-weight: 700; color: #2c71e0; flex-shrink: 0; }
+
+.ship-dialog__hint { font-size: 13px; color: #888; padding: 8px 0; }
+.ship-dialog__hint--warn { color: #c0392b; }
 
 /* 摘要 */
 .ship-dialog__section--summary { background: #fafafa; border-radius: 8px; padding: 16px; }

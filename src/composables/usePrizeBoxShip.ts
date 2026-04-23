@@ -2,6 +2,9 @@
 import { computed, reactive, ref, watch, type Ref } from 'vue';
 import { useAddressBook, type AddressItem } from './useAddressBook';
 import { shipPrizeBoxItems, type PrizeBoxShipReq } from '@/services/prizeBoxService';
+import { getShippingMethods, type ShippingMethod } from '@/services/shippingMethodService';
+
+export type { ShippingMethod };
 
 export interface PrizeBoxItem {
   id: string;
@@ -31,7 +34,6 @@ export interface ShipForm {
   city: string;
   district: string;
   address: string;
-  note: string;
 }
 
 export function usePrizeBoxShip(items: Ref<PrizeBoxItem[]>) {
@@ -41,6 +43,15 @@ export function usePrizeBoxShip(items: Ref<PrizeBoxItem[]>) {
   const isSubmitting = ref(false);
   const error = ref<string>('');
 
+  // 配送方式
+  const shippingMethods = ref<ShippingMethod[]>([]);
+  const shippingMethodsLoading = ref(false);
+  const selectedShippingId = ref<string>('');
+
+  const selectedShipping = computed<ShippingMethod | null>(
+    () => shippingMethods.value.find((m) => m.id === selectedShippingId.value) ?? null,
+  );
+
   const form = reactive<ShipForm>({
     recipientName: '',
     recipientPhone: '',
@@ -48,7 +59,6 @@ export function usePrizeBoxShip(items: Ref<PrizeBoxItem[]>) {
     city: '',
     district: '',
     address: '',
-    note: '',
   });
 
   /** 依 storeId 分組 */
@@ -69,19 +79,36 @@ export function usePrizeBoxShip(items: Ref<PrizeBoxItem[]>) {
 
   /** 套用地址本到表單 */
   function applyAddress(addr: AddressItem) {
-    form.recipientName = addr.recipientName;
-    form.recipientPhone = addr.phone;
+    form.recipientName = addr.recipientName ?? '';
+    form.recipientPhone = addr.phone ?? '';
     form.zipCode = addr.zipCode ?? '';
-    form.city = addr.city;
-    form.district = addr.district;
-    form.address = addr.address;
+    form.city = addr.city ?? '';
+    form.district = addr.district ?? '';
+    form.address = addr.address ?? '';
     selectedAddressId.value = addr.id;
   }
 
-  /** 載入地址本，並自動套用預設地址 */
+  /** 載入地址本 + 配送方式，並自動套用預設地址 */
   async function init() {
     error.value = '';
-    await fetchAddresses();
+
+    // 平行載入
+    shippingMethodsLoading.value = true;
+    const [, methods] = await Promise.allSettled([
+      fetchAddresses(),
+      getShippingMethods(),
+    ]);
+
+    shippingMethodsLoading.value = false;
+
+    if (methods.status === 'fulfilled') {
+      shippingMethods.value = methods.value;
+      // 預選第一個
+      if (!selectedShippingId.value && methods.value.length > 0) {
+        selectedShippingId.value = methods.value[0].id;
+      }
+    }
+
     const def = addresses.value.find((a) => a.isDefault);
     if (def) applyAddress(def);
     else if (addresses.value.length > 0) applyAddress(addresses.value[0]);
@@ -94,27 +121,33 @@ export function usePrizeBoxShip(items: Ref<PrizeBoxItem[]>) {
     if (def) applyAddress(def);
   });
 
-  /** 驗證表單必填 */
+  /** 驗證表單必填（含配送方式） */
   const isFormValid = computed(() => {
     return (
-      form.recipientName.trim() !== '' &&
-      form.recipientPhone.trim() !== '' &&
-      form.city.trim() !== '' &&
-      form.district.trim() !== '' &&
-      form.address.trim() !== ''
+      selectedShippingId.value !== '' &&
+      (form.recipientName ?? '').trim() !== '' &&
+      (form.recipientPhone ?? '').trim() !== '' &&
+      (form.city ?? '').trim() !== '' &&
+      (form.district ?? '').trim() !== '' &&
+      (form.address ?? '').trim() !== ''
     );
   });
 
   /**
-   * 送出出貨：每個 storeGroup 各呼叫一次 API
-   * 全部成功 → return true
-   * 任一失敗 → 收集錯誤，return false
+   * 送出出貨：後端會自動依 storeId 分單，前端只需一次呼叫
    */
   async function submit(): Promise<boolean> {
     if (!isFormValid.value) {
-      error.value = '請填寫完整配送資訊';
+      error.value = selectedShippingId.value
+        ? '請填寫完整配送資訊'
+        : '請選擇配送方式';
       return false;
     }
+
+    const shipping = selectedShipping.value!;
+
+    // 合併地址字串
+    const recipientAddress = `${form.city.trim()}${form.district.trim()}${form.address.trim()}`;
 
     isSubmitting.value = true;
     error.value = '';
@@ -124,13 +157,12 @@ export function usePrizeBoxShip(items: Ref<PrizeBoxItem[]>) {
     for (const group of storeGroups.value) {
       const req: PrizeBoxShipReq = {
         prizeBoxIds: group.items.map((i) => i.id),
+        shippingMethod: shipping.code,
+        shippingMethodId: shipping.id,
+        shippingFee: shipping.fee,
         recipientName: form.recipientName.trim(),
         recipientPhone: form.recipientPhone.trim(),
-        city: form.city.trim(),
-        district: form.district.trim(),
-        address: form.address.trim(),
-        zipCode: form.zipCode.trim() || undefined,
-        note: form.note.trim() || undefined,
+        recipientAddress,
       };
 
       try {
@@ -163,6 +195,11 @@ export function usePrizeBoxShip(items: Ref<PrizeBoxItem[]>) {
     selectedAddressId,
     applyAddress,
     init,
+    // 配送方式
+    shippingMethods,
+    shippingMethodsLoading,
+    selectedShippingId,
+    selectedShipping,
     // 分組
     storeGroups,
     // 表單

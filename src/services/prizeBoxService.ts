@@ -10,13 +10,12 @@ interface RequestData {
 /** 出貨請求（同一家店的獎品） */
 export interface PrizeBoxShipReq {
   prizeBoxIds: string[];
+  shippingMethod: string;       // 配送方式代碼，如 HOME_DELIVERY、SEVEN_ELEVEN、FAMILY_MART
+  shippingMethodId: string;     // 配送方式 UUID
+  shippingFee: number;          // 運費
   recipientName: string;
   recipientPhone: string;
-  zipCode?: string;
-  city: string;
-  district: string;
-  address: string;
-  note?: string;
+  recipientAddress: string;     // 完整地址字串（城市＋鄉鎮區＋詳細地址）
 }
 
 /** 出貨結果 */

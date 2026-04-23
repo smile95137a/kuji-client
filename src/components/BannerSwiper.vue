@@ -236,7 +236,7 @@ onMounted(async () => {
     });
 
     ro = new ResizeObserver(() => requestAnimationFrame(updateNavPosition));
-    ro.observe(swiperEl.value);
+    if (swiperEl.value) ro.observe(swiperEl.value);
 
     window.addEventListener('resize', updateNavPosition, { passive: true });
 
