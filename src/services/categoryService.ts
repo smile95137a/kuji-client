@@ -60,13 +60,13 @@ export const queryCategories = async (
 
 /**
  * 查詢商品主題
- * POST /category/themes
+ * GET /category/themes
  */
 export const queryThemes = async (
   req?: CategoryQueryReq,
 ): Promise<ApiResponse<CategoryRes[]>> => {
   try {
-    const res = await api.post(`${basePath}/themes`, req ?? undefined);
+    const res = await api.get(`${basePath}/themes`);
     return res.data;
   } catch (e) {
     console.error('Category - queryThemes error:', e);
