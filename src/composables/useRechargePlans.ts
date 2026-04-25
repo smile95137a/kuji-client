@@ -64,7 +64,7 @@ export function useRechargePlans() {
     error.value = null;
 
     try {
-      const res = await createRechargeRequest({ planId });
+      const res = await createRechargeRequest({ planId, paymentMethod: 'GOMYPAY' });
 
       if (res?.success) {
         const data = res.data as any;

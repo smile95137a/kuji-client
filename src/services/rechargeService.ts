@@ -5,6 +5,7 @@ const basePath = '/recharge';
 
 export interface RechargeReq {
   planId: string;
+  paymentMethod?: string;
 }
 
 export type RechargeStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
@@ -64,6 +65,19 @@ export const getMyRechargeHistory = async (req?: {
  * 前台 - 確認支付（模擬/回調）
  * POST /api/recharge/{rechargeId}/confirm?transactionId=xxx
  */
+/**
+ * 前台 - 查詢可用支付方式 GET /api/recharge/payment-methods（公開，不需 Token）
+ */
+export const getPaymentMethods = async (): Promise<ApiResponse<any[]>> => {
+  try {
+    const res = await api.get(`${basePath}/payment-methods`);
+    return res.data;
+  } catch (e) {
+    console.error('Recharge - getPaymentMethods error:', e);
+    throw e;
+  }
+};
+
 export const confirmRechargePayment = async (
   rechargeId: string,
   transactionId?: string,

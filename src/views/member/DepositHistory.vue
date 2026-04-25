@@ -290,7 +290,7 @@ const normalizeRechargeHistory = (raw: any): DepositHistoryRow[] => {
     bonusCoins: Number(o.bonusCoins ?? 0) || 0,
 
     paymentMethod: (o.paymentMethod ?? 'CREDIT_CARD') as PayMethod,
-    paymentStatus: (o.paymentStatus ?? 'PENDING') as PaymentStatus,
+    paymentStatus: ((o.paymentStatus ?? o.status) ?? 'PENDING') as PaymentStatus,
 
     transactionId: String(o.transactionId ?? ''),
     createdAt: String(o.createdAt ?? ''),

@@ -63,7 +63,7 @@ export const uploadAvatar = async (file: File): Promise<any> => {
 };
 
 /**
- * 前台 - 上傳並更新頭像（一步完成）POST /user/avatar/update
+ * 前台 - 上傳並更新頭像（一步完成）POST /user/me/avatar/update
  * 後端回：UserRes（含新 avatar + wallet）
  */
 export const uploadAndUpdateAvatar = async (file: File): Promise<any> => {
@@ -71,7 +71,7 @@ export const uploadAndUpdateAvatar = async (file: File): Promise<any> => {
     const form = new FormData();
     form.append('file', file);
 
-    const res = await api.post(`${basePath}/avatar/update`, form, {
+    const res = await api.post(`${basePath}/me/avatar/update`, form, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

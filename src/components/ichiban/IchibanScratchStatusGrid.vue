@@ -19,44 +19,60 @@
     </header>
 
     <div class="scratchGrid__grid">
-      <button
-        v-for="t in normalizedCards"
-        :key="t.id"
-        type="button"
-        class="scratchGrid__cell"
-        :class="cellClass(t)"
-        :disabled="!t.isAvailable"
-        :title="getCellTitle(t)"
-        @click="emitSelect(t.id)"
-      >
-        <div
-          v-if="!t.isAvailable"
-          class="scratchGrid__cellLogo"
+      <template v-for="(t, index) in gridCells" :key="index">
+        <!-- 空槽（票券資料缺失 / 後端未回傳） -->
+        <button
+          v-if="t === null"
+          type="button"
+          class="scratchGrid__cell is-scratched"
+          disabled
           aria-hidden="true"
         >
-          <img :src="weblogo" alt="" />
-        </div>
-
-        <!-- 可選格 -->
-        <template v-if="t.isAvailable">
-          <div class="scratchGrid__badge" v-if="t.isActive">已選擇</div>
-
-          <div class="scratchGrid__ticketNo"></div>
-
-          <div class="scratchGrid__circle" aria-hidden="true">
-            <span class="scratchGrid__circleCore">
-              <img :src="weblogo" alt="" class="scratchGrid__circleLogo" />
-            </span>
+          <div class="scratchGrid__cellLogo" aria-hidden="true">
+            <img :src="weblogo" alt="" />
           </div>
-        </template>
+          <div class="scratchGrid__num">{{ index + 1 }}</div>
+        </button>
 
-        <!-- 已刮過 / 不可選 -->
-        <template v-else>
-          <div class="scratchGrid__num">
-            {{ t.revealedNumber ?? t.ticketNumber }}
+        <!-- 正常票券格 -->
+        <button
+          v-else
+          type="button"
+          class="scratchGrid__cell"
+          :class="cellClass(t)"
+          :disabled="!t.isAvailable"
+          :title="getCellTitle(t)"
+          @click="emitSelect(t.id)"
+        >
+          <div
+            v-if="!t.isAvailable"
+            class="scratchGrid__cellLogo"
+            aria-hidden="true"
+          >
+            <img :src="weblogo" alt="" />
           </div>
-        </template>
-      </button>
+
+          <!-- 可選格 -->
+          <template v-if="t.isAvailable">
+            <div class="scratchGrid__badge" v-if="t.isActive">已選擇</div>
+
+            <div class="scratchGrid__ticketNo"></div>
+
+            <div class="scratchGrid__circle" aria-hidden="true">
+              <span class="scratchGrid__circleCore">
+                <img :src="weblogo" alt="" class="scratchGrid__circleLogo" />
+              </span>
+            </div>
+          </template>
+
+          <!-- 已刮過 / 不可選 -->
+          <template v-else>
+            <div class="scratchGrid__num">
+              {{ t.revealedNumber ?? t.ticketNumber }}
+            </div>
+          </template>
+        </button>
+      </template>
     </div>
   </section>
 </template>
@@ -75,6 +91,7 @@ type TicketItem = {
 const props = defineProps<{
   cards: TicketItem[];
   activeCards: Array<string | number>;
+  totalTickets?: number;
 }>();
 
 const emit = defineEmits<{
@@ -85,33 +102,52 @@ const activeCardSet = computed(() => {
   return new Set((props.activeCards ?? []).map((id) => String(id)));
 });
 
-const normalizedCards = computed(() => {
+const gridCells = computed(() => {
   const arr = Array.isArray(props.cards) ? props.cards : [];
 
-  return arr
-    .map((t) => {
-      const status = String(t.status ?? '').toUpperCase();
-      const id = String(t.id ?? '');
-      const ticketNumber = Number(t.ticketNumber ?? 0) || 0;
+  // Determine grid size: prefer explicit totalTickets, fall back to max ticketNumber in data
+  const maxFromData = arr.reduce((max, t) => Math.max(max, Number(t.ticketNumber ?? 0) || 0), 0);
+  const size = (props.totalTickets && props.totalTickets > 0) ? props.totalTickets : maxFromData;
 
-      return {
-        ...t,
-        id,
-        ticketNumber,
-        isAvailable: status === 'AVAILABLE',
-        isActive: activeCardSet.value.has(id),
-      };
-    })
-    .sort((a, b) => a.ticketNumber - b.ticketNumber);
+  if (size <= 0) return [];
+
+  // Build a fixed-size array so each ticketNumber always occupies the same DOM slot
+  const grid: ({
+    id: string;
+    ticketNumber: number;
+    isAvailable: boolean;
+    isActive: boolean;
+    revealedNumber?: number | null;
+    status: string;
+  } | null)[] = new Array(size).fill(null);
+
+  arr.forEach((t) => {
+    const ticketNumber = Number(t.ticketNumber ?? 0) || 0;
+    const idx = ticketNumber - 1;
+    if (idx < 0 || idx >= size) return;
+
+    const status = String(t.status ?? '').toUpperCase();
+    const id = String(t.id ?? '');
+
+    grid[idx] = {
+      ...t,
+      id,
+      ticketNumber,
+      isAvailable: status === 'AVAILABLE',
+      isActive: activeCardSet.value.has(id),
+    };
+  });
+
+  return grid;
 });
 
-const cellClass = (t: (typeof normalizedCards.value)[number]) => ({
+const cellClass = (t: NonNullable<(typeof gridCells.value)[number]>) => ({
   'is-available': t.isAvailable,
   'is-scratched': !t.isAvailable,
   'is-active': t.isActive,
 });
 
-const getCellTitle = (t: (typeof normalizedCards.value)[number]) => {
+const getCellTitle = (t: NonNullable<(typeof gridCells.value)[number]>) => {
   if (!t.isAvailable) return '已刮過 / 不可選';
   return t.isActive
     ? `第 ${t.ticketNumber} 格，已選擇`

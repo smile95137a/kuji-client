@@ -265,6 +265,7 @@
           v-if="isScratchMode"
           :cards="statusCards"
           :active-cards="activeCards"
+          :total-tickets="detail?.totalPrizes ?? 0"
           @select="handleScratchCardSelect"
         />
 
