@@ -265,7 +265,6 @@
           v-if="isScratchMode"
           :cards="statusCards"
           :active-cards="activeCards"
-          :total-tickets="detail?.totalPrizes ?? 0"
           @select="handleScratchCardSelect"
         />
 
@@ -387,7 +386,8 @@ const kujiId = computed(() => String(route.params.id || ''));
  * ----------------------------- */
 type TicketItem = {
   id: string; //  UUID
-  ticketNumber: number;
+  ticketNumber: number;      // 物理位置（第幾格），用來定位 grid 哪格要更新
+  revealedNumber?: number | null;  // 刮開後顯示的亂數（隨機洗牌），僅作顯示用，不代表格子位置
   status: 'AVAILABLE' | 'DRAWN' | 'RESERVED' | 'LOCKED' | string;
   isDesignatedPrize?: boolean;
 
@@ -1678,30 +1678,46 @@ const handleScratchBatch = async (ticketIds: string[]) => {
   }
 
   const results: DrawResult[] = [];
+  let batchGameMode = '';
 
   for (const ticketId of normalizedTicketIds) {
     if (showWaitingOverlay.value) return;
 
-    const { result, blocked } = await drawScratchTicket(ticketId);
+    const { result, blocked, rawData } = await drawScratchTicket(ticketId);
 
     // 被指定流程 / 等待流程攔截，整批先中止
     if (blocked) return;
 
     if (result) {
       results.push(result);
+      // 從第一筆成功回應取得 gameMode（批次中每張相同）
+      if (!batchGameMode && rawData?.gameMode) {
+        batchGameMode = String(rawData.gameMode).toUpperCase();
+      }
     }
   }
 
   if (!results.length) return;
 
-  const cards = results.map((item) => ({
+  // 依 ticketNumber 排序，讓對話框順序與格子位置一致（spec 要求）
+  const sortedResults = [...results].sort(
+    (a, b) => Number(a.ticketNumber ?? 0) - Number(b.ticketNumber ?? 0),
+  );
+
+  // spec：SCRATCH_STORE / RANDOM 模式下前端完全不需要讀 revealedNumber
+  // 只有 SCRATCH_PLAYER 模式才在卡片底部顯示 revealedNumber 供玩家比對大獎號碼
+  const isScratchPlayerMode = batchGameMode === 'SCRATCH_PLAYER';
+
+  const cards = sortedResults.map((item) => ({
     imageSrc: item.prizeImageUrl || '',
     imageAlt: item.prizeName || 'scratch prize',
     idleText: '刮開看看，抽到什麼賞？',
     revealText: item.prizeName ?? '銘謝惠顧',
     threshold: 45,
     grade: item.prizeLevel,
-    revealedNumber: item.revealedNumber ?? null,
+    // 只有 SCRATCH_PLAYER 模式才傳 revealedNumber；
+    // SCRATCH_STORE 傳 null，確保底層顯示獎品圖片而非亂數
+    revealedNumber: isScratchPlayerMode ? (item.revealedNumber ?? null) : null,
   }));
   overlay.open();
   activeCards.value = [];
@@ -1739,8 +1755,12 @@ const handleScratch = async (ticketIdOverride?: string) => {
     return;
   }
 
-  const { result, blocked } = await drawScratchTicket(String(selectedTicketId));
+  const { result, blocked, rawData } = await drawScratchTicket(String(selectedTicketId));
   if (blocked || !result) return;
+
+  // spec：SCRATCH_STORE 模式下不應顯示 revealedNumber，只有 SCRATCH_PLAYER 才需要
+  const isScratchPlayerMode =
+    String(rawData?.gameMode ?? '').toUpperCase() === 'SCRATCH_PLAYER';
 
   overlay.open();
   activeCards.value = [];
@@ -1753,7 +1773,7 @@ const handleScratch = async (ticketIdOverride?: string) => {
       revealText: result.prizeName ?? '銘謝惠顧',
       threshold: 45,
       grade: result.prizeLevel,
-      revealedNumber: result.revealedNumber ?? null,
+      revealedNumber: isScratchPlayerMode ? (result.revealedNumber ?? null) : null,
     });
 
     await ichibanResultDialog({
