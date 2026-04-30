@@ -26,7 +26,7 @@
     </div>
 
     <div class="ichibanDetail__metaRow">
-      <span class="ichibanDetail__metaKey">獎品</span>
+      <span class="ichibanDetail__metaKey">{{ prizeLabel }}</span>
       <span class="ichibanDetail__metaVal">
         剩餘
         <NumberFormatter :number="remainingPrizes" locale="zh-TW" />
@@ -36,14 +36,13 @@
     </div>
 
     <div class="ichibanDetail__metaRow">
-      <span class="ichibanDetail__metaKey">多抽</span>
-      <span class="ichibanDetail__metaVal">
-        <template v-if="!allowMultiDraw">不支援</template>
-        <template v-else-if="multiDrawOptions.length">
-          支援：{{ multiDrawOptions.join('、') }} 連
-        </template>
-        <template v-else>支援（方案準備中）</template>
-      </span>
+      <span class="ichibanDetail__metaKey">支付</span>
+      <span class="ichibanDetail__metaVal">{{ paymentTypeText }}</span>
+    </div>
+
+    <div v-if="freeDrawThresholdText" class="ichibanDetail__metaRow">
+      <span class="ichibanDetail__metaKey">免費抽門檻</span>
+      <span class="ichibanDetail__metaVal">{{ freeDrawThresholdText }}</span>
     </div>
 
     <div class="ichibanDetail__metaRow">
@@ -88,17 +87,37 @@ const statusText = computed(
   () => props.detail?.statusName || props.detail?.status || '-',
 );
 
-const remainingPrizes = computed(
-  () => Number(props.detail?.remainingPrizes ?? 0) || 0,
+const isScratchMode = computed(
+  () => String(props.detail?.playMode ?? '').toUpperCase() === 'SCRATCH_MODE',
 );
-const totalPrizes = computed(() => Number(props.detail?.totalPrizes ?? 0) || 0);
 
-const allowMultiDraw = computed(() => !!props.detail?.allowMultiDraw);
-const multiDrawOptions = computed<number[]>(() => {
-  const arr = props.detail?.multiDrawOptions;
-  return Array.isArray(arr)
-    ? arr.filter((n: any) => Number.isFinite(Number(n))).map(Number)
-    : [];
+const remainingPrizes = computed(() => {
+  if (isScratchMode.value) {
+    return Number(props.detail?.remainingDraws ?? props.detail?.remainingPrizes ?? 0) || 0;
+  }
+  return Number(props.detail?.remainingPrizes ?? 0) || 0;
+});
+
+const totalPrizes = computed(() => {
+  if (isScratchMode.value) {
+    return Number(props.detail?.maxDraws ?? props.detail?.totalPrizes ?? 0) || 0;
+  }
+  return Number(props.detail?.totalPrizes ?? 0) || 0;
+});
+
+const prizeLabel = computed(() => (isScratchMode.value ? '抽數' : '獎品'));
+
+const paymentTypeText = computed(() => {
+  const raw = String(props.detail?.paymentType ?? '').toUpperCase();
+  if (raw === 'BONUS') return '紅利';
+  if (raw === 'GOLD') return '金幣';
+  return '-';
+});
+
+const freeDrawThresholdText = computed(() => {
+  const n = Number(props.detail?.freeDrawThreshold ?? NaN);
+  if (!Number.isFinite(n) || n < 1) return '';
+  return `累計 ${n} 抽可觸發`;
 });
 
 const bonusEnabled = computed(() => !!props.detail?.bonusEnabled);

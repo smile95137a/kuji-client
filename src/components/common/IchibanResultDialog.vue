@@ -36,11 +36,11 @@
             </div>
 
             <div class="stat stat--price">
-              <span class="label">共花費</span>
+              <span class="label">共扣款</span>
               <span class="value">
                 <NumberFormatter :number="totalPrice" locale="zh-TW" />
               </span>
-              <span class="unit">元</span>
+              <span class="unit">{{ costTypeLabel || '金幣' }}</span>
             </div>
           </div>
 
@@ -87,6 +87,7 @@ defineProps<{
   remain: number;
   count: number;
   totalPrice: number;
+  costTypeLabel?: string;
   items: any[];
 }>();
 

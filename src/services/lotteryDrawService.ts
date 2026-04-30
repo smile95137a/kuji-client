@@ -16,13 +16,15 @@ export interface DrawReq {
 export interface DrawResult {
   success: boolean;
   ticketId?: string;
-  ticketNumber?: string;           // string，格式如 "042"（非 number）
+  ticketNumber?: string | number;
   revealedNumber?: number | null;  // SCRATCH_MODE 才有值
   prizeId?: string;
   prizeLevel?: string;
   prizeName?: string;
   prizeImageUrl?: string;
   isGrandPrize?: boolean;
+  costType?: 'GOLD' | 'BONUS' | string;
+  paymentType?: 'GOLD' | 'BONUS' | string;
   goldSpent: number;         // 本次扣除金幣
   bonusSpent: number;        // 本次扣除紅利
   remainingGold: number;     // 剩餘金幣（每筆結果都更新）

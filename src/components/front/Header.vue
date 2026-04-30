@@ -198,6 +198,7 @@ import {
   onMounted,
   ref,
   watch,
+  type ComponentPublicInstance,
 } from 'vue';
 
 import { useRouter, useRoute, type RouteLocationRaw } from 'vue-router';
@@ -326,13 +327,22 @@ const megaTo = (b: MegaItem): RouteLocationRaw => {
 
 /** ===== Refs ===== */
 const headerRef = ref<HTMLElement | null>(null);
-const logoRef = ref<HTMLElement | null>(null);
+const logoRef = ref<HTMLElement | ComponentPublicInstance | null>(null);
 const primaryBarInnerRef = ref<HTMLElement | null>(null);
-const firstPrimaryLinkRef = ref<HTMLElement | null>(null);
+const firstPrimaryLinkRef = ref<HTMLElement | ComponentPublicInstance | null>(null);
 
 const setPrimaryLinkRef = (idx: number) => (el: HTMLElement | null) => {
   if (idx !== 0) return;
   firstPrimaryLinkRef.value = el;
+};
+
+const getObservedElement = (
+  el: HTMLElement | ComponentPublicInstance | null | undefined,
+): HTMLElement | null => {
+  if (!el) return null;
+  if (el instanceof HTMLElement) return el;
+  if ((el as any).$el instanceof HTMLElement) return (el as any).$el;
+  return null;
 };
 
 /** ===== Notch (secondary) ===== */
@@ -451,7 +461,7 @@ const getCssPx = (el: HTMLElement, name: string, fallback: number) => {
 
 const updateLogoLeft = () => {
   const headerEl = headerRef.value;
-  const logoEl = logoRef.value;
+  const logoEl = getObservedElement(logoRef.value);
   const barEl = primaryBarInnerRef.value;
   if (!headerEl || !logoEl || !barEl) return;
 
@@ -495,17 +505,22 @@ onMounted(async () => {
   document.fonts?.ready?.then(rafUpdate).catch(() => {});
 
   ro = new ResizeObserver(() => rafUpdate());
-  headerRef.value && ro.observe(headerRef.value);
-  logoRef.value && ro.observe(logoRef.value);
-  primaryBarInnerRef.value && ro.observe(primaryBarInnerRef.value);
-  if (firstPrimaryLinkRef.value) ro.observe(firstPrimaryLinkRef.value);
+  const headerEl = headerRef.value;
+  const logoEl = getObservedElement(logoRef.value);
+  const firstPrimaryLinkEl = getObservedElement(firstPrimaryLinkRef.value);
+
+  if (headerEl) ro.observe(headerEl);
+  if (logoEl) ro.observe(logoEl);
+  if (primaryBarInnerRef.value) ro.observe(primaryBarInnerRef.value);
+  if (firstPrimaryLinkEl) ro.observe(firstPrimaryLinkEl);
 
   rafUpdate();
 });
 
 watch(firstPrimaryLinkRef, async (el) => {
   await nextTick();
-  if (el && ro) ro.observe(el);
+  const observedEl = getObservedElement(el);
+  if (observedEl && ro) ro.observe(observedEl);
   rafUpdate();
 });
 

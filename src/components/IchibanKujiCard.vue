@@ -117,14 +117,22 @@ const resolvedImgSrc = computed(() => {
   return url ? url : demo1;
 });
 
+const isScratchMode = computed(
+  () => String(props.item?.playMode ?? '').toUpperCase() === 'SCRATCH_MODE',
+);
+
 const resolvedRemainingPrizes = computed(() => {
-  const n = props.item?.remainingTickets ?? props.item?.remainingPrizes ?? props.item?.remainingDraws;
-  return ~~n;
+  if (isScratchMode.value) {
+    return ~~(props.item?.remainingDraws ?? props.item?.remainingPrizes ?? 0);
+  }
+  return ~~(props.item?.remainingTickets ?? props.item?.remainingPrizes ?? props.item?.remainingDraws ?? 0);
 });
 
 const resolvedTotalPrizes = computed(() => {
-  const n = props.item?.totalTickets ?? props.item?.totalPrizes ?? props.item?.totalDraws;
-  return ~~n;
+  if (isScratchMode.value) {
+    return ~~(props.item?.maxDraws ?? props.item?.totalDraws ?? props.item?.totalPrizes ?? 0);
+  }
+  return ~~(props.item?.totalTickets ?? props.item?.totalPrizes ?? props.item?.totalDraws ?? 0);
 });
 
 const isSoldOut = computed(() =>

@@ -246,8 +246,8 @@
 
         <ScratchRemainingCounter
           v-if="isScratchMode"
-          :remaining-prizes="detail?.remainingPrizes ?? null"
-          :total-prizes="detail?.totalPrizes ?? null"
+          :remaining-prizes="detail?.remainingDraws ?? null"
+          :total-prizes="detail?.maxDraws ?? null"
           :tickets="statusCards"
           :protection-info="protectionInfo"
           :protection-end-time="session?.protectionEndTime ?? null"
@@ -265,7 +265,7 @@
           v-if="isScratchMode"
           :cards="statusCards"
           :active-cards="activeCards"
-          :total-tickets="detail?.totalPrizes ?? 0"
+          :total-tickets="detail?.maxDraws ?? detail?.totalPrizes ?? 0"
           @select="handleScratchCardSelect"
         />
 
@@ -679,13 +679,6 @@ const prices = computed<PriceItem[]>(() => {
     arr.push({ label, amount: discounted!, unit: '元' });
   }
 
-  const opts = Array.isArray(d.multiDrawOptions) ? d.multiDrawOptions : [];
-  const chosen = opts.length ? opts[0] : null;
-
-  if (d.allowMultiDraw && chosen) {
-    arr.push({ label: `${chosen}連`, amount: per * chosen, unit: '元' });
-  }
-
   return arr;
 });
 
@@ -943,6 +936,50 @@ const handleDraw = async () => {
   isDrawPanelOpen.value = true;
 };
 
+const normalizePaymentType = (value: unknown): 'GOLD' | 'BONUS' => {
+  const normalized = String(value ?? '').toUpperCase();
+  return normalized === 'BONUS' ? 'BONUS' : 'GOLD';
+};
+
+const resolvePaymentTypeFromResults = (
+  results: DrawResult[],
+): 'GOLD' | 'BONUS' => {
+  for (const item of results) {
+    const typed = String((item as any)?.costType ?? (item as any)?.paymentType ?? '').toUpperCase();
+    if (typed === 'GOLD' || typed === 'BONUS') return typed;
+  }
+
+  const totalGoldSpent = results.reduce(
+    (sum, item) => sum + (Number(item?.goldSpent ?? 0) || 0),
+    0,
+  );
+  const totalBonusSpent = results.reduce(
+    (sum, item) => sum + (Number(item?.bonusSpent ?? 0) || 0),
+    0,
+  );
+
+  if (totalBonusSpent > 0 && totalGoldSpent <= 0) return 'BONUS';
+  return normalizePaymentType(detail.value?.paymentType);
+};
+
+const getPaymentLabel = (value: 'GOLD' | 'BONUS') => {
+  return value === 'BONUS' ? '紅利' : '金幣';
+};
+
+const calcTotalSpend = (
+  results: DrawResult[],
+  fallbackCount: number,
+  paymentType: 'GOLD' | 'BONUS',
+) => {
+  const key = paymentType === 'BONUS' ? 'bonusSpent' : 'goldSpent';
+  const apiTotal = results.reduce(
+    (sum, item) => sum + (Number((item as any)?.[key] ?? 0) || 0),
+    0,
+  );
+  if (apiTotal > 0) return apiTotal;
+  return (Number(displayPrice.value ?? 0) || 0) * fallbackCount;
+};
+
 const handleGacha = async () => {
   const ok = await ensureCanDraw();
   if (!ok) return;
@@ -986,8 +1023,9 @@ const handleGacha = async () => {
         });
 
         const drawnCount = drawResults.length;
-        const unitPrice = Number(displayPrice.value ?? 0) || 0;
-        const totalPrice = unitPrice * drawnCount;
+        const paymentType = resolvePaymentTypeFromResults(drawResults);
+        const totalPrice = calcTotalSpend(drawResults, drawnCount, paymentType);
+        const costTypeLabel = getPaymentLabel(paymentType);
 
         const beforeRemain = Math.max(
           0,
@@ -1000,6 +1038,7 @@ const handleGacha = async () => {
           remain,
           count: drawnCount,
           totalPrice,
+          costTypeLabel,
           items: drawResults,
         });
 
@@ -1393,8 +1432,9 @@ const handleExchange = async (payload: {
           if (!tearResult) return;
 
           const drawnCount = drawResults.length;
-          const unitPrice = Number(displayPrice.value ?? 0) || 0;
-          const totalPrice = unitPrice * drawnCount;
+          const paymentType = resolvePaymentTypeFromResults(drawResults);
+          const totalPrice = calcTotalSpend(drawResults, drawnCount, paymentType);
+          const costTypeLabel = getPaymentLabel(paymentType);
           const beforeRemain = Math.max(
             0,
             Number(
@@ -1410,6 +1450,7 @@ const handleExchange = async (payload: {
             remain,
             count: drawnCount,
             totalPrice,
+            costTypeLabel,
             items: drawResults,
           });
 
@@ -1750,13 +1791,15 @@ const handleScratchBatch = async (ticketIds: string[]) => {
       title: 'STARDO・刮刮樂',
       cards,
     });
+    const paymentType = resolvePaymentTypeFromResults(results);
     await ichibanResultDialog({
       remain: Math.max(
         0,
         Number(detail.value?.remainingDraws ?? 0) - results.length,
       ),
       count: results.length,
-      totalPrice: Number(displayPrice.value ?? 0) * results.length,
+      totalPrice: calcTotalSpend(results, results.length, paymentType),
+      costTypeLabel: getPaymentLabel(paymentType),
       items: results,
     });
 
@@ -1799,10 +1842,12 @@ const handleScratch = async (ticketIdOverride?: string) => {
       revealedNumber: isScratchPlayerMode ? (result.revealedNumber ?? null) : null,
     });
 
+    const paymentType = resolvePaymentTypeFromResults([result]);
     await ichibanResultDialog({
       remain: Math.max(0, Number(detail.value?.remainingDraws ?? 0) - 1),
       count: 1,
-      totalPrice: displayPrice.value,
+      totalPrice: calcTotalSpend([result], 1, paymentType),
+      costTypeLabel: getPaymentLabel(paymentType),
       items: [result],
     });
 

@@ -7,6 +7,7 @@ export interface IchibanResultOptions {
   remain: number;
   count: number;
   totalPrice: number;
+  costTypeLabel?: string;
   items: any[];
 }
 
