@@ -10,20 +10,26 @@ interface RequestData {
 /** 出貨請求（同一家店的獎品） */
 export interface PrizeBoxShipReq {
   prizeBoxIds: string[];
-  shippingMethod: string;       // 配送方式代碼，如 HOME_DELIVERY、SEVEN_ELEVEN、FAMILY_MART
-  shippingMethodId: string;     // 配送方式 UUID
-  shippingFee: number;          // 運費
+  shippingMethod: string;
+  shippingMethodId?: string | null;
+  shippingFee?: number | null;
   recipientName: string;
   recipientPhone: string;
-  recipientAddress: string;     // 完整地址字串（城市＋鄉鎮區＋詳細地址）
+  recipientAddress?: string | null;
+  storeCode?: string | null;
+  storeName?: string | null;
+  storeAddress?: string | null;
+  remark?: string | null;
+  userAddressId?: string | null;
 }
 
-/** 出貨結果 */
-export interface ShipResultRes {
-  orderId?: string;
-  orderCode?: string;
-  status?: string;
-  message?: string;
+export interface ShipOrderResult {
+  orderId: string;
+  orderNumber: string;
+  shippingFee: number;
+  paymentStatus: string;
+  paymentUrl: string | null;
+  gatewayTradeNo: string | null;
 }
 
 /** 賞品盒單筆獎品 */
@@ -76,7 +82,7 @@ export const getPrizeBoxSummaryByStore = async (): Promise<
  */
 export const shipPrizeBoxItems = async (
   req: PrizeBoxShipReq,
-): Promise<ApiResponse<ShipResultRes>> => {
+): Promise<ApiResponse<ShipOrderResult[]>> => {
   try {
     const res = await api.post(`${basePath}/ship`, req ?? null);
     return res.data;

@@ -265,6 +265,7 @@
           v-if="isScratchMode"
           :cards="statusCards"
           :active-cards="activeCards"
+          :total-tickets="detail?.totalPrizes ?? 0"
           @select="handleScratchCardSelect"
         />
 
@@ -772,6 +773,18 @@ const ticketNoById = computed<Record<string, number>>(() => {
   return map;
 });
 
+const ticketIdByNo = computed<Record<number, string>>(() => {
+  const map: Record<number, string> = {};
+  const arr = statusCards.value || [];
+  for (const t of arr) {
+    const ticketNumber = Number((t as any).ticketNumber ?? 0);
+    const id = String((t as any).id || '');
+    if (!ticketNumber || !id) continue;
+    map[ticketNumber] = id;
+  }
+  return map;
+});
+
 const activeCardNumbers = computed<number[]>(() => {
   return activeCards.value
     .map((id) => ticketNoById.value[String(id)])
@@ -836,7 +849,9 @@ const toggleCardSelection = (ticketId: string) => {
  */
 const handleCardSelect = async (ticketId: string) => {
   if (isScratchMode.value) {
-    await handleScratchCardSelect(ticketId);
+    await handleScratchCardSelect(
+      Number(ticketNoById.value[String(ticketId)] ?? 0),
+    );
   } else {
     await openDrawPanelFromCard(ticketId);
   }
@@ -845,13 +860,21 @@ const handleCardSelect = async (ticketId: string) => {
 /**
  * 刮刮樂格子點擊：支援多選，每次 toggle 該格，面板跟著顯示/隱藏
  */
-const handleScratchCardSelect = async (ticketId: string) => {
+const handleScratchCardSelect = async (ticketNumber: number) => {
   const ok = await ensureCanDraw();
   if (!ok) return;
 
   if (showWaitingOverlay.value) return;
 
-  const normalizedTicketId = String(ticketId);
+  const normalizedTicketNumber = Number(ticketNumber ?? 0);
+  if (!Number.isFinite(normalizedTicketNumber) || normalizedTicketNumber <= 0) {
+    return;
+  }
+
+  const normalizedTicketId = String(
+    ticketIdByNo.value[normalizedTicketNumber] ?? '',
+  );
+  if (!normalizedTicketId) return;
 
   if (!availableTicketIds.value.includes(normalizedTicketId)) return;
 

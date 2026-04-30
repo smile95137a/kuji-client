@@ -20,17 +20,17 @@
 
     <div class="scratchGrid__grid">
       <button
-        v-for="t in normalizedCards"
-        :key="t.ticketNumber"
+        v-for="(t, index) in gridCells"
+        :key="index"
         type="button"
         class="scratchGrid__cell"
         :class="cellClass(t)"
-        :disabled="!t.isAvailable"
+        :disabled="!t?.isAvailable"
         :title="getCellTitle(t)"
-        @click="emitSelect(t.id)"
+        @click="t && emitSelect(t.ticketNumber)"
       >
         <div
-          v-if="!t.isAvailable"
+          v-if="!t?.isAvailable"
           class="scratchGrid__cellLogo"
           aria-hidden="true"
         >
@@ -38,10 +38,10 @@
         </div>
 
         <!-- 可選格 -->
-        <template v-if="t.isAvailable">
+        <template v-if="t?.isAvailable">
           <div class="scratchGrid__badge" v-if="t.isActive">已選擇</div>
 
-          <div class="scratchGrid__ticketNo"></div>
+          <div class="scratchGrid__ticketNo">{{ t.ticketNumber }}</div>
 
           <div class="scratchGrid__circle" aria-hidden="true">
             <span class="scratchGrid__circleCore">
@@ -53,7 +53,7 @@
         <!-- 已刮過 / 不可選 -->
         <template v-else>
           <div class="scratchGrid__num">
-            {{ t.revealedNumber }}
+            {{ t?.revealedNumber ?? '' }}
           </div>
         </template>
       </button>
@@ -72,20 +72,28 @@ type TicketItem = {
   revealedNumber?: number | null;
 };
 
+type NormalizedTicketItem = Omit<TicketItem, 'id' | 'ticketNumber'> & {
+  id: string;
+  ticketNumber: number;
+  isAvailable: boolean;
+  isActive: boolean;
+};
+
 const props = defineProps<{
   cards: TicketItem[];
   activeCards: Array<string | number>;
+  totalTickets?: number | null;
 }>();
 
 const emit = defineEmits<{
-  (e: 'select', ticketId: string): void;
+  (e: 'select', ticketNumber: number): void;
 }>();
 
 const activeCardSet = computed(() => {
   return new Set((props.activeCards ?? []).map((id) => String(id)));
 });
 
-const normalizedCards = computed(() => {
+const normalizedCards = computed<NormalizedTicketItem[]>(() => {
   const arr = Array.isArray(props.cards) ? props.cards : [];
   return arr
     .map((t) => {
@@ -103,20 +111,43 @@ const normalizedCards = computed(() => {
     .sort((a, b) => a.ticketNumber - b.ticketNumber);
 });
 
-const cellClass = (t: (typeof normalizedCards.value)[number]) => ({
-  'is-available': t.isAvailable,
-  'is-scratched': !t.isAvailable,
-  'is-active': t.isActive,
+const gridCells = computed<Array<NormalizedTicketItem | null>>(() => {
+  const sizeFromProp = Number(props.totalTickets ?? 0);
+  const sizeFromCards = normalizedCards.value.reduce(
+    (max, t) => Math.max(max, t.ticketNumber),
+    0,
+  );
+  const size = Number.isFinite(sizeFromProp) && sizeFromProp > 0
+    ? sizeFromProp
+    : sizeFromCards;
+
+  const grid: Array<NormalizedTicketItem | null> = new Array(size).fill(null);
+
+  for (const ticket of normalizedCards.value) {
+    const index = ticket.ticketNumber - 1;
+    if (index >= 0 && index < grid.length) {
+      grid[index] = ticket;
+    }
+  }
+
+  return grid;
 });
 
-const getCellTitle = (t: (typeof normalizedCards.value)[number]) => {
+const cellClass = (t: (typeof gridCells.value)[number]) => ({
+  'is-available': t?.isAvailable === true,
+  'is-scratched': !t?.isAvailable,
+  'is-active': t?.isActive === true,
+});
+
+const getCellTitle = (t: (typeof gridCells.value)[number]) => {
+  if (!t) return '已刮過 / 不可選';
   if (!t.isAvailable) return '已刮過 / 不可選';
   return t.isActive
     ? `第 ${t.ticketNumber} 格，已選擇`
     : `點選第 ${t.ticketNumber} 格加入本次刮刮`;
 };
 
-const emitSelect = (id: string) => emit('select', String(id));
+const emitSelect = (ticketNumber: number) => emit('select', ticketNumber);
 </script>
 <style scoped lang="scss">
 $wine-base: #5c0505;

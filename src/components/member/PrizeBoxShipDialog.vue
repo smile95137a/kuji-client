@@ -2,9 +2,16 @@
 <template>
   <Teleport to="body">
     <div v-if="visible" class="ship-dialog__backdrop" @click.self="tryClose">
-      <dialog class="ship-dialog" open>
+      <div
+        ref="modalRef"
+        class="ship-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="ship-dialog-title"
+        tabindex="-1"
+      >
         <header class="ship-dialog__header">
-          <h2 class="ship-dialog__title">確認出貨</h2>
+          <h2 id="ship-dialog-title" class="ship-dialog__title">確認出貨</h2>
           <button class="ship-dialog__close" type="button" @click="tryClose" aria-label="關閉">✕</button>
         </header>
 
@@ -67,7 +74,9 @@
                 />
                 <div class="ship-dialog__shipping-info">
                   <span class="ship-dialog__shipping-name">{{ method.name }}</span>
-                  <span class="ship-dialog__shipping-desc">{{ method.description }}</span>
+                  <span class="ship-dialog__shipping-desc">
+                    {{ method.provider || method.code }}
+                  </span>
                 </div>
                 <span class="ship-dialog__shipping-fee">NT$ {{ method.fee }}</span>
               </label>
@@ -124,47 +133,94 @@
               </div>
             </div>
 
-            <!-- 地址 -->
-            <div class="ship-dialog__row">
-              <div class="ship-dialog__field ship-dialog__field--sm">
-                <label class="ship-dialog__label" for="ship-city">縣市 <span class="req">*</span></label>
+            <template v-if="isHomeDelivery">
+              <div class="ship-dialog__row">
+                <div class="ship-dialog__field ship-dialog__field--sm">
+                  <label class="ship-dialog__label" for="ship-city">縣市 <span class="req">*</span></label>
+                  <input
+                    id="ship-city"
+                    class="ship-dialog__input"
+                    type="text"
+                    v-model.trim="form.city"
+                    placeholder="縣市"
+                  />
+                </div>
+                <div class="ship-dialog__field ship-dialog__field--sm">
+                  <label class="ship-dialog__label" for="ship-district">鄉鎮區 <span class="req">*</span></label>
+                  <input
+                    id="ship-district"
+                    class="ship-dialog__input"
+                    type="text"
+                    v-model.trim="form.district"
+                    placeholder="鄉鎮區"
+                  />
+                </div>
+                <div class="ship-dialog__field ship-dialog__field--sm">
+                  <label class="ship-dialog__label" for="ship-zip">郵遞區號</label>
+                  <input
+                    id="ship-zip"
+                    class="ship-dialog__input"
+                    type="text"
+                    v-model.trim="form.zipCode"
+                    placeholder="郵遞區號"
+                  />
+                </div>
+              </div>
+              <div class="ship-dialog__field">
+                <label class="ship-dialog__label" for="ship-address">詳細地址 <span class="req">*</span></label>
                 <input
-                  id="ship-city"
+                  id="ship-address"
                   class="ship-dialog__input"
                   type="text"
-                  v-model.trim="form.city"
-                  placeholder="縣市"
+                  v-model.trim="form.address"
+                  placeholder="路/街/巷/弄/號"
                 />
               </div>
-              <div class="ship-dialog__field ship-dialog__field--sm">
-                <label class="ship-dialog__label" for="ship-district">鄉鎮區 <span class="req">*</span></label>
+            </template>
+
+            <template v-else-if="isConvenienceStorePickup">
+              <div class="ship-dialog__row">
+                <div class="ship-dialog__field ship-dialog__field--sm">
+                  <label class="ship-dialog__label" for="ship-store-code">門市代碼 <span class="req">*</span></label>
+                  <input
+                    id="ship-store-code"
+                    class="ship-dialog__input"
+                    type="text"
+                    v-model.trim="form.storeCode"
+                    placeholder="例如 131415"
+                  />
+                </div>
+                <div class="ship-dialog__field">
+                  <label class="ship-dialog__label" for="ship-store-name">門市名稱 <span class="req">*</span></label>
+                  <input
+                    id="ship-store-name"
+                    class="ship-dialog__input"
+                    type="text"
+                    v-model.trim="form.storeName"
+                    placeholder="例如 7-11 台北門市"
+                  />
+                </div>
+              </div>
+              <div class="ship-dialog__field">
+                <label class="ship-dialog__label" for="ship-store-address">門市地址 <span class="req">*</span></label>
                 <input
-                  id="ship-district"
+                  id="ship-store-address"
                   class="ship-dialog__input"
                   type="text"
-                  v-model.trim="form.district"
-                  placeholder="鄉鎮區"
+                  v-model.trim="form.storeAddress"
+                  placeholder="請輸入門市地址"
                 />
               </div>
-              <div class="ship-dialog__field ship-dialog__field--sm">
-                <label class="ship-dialog__label" for="ship-zip">郵遞區號</label>
-                <input
-                  id="ship-zip"
-                  class="ship-dialog__input"
-                  type="text"
-                  v-model.trim="form.zipCode"
-                  placeholder="郵遞區號"
-                />
-              </div>
-            </div>
+            </template>
+
             <div class="ship-dialog__field">
-              <label class="ship-dialog__label" for="ship-address">詳細地址 <span class="req">*</span></label>
+              <label class="ship-dialog__label" for="ship-remark">備註</label>
               <input
-                id="ship-address"
+                id="ship-remark"
                 class="ship-dialog__input"
                 type="text"
-                v-model.trim="form.address"
-                placeholder="路/街/巷/弄/號"
+                v-model.trim="form.remark"
+                placeholder="例如 白天收件"
               />
             </div>
           </section>
@@ -213,13 +269,13 @@
             {{ isSubmitting ? '出貨中…' : `確認出貨（${totalCount} 件）` }}
           </button>
         </footer>
-      </dialog>
+      </div>
     </div>
   </Teleport>
 </template>
 
 <script setup lang="ts">
-import { computed, watch } from 'vue';
+import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { usePrizeBoxShip, type PrizeBoxItem } from '@/composables/usePrizeBoxShip';
 
 const props = defineProps<{
@@ -231,6 +287,8 @@ const emit = defineEmits<{
   (e: 'close'): void;
   (e: 'success'): void;
 }>();
+
+const modalRef = ref<HTMLElement | null>(null);
 
 // composable
 const itemsRef = computed(() => props.items);
@@ -249,18 +307,42 @@ const {
   shippingMethodsLoading,
   selectedShippingId,
   selectedShipping,
+  isHomeDelivery,
+  isConvenienceStorePickup,
 } = usePrizeBoxShip(itemsRef);
 
-// 初始化：每次 dialog 打開時重載地址本
+let previousBodyOverflow = '';
+
 watch(
   () => props.visible,
-  async (v) => {
-    if (v) {
-      error.value = '';
-      await init();
-    }
+  async (visible, _, onCleanup) => {
+    if (!visible) return;
+
+    previousBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        tryClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeydown);
+    await init();
+    await nextTick();
+    modalRef.value?.focus();
+
+    onCleanup(() => {
+      window.removeEventListener('keydown', handleKeydown);
+      document.body.style.overflow = previousBodyOverflow;
+    });
   },
 );
+
+onBeforeUnmount(() => {
+  document.body.style.overflow = previousBodyOverflow;
+});
 
 const totalCount = computed(() => props.items.length);
 
