@@ -556,14 +556,15 @@ const isScratchMode = computed(() => {
   return m === 'SCRATCH_MODE' || m === 'SCRATCH_CARD_MODE';
 });
 
-/** 真正的扭蛋（加權隨機）：category=GACHA 且沒有籤位制 playMode */
+/** 真正的扭蛋（加權隨機）：category=GACHA 且不是刮刮模式 */
 const isGacha = computed(() => {
   const category = String(detail.value?.category ?? '').toUpperCase();
   const m = String(detail.value?.playMode ?? '').toUpperCase();
-  // 有籤位制 playMode 就不算扭蛋（走 draw 路由）
-  const isTicketBased =
-    m === 'LOTTERY_MODE' || m === 'SCRATCH_MODE' || m === 'SCRATCH_CARD_MODE';
-  return category === 'GACHA' && !isTicketBased;
+  return (
+    category === 'GACHA' &&
+    m !== 'SCRATCH_MODE' &&
+    m !== 'SCRATCH_CARD_MODE'
+  );
 });
 
 /** 扭蛋次數（1-10） */
@@ -1366,11 +1367,7 @@ const handleExchange = async (payload: {
             remain,
             count: drawnCount,
             totalPrice,
-            items: drawResults.map((r) => ({
-              id: r.prizeId ?? '',
-              name: r.prizeName ?? '',
-              image: r.prizeImageUrl ?? '',
-            })),
+            items: drawResults,
           });
 
           // 免單彈窗

@@ -1,6 +1,6 @@
 // src/composables/useTransactionHistory.ts
 import { ref, computed } from 'vue';
-import { getMyWalletTransactions } from '@/services/walletService';
+import { getMyConsumptionRecords } from '@/services/consumptionRecordService';
 
 export type WalletTransactionType =
   | 'RECHARGE'
@@ -93,7 +93,7 @@ export function useTransactionHistory() {
         sortOrder: 'DESC',
       };
 
-      const res = await getMyWalletTransactions(req);
+      const res = await getMyConsumptionRecords(req);
 
       if (res?.success) {
         const data = res.data as any;

@@ -15,11 +15,13 @@ export interface IchibanResultCardDialogOptions {
   /** 本次總金額 */
   totalPrice: number;
 
-  /** 抽到的獎品列表 */
+  /** 抽到的獎品列表（直接傳 DrawResult[]） */
   items: {
-    id: string;
-    name: string;
-    image: string;
+    prizeId?: string;
+    prizeName?: string;
+    prizeImageUrl?: string;
+    prizeLevel?: string;
+    [key: string]: any;
   }[];
 }
 
