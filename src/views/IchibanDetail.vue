@@ -1503,9 +1503,9 @@ const reload = async () => {
 
         // ✅ 新增：取得 designatedWinningNumbers（刮刮樂大獎中獎號碼）
         designatedWinningNumbers.value = Array.isArray(
-          data?.designatedNumbers,
+          data?.designatedWinningNumbers,
         )
-          ? (data.designatedNumbers as DesignatedWinningNumber[])
+          ? (data.designatedWinningNumbers as DesignatedWinningNumber[])
           : [];
       },
       onFail: async () => {
