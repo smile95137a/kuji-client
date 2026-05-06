@@ -67,23 +67,23 @@
 
       <div class="orderDetail__hr"></div>
 
-      <!-- 金額區（後端目前沒有金額欄位，先顯示 -，不讓 UI 壞） -->
+      <!-- 金額區 -->
       <div class="orderDetail__moneyRow">
         <div class="orderDetail__moneyItem">
           <p class="orderDetail__k">商品小計</p>
-          <p class="orderDetail__v">-</p>
+          <p class="orderDetail__v">NT$ {{ Number(order?.subtotal ?? 0).toLocaleString() }}</p>
         </div>
         <div class="orderDetail__moneyItem">
           <p class="orderDetail__k">運費</p>
-          <p class="orderDetail__v">-</p>
+          <p class="orderDetail__v">NT$ {{ Number(order?.shippingFee ?? 0).toLocaleString() }}</p>
         </div>
         <div class="orderDetail__moneyItem">
           <p class="orderDetail__k">折扣</p>
-          <p class="orderDetail__v">-</p>
+          <p class="orderDetail__v">{{ order?.discount ? `-NT$ ${Number(order.discount).toLocaleString()}` : '-' }}</p>
         </div>
         <div class="orderDetail__moneyItem orderDetail__moneyItem--total">
           <p class="orderDetail__k">總金額</p>
-          <p class="orderDetail__v">-</p>
+          <p class="orderDetail__v">NT$ {{ Number(order?.totalAmount ?? 0).toLocaleString() }}</p>
         </div>
       </div>
     </div>

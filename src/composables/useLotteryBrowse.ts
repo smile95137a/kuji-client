@@ -5,6 +5,7 @@ import {
   type BrowseQueryReq,
   type BrowseCondition,
 } from '@/services/lotteryBrowseService';
+import type { PageResult } from '@/types/api';
 
 export function useLotteryBrowse() {
   const items = ref<any[]>([]);
@@ -12,10 +13,12 @@ export function useLotteryBrowse() {
   const error = ref<string | null>(null);
 
   const pagination = reactive({
-    page: 0,
+    page: 1,
     size: 12,
-    totalPages: 0,
-    totalElements: 0,
+    total: 0,
+    totalPages: 1,
+    hasNext: false,
+    hasPrevious: false,
   });
 
   const filters = ref<BrowseCondition>({});
@@ -31,18 +34,14 @@ export function useLotteryBrowse() {
       };
       const res = await queryBrowseLotteries(req);
       if (res?.success && res.data) {
-        const data = res.data as any;
-        // Support both paginated (content array) and plain array responses
-        if (Array.isArray(data)) {
-          items.value = data;
-          pagination.totalElements = data.length;
-          pagination.totalPages = 1;
-        } else {
-          items.value = data.content ?? [];
-          pagination.totalElements = data.totalElements ?? data.content?.length ?? 0;
-          pagination.totalPages = data.totalPages ?? 1;
-        }
-        pagination.page = page;
+        const data = res.data as PageResult<any>;
+        items.value = data.data ?? [];
+        pagination.page = data.page ?? page;
+        pagination.size = data.size ?? pagination.size;
+        pagination.total = data.total ?? 0;
+        pagination.totalPages = data.totalPages ?? 1;
+        pagination.hasNext = Boolean(data.hasNext);
+        pagination.hasPrevious = Boolean(data.hasPrevious);
       }
     } catch (e: any) {
       error.value = e?.message ?? '載入失敗';
@@ -53,17 +52,18 @@ export function useLotteryBrowse() {
 
   async function applyFilter(newFilters: BrowseCondition) {
     filters.value = { ...newFilters };
-    await load(0);
+    pagination.page = 1;
+    await load(1);
   }
 
   async function nextPage() {
-    if (pagination.page < pagination.totalPages - 1) {
+    if (pagination.hasNext && pagination.page < pagination.totalPages) {
       await load(pagination.page + 1);
     }
   }
 
   async function prevPage() {
-    if (pagination.page > 0) {
+    if (pagination.hasPrevious && pagination.page > 1) {
       await load(pagination.page - 1);
     }
   }

@@ -16,17 +16,16 @@
       </div>
     </div>
 
-    <p v-else class="bizHours__fallback">營業時間：請洽店家</p>
+    <p v-else class="bizHours__fallback">{{ fallbackText }}</p>
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed } from 'vue';
-
-type DayHours = { open: string; close: string; isClosed: boolean };
+import type { StoreBusinessHoursDay } from '@/services/storeService';
 
 const props = defineProps<{
-  businessHours?: Record<string, DayHours> | null;
+  businessHours?: Record<string, StoreBusinessHoursDay> | string | null;
 }>();
 
 const DAY_KEYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
@@ -48,7 +47,11 @@ const todayIndex = computed(() => {
 
 const weekRows = computed(() =>
   DAY_KEYS.map((key) => {
-    const h = props.businessHours?.[key];
+    const parsedHours =
+      typeof props.businessHours === 'object' && props.businessHours !== null
+        ? props.businessHours
+        : null;
+    const h = parsedHours?.[key];
     return {
       key,
       label: DAY_LABELS[key],
@@ -61,10 +64,18 @@ const weekRows = computed(() =>
 
 const hasParsedHours = computed(
   () =>
-    !!props.businessHours &&
     typeof props.businessHours === 'object' &&
+    props.businessHours !== null &&
     Object.keys(props.businessHours).length > 0,
 );
+
+const fallbackText = computed(() => {
+  if (typeof props.businessHours === 'string' && props.businessHours.trim()) {
+    return `營業時間：${props.businessHours}`;
+  }
+
+  return '營業時間：請洽店家';
+});
 </script>
 
 <style scoped lang="scss">

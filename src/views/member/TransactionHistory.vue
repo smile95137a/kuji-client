@@ -79,9 +79,9 @@
             <tr>
               <th>日期</th>
               <th>類型</th>
-              <th>幣別</th>
-              <th>金額</th>
-              <th>餘額</th>
+              <th>賞品主題</th>
+              <th>金幣消費</th>
+              <th>紅利消費</th>
               <th>說明</th>
             </tr>
           </thead>
@@ -89,18 +89,22 @@
             <tr v-for="row in items" :key="row.id">
               <td>{{ row.createdAtText }}</td>
               <td>{{ row.typeName || row.type }}</td>
-              <td>{{ row.coinType === 'GOLD' ? '金幣' : '紅利' }}</td>
+              <td class="transactionHistory__lottery">{{ row.lotteryTitle || '-' }}</td>
               <td>
-                <span
-                  :class="{
-                    'transactionHistory__money--pos': row.isIncome,
-                    'transactionHistory__money--neg': !row.isIncome,
-                  }"
-                >
-                  {{ row.isIncome ? '+' : '' }}{{ row.amount.toLocaleString() }}
+                <span v-if="row.goldAmount > 0" class="transactionHistory__money--neg">
+                  -{{ row.goldAmount.toLocaleString() }}
                 </span>
+                <span v-else-if="row.isIncome && row.goldAmount === 0 && row.bonusAmount === 0" class="transactionHistory__money--pos">
+                  +{{ row.amount.toLocaleString() }}
+                </span>
+                <span v-else>-</span>
               </td>
-              <td>{{ row.balanceAfter.toLocaleString() }}</td>
+              <td>
+                <span v-if="row.bonusAmount > 0" class="transactionHistory__money--neg">
+                  -{{ row.bonusAmount.toLocaleString() }}
+                </span>
+                <span v-else>-</span>
+              </td>
               <td class="transactionHistory__desc">{{ row.description || '-' }}</td>
             </tr>
 
@@ -135,7 +139,11 @@
       <div class="transactionHistory__pagination">
         <BasePagination
           v-model:page="page"
+          :total="totalItems"
+          :size="size"
           :total-pages="totalPages"
+          :has-next="hasNext"
+          :has-previous="hasPrevious"
           :max-visible="5"
           @update:page="goToPage"
         />
@@ -154,7 +162,10 @@ const {
   items,
   isLoading,
   totalItems,
+  hasNext,
+  hasPrevious,
   totalPages,
+  size,
   page,
   typeFilter,
   dateStart,

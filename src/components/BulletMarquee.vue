@@ -1,32 +1,44 @@
 <template>
   <div class="bullet-marquee">
     <div class="bullet-marquee__inner" ref="trackRef">
-      <!-- 只跑你給的 messages，不幫你複製 -->
       <div
-        v-for="(msg, index) in messagesToShow"
+        v-for="(item, index) in itemsToShow"
         :key="index"
         class="bullet-marquee__item"
+        :style="{
+          backgroundColor: item.bgColor ?? undefined,
+          color: item.textColor ?? undefined,
+          borderColor: item.bgColor ?? undefined,
+        }"
       >
-        {{ msg }}
+        {{ item.content }}
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, nextTick, watch } from 'vue';
 import { gsap } from 'gsap';
 
+export interface MarqueeItem {
+  content: string;
+  bgColor?: string | null;
+  textColor?: string | null;
+}
+
 const props = defineProps<{
-  messages: string[];
+  items?: MarqueeItem[];
   speed?: number;
 }>();
 
 const trackRef = ref<HTMLElement | null>(null);
 let tween: gsap.core.Tween | null = null;
 
-const messagesToShow = computed(() =>
-  props.messages.length ? props.messages : ['歡迎光臨', '今天也來抽一番賞～'],
+const itemsToShow = computed<MarqueeItem[]>(() =>
+  props.items && props.items.length
+    ? props.items
+    : [{ content: '歡迎光臨' }, { content: '今天也來抽一番賞～' }],
 );
 
 const playMarquee = async () => {
@@ -48,7 +60,7 @@ const playMarquee = async () => {
 
   // 根據距離算 duration，這樣不管字多長速度都差不多
   const distance = containerWidth + trackWidth; // 要跑的總距離
-  const pixelsPerSecond = props.speed ?? 60;
+  const pixelsPerSecond = props.speed ?? 80;
   const duration = distance / pixelsPerSecond;
 
   if (tween) {
@@ -83,6 +95,10 @@ onBeforeUnmount(() => {
     tween = null;
   }
   window.removeEventListener('resize', handleResize);
+});
+
+watch(() => props.items, () => {
+  nextTick(() => playMarquee());
 });
 </script>
 

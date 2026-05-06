@@ -1,9 +1,11 @@
 /// <reference types="vite/client" />
 interface ApiResponse<T> {
-  code: string;
-  message: string;
   success: boolean;
-  data: T;
+  data: T | null;
+  message?: string;
+  code?: string;
+  error?: { code: string; message: string } | null;
+  meta?: { timestamp: string; requestId: string };
 }
 interface SelectOption {
   value: string;

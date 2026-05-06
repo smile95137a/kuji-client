@@ -120,6 +120,14 @@
         <button
           class="memberProfile__shortcut"
           type="button"
+          @click="goName('OrderHistory')"
+        >
+          訂單記錄
+        </button>
+
+        <button
+          class="memberProfile__shortcut"
+          type="button"
           @click="goName('PrizeBox')"
         >
           賞品盒

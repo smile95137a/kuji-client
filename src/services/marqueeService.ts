@@ -6,10 +6,14 @@ const basePath = '/marquee';
 export interface MarqueeRes {
   id: string;
   content: string;
-  url: string | null;
-  sortOrder: number;
-  startAt: string | null;
-  endAt: string | null;
+  linkUrl: string | null;
+  linkType: 'EXTERNAL' | 'INTERNAL' | null;
+  priority: number;
+  bgColor: string | null;
+  textColor: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
 }
 
 interface RequestData {

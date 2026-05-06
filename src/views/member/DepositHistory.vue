@@ -67,7 +67,7 @@
     <div class="depositHistory__card">
       <div class="depositHistory__resultHeader">
         <p class="depositHistory__count">
-          共 <b>{{ filteredRows.length }}</b> 筆
+          共 <b>{{ total }}</b> 筆
         </p>
       </div>
 
@@ -183,8 +183,13 @@
       <div class="depositHistory__pagination">
         <BasePagination
           v-model:page="page"
+          :total="total"
+          :size="size"
           :total-pages="totalPages"
+          :has-next="hasNext"
+          :has-previous="hasPrevious"
           :max-visible="5"
+          @update:page="goToPage"
         />
       </div>
     </div>
@@ -194,8 +199,12 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
 import BasePagination from '@/components/common/BasePagination.vue';
-import { getMyRechargeHistory } from '@/services/rechargeService';
+import {
+  getMyRechargeHistory,
+  type RechargeHistoryRow,
+} from '@/services/rechargeService';
 import { executeApi } from '@/utils/executeApiUtils';
+import { useServerPagination } from '@/composables/useServerPagination';
 
 type PayMethod = 'CREDIT_CARD' | 'ATM' | 'CVS';
 type PaymentStatus = 'COMPLETED' | 'PENDING' | 'FAILED' | 'CANCELED';
@@ -216,8 +225,8 @@ type DepositHistoryRow = {
   paidAt?: string; // ISO
 };
 
-const pageSize = 8;
-const page = ref(1);
+const { page, size, total, totalPages, hasNext, hasPrevious, sync } =
+  useServerPagination(8);
 
 // filters
 const createdAtStart = ref('');
@@ -227,61 +236,16 @@ const transactionId = ref('');
 
 // data
 const rows = ref<DepositHistoryRow[]>([]);
-
-const filteredRows = computed(() => {
-  const from = createdAtStart.value
-    ? new Date(createdAtStart.value).getTime()
-    : null;
-  const to = createdAtEnd.value ? new Date(createdAtEnd.value).getTime() : null;
-
-  const kw = transactionId.value.trim().toLowerCase();
-
-  return rows.value
-    .filter((r) => {
-      const t = r.createdAt ? new Date(r.createdAt).getTime() : 0;
-
-      const okFrom = from == null ? true : t >= from;
-      const okTo = to == null ? true : t <= to;
-      const okStatus = paymentStatus.value
-        ? r.paymentStatus === paymentStatus.value
-        : true;
-
-      const okKeyword = kw
-        ? (r.transactionId || '').toLowerCase().includes(kw)
-        : true;
-
-      return okFrom && okTo && okStatus && okKeyword;
-    })
-    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
-});
-
-const totalPages = computed(() =>
-  Math.max(1, Math.ceil(filteredRows.value.length / pageSize)),
-);
-
-const pageRows = computed(() => {
-  const start = (page.value - 1) * pageSize;
-  return filteredRows.value.slice(start, start + pageSize);
-});
+const pageRows = computed(() => rows.value);
 
 watch([createdAtStart, createdAtEnd, paymentStatus, transactionId], () => {
   page.value = 1;
 });
 
-watch(totalPages, (tp) => {
-  if (page.value > tp) page.value = tp;
-  if (page.value < 1) page.value = 1;
-});
-
-const normalizeRechargeHistory = (raw: any): DepositHistoryRow[] => {
-  const data = raw?.data?.data ?? raw?.data ?? raw;
-  const list = Array.isArray(data)
-    ? data
-    : Array.isArray(data?.list)
-      ? data.list
-      : [];
-
-  return list.map((o: any, idx: number) => ({
+const normalizeRechargeHistory = (
+  list: RechargeHistoryRow[],
+): DepositHistoryRow[] =>
+  list.map((o: any, idx: number) => ({
     id: String(o.id ?? idx),
     planId: String(o.planId ?? ''),
 
@@ -296,16 +260,33 @@ const normalizeRechargeHistory = (raw: any): DepositHistoryRow[] => {
     createdAt: String(o.createdAt ?? ''),
     paidAt: o.paidAt ? String(o.paidAt) : undefined,
   }));
+
+const buildReq = (): any => {
+  const condition: any = {};
+  if (createdAtStart.value) condition.createdAtStart = createdAtStart.value;
+  if (createdAtEnd.value) condition.createdAtEnd = createdAtEnd.value;
+  if (paymentStatus.value) condition.paymentStatus = paymentStatus.value;
+  if (transactionId.value) condition.transactionId = transactionId.value.trim();
+
+  return {
+    condition,
+    page: page.value,
+    size: size.value,
+  };
 };
 
 const loadHistory = async () => {
   await executeApi<any>({
-    // 你後端：GET /recharge/history?page=&size=
-    fn: () => getMyRechargeHistory({ page: 1, size: 1000 } as any),
-    onSuccess: (raw) => {
-      rows.value = normalizeRechargeHistory(raw);
+    fn: () => getMyRechargeHistory(buildReq()),
+    onSuccess: (res) => {
+      rows.value = normalizeRechargeHistory(res?.data ?? []);
+      sync(res);
     },
   });
+};
+
+const goToPage = () => {
+  loadHistory();
 };
 
 const onSearch = async () => {

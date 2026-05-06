@@ -44,17 +44,14 @@
       <div v-else-if="errorMsg" class="official-ichiban__state is-error">
         {{ errorMsg }}
       </div>
-      <div
-        v-else-if="filteredList.length === 0"
-        class="official-ichiban__state"
-      >
+      <div v-else-if="kujiList.length === 0" class="official-ichiban__state">
         目前沒有商品
       </div>
 
       <!-- 列表 -->
       <section v-else class="official-ichiban__grid">
         <IchibanKujiCard
-          v-for="item in pagedList"
+          v-for="item in kujiList"
           :key="item.id"
           class="ichibanList__card"
           :item="item"
@@ -64,13 +61,18 @@
 
       <!-- 分頁 -->
       <div
-        v-if="!loading && !errorMsg && filteredList.length > 0"
+        v-if="!loading && !errorMsg && kujiList.length > 0"
         class="official-ichiban__pagination"
       >
         <BasePagination
           v-model:page="page"
+          :total="total"
+          :size="size"
           :total-pages="totalPages"
+          :has-next="hasNext"
+          :has-previous="hasPrevious"
           :max-visible="5"
+          @update:page="goToPage"
         />
       </div>
     </div>
@@ -86,22 +88,17 @@ import MSelect from '@/components/common/MSelect.vue';
 import MSearch from '@/components/common/MSearch.vue';
 import BasePagination from '@/components/common/BasePagination.vue';
 
-import { queryBrowseLotteries } from '@/services/lotteryBrowseService';
+import {
+  queryBrowseLotteries,
+  type BrowseCondition,
+} from '@/services/lotteryBrowseService';
+import { queryThemes, type CategoryRes } from '@/services/categoryService';
 import { executeApi } from '@/utils/executeApiUtils';
+import { useServerPagination } from '@/composables/useServerPagination';
 
 const router = useRouter();
 
-/**  mapping */
-const typeToCategory: Record<string, string | 'all'> = {
-  kuji: 'OFFICIAL_ICHIBAN',
-  gacha: 'GACHA',
-  custom: 'CUSTOM_GACHA',
-  card: 'TRADING_CARD',
-};
-
 //  這頁固定就是官方一番賞
-const currentCategory = typeToCategory.kuji; // 'OFFICIAL_ICHIBAN'
-
 /** filters */
 const filterTheme = ref(''); //  系列改用 theme
 const filterStatus = ref(''); //  狀態用 status
@@ -111,25 +108,36 @@ const keyword = ref('');
 const loading = ref(false);
 const errorMsg = ref('');
 const kujiList = ref<any[]>([]);
+const themeOptions = ref<Array<{ label: string; value: string }>>([]);
+const { page, size, total, totalPages, hasNext, hasPrevious, sync } =
+  useServerPagination(6);
 
 /**  API：維持你要的 executeApi 風格 + map 成卡片要吃的 item */
 const fetchList = async () => {
   loading.value = true;
   errorMsg.value = '';
 
+  const condition: BrowseCondition = {
+    category: 'OFFICIAL_ICHIBAN',
+    theme: filterTheme.value || undefined,
+    status: (filterStatus.value || undefined) as any,
+    keyword: keyword.value.trim() || undefined,
+  };
+
   await executeApi({
     fn: () =>
       queryBrowseLotteries({
-        condition: {
-          category: currentCategory, //  固定只抓官方一番賞
-        },
+        condition,
+        page: page.value,
+        size: size.value,
       }),
-    onSuccess: async (data) => {
-      const arr = Array.isArray(data) ? data : [];
-      kujiList.value = arr.map((x: any) => {
-        //  展平成 card 需要的 item，保留 theme/status/statusName 等欄位
-        return { ...x.lottery, prizes: x.prizes };
-      });
+    onSuccess: async (result) => {
+      const arr = result?.data ?? [];
+      kujiList.value = arr.map((x: any) => ({
+        ...x.lottery,
+        prizes: x.prizes,
+      }));
+      sync(result);
     },
     onFinal: () => {
       loading.value = false;
@@ -138,22 +146,31 @@ const fetchList = async () => {
 };
 
 onMounted(async () => {
+  await loadThemeOptions();
   await fetchList();
 });
 
-/**  options：動態由 API 資料長出來（系列=theme；狀態=status/statusName） */
-const themeOptions = computed(() => {
-  const set = new Set<string>();
+const loadThemeOptions = async () => {
+  await executeApi({
+    fn: () => queryThemes(),
+    showCatchDialog: false,
+    showFailDialog: false,
+    onSuccess: (res: any) => {
+      const list: CategoryRes[] = Array.isArray(res) ? res : (res?.data ?? []);
+      const themes = Array.from(
+        new Set(
+          list
+            .map((item) => String(item?.name ?? '').trim())
+            .filter(Boolean),
+        ),
+      )
+        .sort((a, b) => a.localeCompare(b, 'zh-Hant'))
+        .map((value) => ({ label: value, value }));
 
-  for (const item of kujiList.value as any[]) {
-    const v = String(item?.theme ?? '').trim();
-    if (v) set.add(v);
-  }
-
-  return Array.from(set)
-    .sort((a, b) => a.localeCompare(b, 'zh-Hant'))
-    .map((t) => ({ label: t, value: t }));
-});
+      themeOptions.value = themes;
+    },
+  });
+};
 
 const statusOptions = computed(() => {
   const map = new Map<string, string>(); // key=status, value=statusName
@@ -171,38 +188,13 @@ const statusOptions = computed(() => {
     .map(([value, label]) => ({ label, value }));
 });
 
-/**  前端篩選：theme/status/keyword */
-const filteredList = computed(() => {
-  const kw = keyword.value.trim().toLowerCase();
-
-  return (kujiList.value as any[])
-    .filter((x) => x.category === currentCategory) // 防呆
-    .filter((x) => {
-      const okTheme = !filterTheme.value || x.theme === filterTheme.value; //  theme
-      const okStatus = !filterStatus.value || x.status === filterStatus.value; //  status
-
-      const title = String(x.title ?? '').toLowerCase();
-      const okKw = !kw || title.includes(kw);
-
-      return okTheme && okStatus && okKw;
-    });
-});
-
-/** pagination（前端） */
-const page = ref(1);
-const pageSize = 6;
-
-const totalPages = computed(() =>
-  Math.max(1, Math.ceil(filteredList.value.length / pageSize)),
-);
-
-const pagedList = computed(() => {
-  const start = (page.value - 1) * pageSize;
-  return filteredList.value.slice(start, start + pageSize);
-});
-
 const onSearch = () => {
   page.value = 1;
+  fetchList();
+};
+
+const goToPage = () => {
+  fetchList();
 };
 
 const goDetail = (id: string) => {
@@ -212,11 +204,7 @@ const goDetail = (id: string) => {
 /**  篩選變動：回到第一頁 */
 watch([filterTheme, filterStatus], () => {
   page.value = 1;
-});
-
-/** 防呆：總頁數變小避免 page 超出 */
-watch(totalPages, (tp) => {
-  if (page.value > tp) page.value = tp;
+  fetchList();
 });
 </script>
 

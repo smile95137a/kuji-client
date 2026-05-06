@@ -8,28 +8,22 @@ import {
   queryBrowseLotteries,
   type BrowseCondition,
 } from '@/services/lotteryBrowseService';
+import { queryThemes, type CategoryRes } from '@/services/categoryService';
 import { executeApi } from '@/utils/executeApiUtils';
+import { useServerPagination } from '@/composables/useServerPagination';
 
 const DEFAULT_SORT = 'latest';
-const DEFAULT_TAG = 'all';
+const DEFAULT_THEME = 'all';
 const DEFAULT_PAGE = 1;
 
 const resetUiState = () => {
   currentSort.value = DEFAULT_SORT;
-  currentTag.value = DEFAULT_TAG;
+  currentTheme.value = DEFAULT_THEME;
   currentPage.value = DEFAULT_PAGE;
 };
 
 const router = useRouter();
 const route = useRoute();
-
-const typeToCategory: Record<string, string | 'all'> = {
-  kuji: 'OFFICIAL_ICHIBAN',
-  gacha: 'GACHA',
-  scratch: 'SCRATCH',
-  custom: 'CUSTOM_GACHA',
-  card: 'TRADING_CARD',
-};
 
 const typeToTitle: Record<string, string> = {
   kuji: '一番賞',
@@ -39,24 +33,11 @@ const typeToTitle: Record<string, string> = {
   card: '卡牌',
 };
 
-/** 判斷商品是否屬於刮刮樂（以 playMode 為主） */
-const isScratchItem = (item: any) => {
-  const m = String(item?.playMode ?? '').toUpperCase();
-  return m === 'SCRATCH_MODE' || m === 'SCRATCH_CARD_MODE';
-};
-
-/** 判斷商品是否屬於真正的扭蛋（category=GACHA 且非刮刮樂 playMode） */
-const isGachaItem = (item: any) => {
-  const category = String(item?.category ?? '').toUpperCase();
-  return category === 'GACHA' && !isScratchItem(item);
-};
-
 const pageTitle = computed(() => typeToTitle[currentType.value] ?? '商城');
 
 const currentType = computed(() => String(route.query.type ?? 'kuji'));
 
-const currentCategory = ref<string>('all');
-const currentTag = ref(DEFAULT_TAG);
+const currentTheme = ref(DEFAULT_THEME);
 
 const sortTabs = [
   { label: '最新', value: 'latest' },
@@ -67,52 +48,21 @@ const sortTabs = [
 
 const currentSort = ref(DEFAULT_SORT);
 
-const pageSize = 12;
-const currentPage = ref(DEFAULT_PAGE);
+const { page: currentPage, size: pageSize, total, totalPages, hasNext, hasPrevious, sync } =
+  useServerPagination(12);
 
 /** API data */
 const loading = ref(true);
 const hasLoaded = ref(false);
 const errorMsg = ref('');
 const kujiList = ref<any[]>([]);
+const themeOptions = ref<Array<{ label: string; value: string }>>([
+  { label: '全部', value: 'all' },
+]);
 
 /* ------------------------------
  * categories chips (dynamic)
  * ------------------------------ */
-const categories = computed(() => {
-  const map = new Map<string, string>();
-
-  for (const item of kujiList.value) {
-    const key = item.category;
-    const name = item.categoryName || item.category || '其他';
-    if (key && !map.has(key)) map.set(key, name);
-  }
-
-  const chips = Array.from(map.entries())
-    .map(([value, label]) => ({ value, label }))
-    .sort((a, b) => a.label.localeCompare(b.label, 'zh-Hant'));
-
-  return [{ label: '全部', value: 'all' }, ...chips];
-});
-
-const tags = computed(() => {
-  const set = new Set<string>();
-
-  for (const item of kujiList.value) {
-    const arr = Array.isArray(item?.tags) ? item.tags : [];
-    for (const t of arr) {
-      const s = String(t ?? '').trim();
-      if (s) set.add(s);
-    }
-  }
-
-  const chips = Array.from(set)
-    .map((t) => ({ label: t, value: t }))
-    .sort((a, b) => a.label.localeCompare(b.label, 'zh-Hant'));
-
-  return [{ label: '全部', value: 'all' }, ...chips];
-});
-
 /* ------------------------------
  * fetch
  * ------------------------------ */
@@ -120,22 +70,42 @@ const fetchList = async () => {
   loading.value = true;
   errorMsg.value = '';
 
-  const condition: BrowseCondition = {};
+  const categoryMap: Record<string, string> = {
+    kuji: 'OFFICIAL_ICHIBAN',
+    gacha: 'GACHA',
+    scratch: 'SCRATCH',
+    custom: 'CUSTOM_GACHA',
+    card: 'TRADING_CARD',
+  };
 
-  const urlTag = route.query.tag;
-  if (urlTag && typeof urlTag === 'string' && urlTag !== 'all') {
-    condition.theme = urlTag;
-  }
+  const sortMap: Record<string, { sortBy: string; sortOrder: 'ASC' | 'DESC' }> = {
+    latest: { sortBy: 'createdAt', sortOrder: 'DESC' },
+    hot: { sortBy: 'hotCount', sortOrder: 'DESC' },
+    priceAsc: { sortBy: 'pricePerDraw', sortOrder: 'ASC' },
+    priceDesc: { sortBy: 'pricePerDraw', sortOrder: 'DESC' },
+  };
+
+  const condition: BrowseCondition = {
+    category: categoryMap[currentType.value],
+    theme: currentTheme.value !== 'all' ? currentTheme.value : undefined,
+  };
 
   try {
     await executeApi({
-      fn: () => queryBrowseLotteries({ condition }),
-      onSuccess: async (data) => {
-        const arr = Array.isArray(data) ? data : [];
-        kujiList.value = arr.map((x: any) => ({
+      fn: () =>
+        queryBrowseLotteries({
+          condition,
+          page: currentPage.value,
+          size: pageSize.value,
+          ...sortMap[currentSort.value],
+        }),
+      onSuccess: async (result) => {
+        const list = result?.data ?? [];
+        kujiList.value = list.map((x: any) => ({
           ...x.lottery,
           prizes: x.prizes,
         }));
+        sync(result);
       },
       onFail: async (error: any) => {
         console.error('queryBrowseLotteries error:', error);
@@ -153,117 +123,30 @@ const fetchList = async () => {
   }
 };
 
-/* ------------------------------
- * filter/sort/pagination
- * ------------------------------ */
-const filteredList = computed(() => {
-  let list = kujiList.value as any[];
-  const type = currentType.value;
-
-  if (type === 'scratch') {
-    list = list.filter((item) => isScratchItem(item));
-  } else if (type === 'gacha') {
-    list = list.filter((item) => isGachaItem(item));
-  } else if (currentCategory.value !== 'all') {
-    list = list.filter((item) => item.category === currentCategory.value);
-  }
-
-  if (currentTag.value !== 'all') {
-    list = list.filter((item) => {
-      const arr = Array.isArray(item?.tags) ? item.tags : [];
-      return arr.includes(currentTag.value);
-    });
-  }
-
-  return list;
-});
-
-const sortedList = computed(() => {
-  const list = [...filteredList.value];
-
-  switch (currentSort.value) {
-    case 'priceAsc':
-      return list.sort((a, b) => (a.currentPrice ?? 0) - (b.currentPrice ?? 0));
-    case 'priceDesc':
-      return list.sort((a, b) => (b.currentPrice ?? 0) - (a.currentPrice ?? 0));
-    case 'hot':
-      return list.sort((a, b) => (b.hotCount ?? 0) - (a.hotCount ?? 0));
-    case 'latest':
-    default:
-      return list.sort((a, b) => {
-        const at = a.createdAt ? new Date(a.createdAt).getTime() : 0;
-        const bt = b.createdAt ? new Date(b.createdAt).getTime() : 0;
-        return bt - at;
-      });
-  }
-});
-
-const totalPages = computed(() =>
-  Math.max(1, Math.ceil(sortedList.value.length / pageSize)),
-);
-
-const pagedList = computed(() => {
-  const start = (currentPage.value - 1) * pageSize;
-  return sortedList.value.slice(start, start + pageSize);
-});
-
-/* ------------------------------
- * state display
- * ------------------------------ */
 const stateMessage = computed(() => {
   if (loading.value || !hasLoaded.value) return '載入中...';
   if (errorMsg.value) return errorMsg.value;
-  if (sortedList.value.length === 0) return '目前沒有商品';
+  if (kujiList.value.length === 0) return '目前沒有商品';
   return '';
 });
 
 const showState = computed(() => !!stateMessage.value);
 const isErrorState = computed(() => !!errorMsg.value);
 
-watch([currentCategory, currentTag, currentSort], () => {
-  currentPage.value = 1;
-});
-
-watch(
-  categories,
-  () => {
-    const exists = categories.value.some(
-      (c) => c.value === currentCategory.value,
-    );
-    if (!exists) currentCategory.value = 'all';
-  },
-  { immediate: true },
-);
-
-watch(
-  tags,
-  () => {
-    const exists = tags.value.some((t) => t.value === currentTag.value);
-    if (!exists) currentTag.value = 'all';
-  },
-  { immediate: true },
-);
-
 watch(
   currentType,
-  (type) => {
-    currentCategory.value = typeToCategory[type] ?? 'all';
+  () => {
     resetUiState();
+    currentPage.value = 1;
+    fetchList();
   },
   { immediate: true },
 );
 
-watch(
-  () => route.query.tag,
-  (tag) => {
-    if (tag && typeof tag === 'string') {
-      currentTag.value = tag;
-    } else {
-      currentTag.value = DEFAULT_TAG;
-    }
-  },
-  { immediate: true },
-);
+watch([currentTheme, currentSort], () => {
+  currentPage.value = 1;
+  fetchList();
+});
 
 /* ------------------------------
  * nav
@@ -272,8 +155,34 @@ const goDetail = (id: string) => {
   router.push({ name: 'IchibanDetail', params: { id } });
 };
 
+const goToPage = () => {
+  fetchList();
+};
+
+const loadThemeOptions = async () => {
+  await executeApi({
+    fn: () => queryThemes(),
+    showCatchDialog: false,
+    showFailDialog: false,
+    onSuccess: (res: any) => {
+      const list: CategoryRes[] = Array.isArray(res) ? res : (res?.data ?? []);
+      const chips = Array.from(
+        new Set(
+          list
+            .map((item) => String(item?.name ?? '').trim())
+            .filter(Boolean),
+        ),
+      )
+        .sort((a, b) => a.localeCompare(b, 'zh-Hant'))
+        .map((value) => ({ label: value, value }));
+
+      themeOptions.value = [{ label: '全部', value: 'all' }, ...chips];
+    },
+  });
+};
+
 onMounted(async () => {
-  await fetchList();
+  await loadThemeOptions();
 });
 </script>
 
@@ -283,16 +192,14 @@ onMounted(async () => {
       <header class="ichibanList__header">
         <h1 class="ichibanList__title">{{ pageTitle }}</h1>
 
-        <div v-if="tags.length > 1" class="ichibanList__tags">
+        <div v-if="themeOptions.length > 1" class="ichibanList__themes">
           <button
-            v-for="t in tags"
+            v-for="t in themeOptions"
             :key="t.value"
             type="button"
             class="ichibanList__chip"
-            :class="{
-              'ichibanList__chip--active': currentTag === t.value,
-            }"
-            @click="currentTag = t.value"
+            :class="{ 'ichibanList__chip--active': currentTheme === t.value }"
+            @click="currentTheme = t.value"
           >
             {{ t.label }}
           </button>
@@ -327,7 +234,7 @@ onMounted(async () => {
 
       <section v-else class="ichibanList__grid">
         <IchibanKujiCard
-          v-for="item in pagedList"
+          v-for="item in kujiList"
           :key="item.id"
           class="ichibanList__card"
           :item="item"
@@ -336,12 +243,16 @@ onMounted(async () => {
       </section>
 
       <BasePagination
-        v-if="!loading && !errorMsg && sortedList.length > 0"
+        v-if="!loading && !errorMsg && kujiList.length > 0"
         class="ichibanList__pagination"
-        :page="currentPage"
+        v-model:page="currentPage"
+        :total="total"
+        :size="pageSize"
         :total-pages="totalPages"
+        :has-next="hasNext"
+        :has-previous="hasPrevious"
         :max-visible="5"
-        @update:page="currentPage = $event"
+        @update:page="goToPage"
       />
     </div>
   </div>

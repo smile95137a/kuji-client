@@ -2,8 +2,8 @@
   <div class="home">
     <BulletMarquee
       class="home__marquee"
-      :messages="marqueeMessages"
-      :speed="300"
+      :items="marqueeItems"
+      :speed="80"
     />
     <BannerSwiper />
     <OfficialIchibanView />
@@ -22,14 +22,19 @@ import HotTopicsSection from '@/components/HotTopicsSection.vue';
 import GachaView from '@/components/GachaView.vue';
 import OfficialIchibanView from '@/components/OfficialIchibanView.vue';
 import { getActiveMarquees } from '@/services/marqueeService';
+import type { MarqueeItem } from '@/components/BulletMarquee.vue';
 
-const marqueeMessages = ref<string[]>([]);
+const marqueeItems = ref<MarqueeItem[]>([]);
 
 onMounted(async () => {
   try {
     const res = await getActiveMarquees();
     if (res?.success && Array.isArray(res.data)) {
-      marqueeMessages.value = res.data.map((m: any) => m.content ?? '');
+      marqueeItems.value = res.data.map((m: any) => ({
+        content: m.content ?? '',
+        bgColor: m.bgColor ?? null,
+        textColor: m.textColor ?? null,
+      }));
     }
   } catch {
     // 載入失敗時保持空陣列，不顯示跑馬燈

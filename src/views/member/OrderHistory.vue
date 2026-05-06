@@ -75,7 +75,7 @@
     <div class="orderHistory__card">
       <div class="orderHistory__resultHeader">
         <p class="orderHistory__count">
-          共 <b>{{ rows.length }}</b> 筆
+          共 <b>{{ total }}</b> 筆
         </p>
       </div>
 
@@ -180,8 +180,13 @@
       <div class="orderHistory__pagination">
         <BasePagination
           v-model:page="page"
+          :total="total"
+          :size="size"
           :total-pages="totalPages"
+          :has-next="hasNext"
+          :has-previous="hasPrevious"
           :max-visible="5"
+          @update:page="goToPage"
         />
       </div>
     </div>
@@ -192,13 +197,14 @@
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import BasePagination from '@/components/common/BasePagination.vue';
-import { getMyOrders } from '@/services/orderService';
+import { getMyOrders, type OrderListRow } from '@/services/orderService';
 import { executeApi } from '@/utils/executeApiUtils';
+import { useServerPagination } from '@/composables/useServerPagination';
 
 const router = useRouter();
 
-const pageSize = 8;
-const page = ref(1);
+const { page, size, total, totalPages, hasNext, hasPrevious, sync } =
+  useServerPagination(8);
 
 // 全部 any（照你需求）
 const createdAtStart = ref<any>('');
@@ -206,25 +212,11 @@ const createdAtEnd = ref<any>('');
 const shippingStatus = ref<any>('');
 const orderNo = ref<any>('');
 
-// API rows
-const rows = ref<any[]>([]);
-
-const totalPages = computed(() =>
-  Math.max(1, Math.ceil(rows.value.length / pageSize)),
-);
-
-const pageRows = computed(() => {
-  const start = (page.value - 1) * pageSize;
-  return rows.value.slice(start, start + pageSize);
-});
+const rows = ref<OrderListRow[]>([]);
+const pageRows = computed(() => rows.value);
 
 watch([createdAtStart, createdAtEnd, shippingStatus, orderNo], () => {
   page.value = 1;
-});
-
-watch(totalPages, (tp) => {
-  if (page.value > tp) page.value = tp;
-  if (page.value < 1) page.value = 1;
 });
 
 // 日期格式：2026-02-09T01:54:29 -> 2026-02-09 01:54
@@ -242,15 +234,8 @@ const fmtDateTime = (v: any) => {
 };
 
 // 依你後端回傳欄位 mapping
-const normalizeOrders = (raw: any): any[] => {
-  const data = raw?.data?.data ?? raw?.data ?? raw;
-  const list = Array.isArray(data)
-    ? data
-    : Array.isArray(data?.list)
-      ? data.list
-      : [];
-
-  return list.map((o: any, idx: number) => ({
+const normalizeOrders = (list: any[]): OrderListRow[] =>
+  list.map((o: any, idx: number) => ({
     id: String(o?.id ?? idx),
     orderNo: String(o?.orderNo ?? ''),
     totalAmount: Number(o?.totalAmount ?? 0) || 0,
@@ -260,7 +245,6 @@ const normalizeOrders = (raw: any): any[] => {
     // 後端沒給付款方式：先留欄位避免 template 爆
     payMethodName: String(o?.payMethodName ?? o?.paymentMethodName ?? ''),
   }));
-};
 
 // req input 直接對後端 condition
 const buildReq = (): any => {
@@ -274,11 +258,21 @@ const buildReq = (): any => {
 
 const loadOrders = async () => {
   await executeApi<any>({
-    fn: () => getMyOrders(buildReq()),
-    onSuccess: (raw) => {
-      rows.value = normalizeOrders(raw);
+    fn: () =>
+      getMyOrders({
+        ...buildReq(),
+        page: page.value,
+        size: size.value,
+      }),
+    onSuccess: (res) => {
+      rows.value = normalizeOrders(res?.data ?? []);
+      sync(res);
     },
   });
+};
+
+const goToPage = () => {
+  loadOrders();
 };
 
 const onSearch = async () => {

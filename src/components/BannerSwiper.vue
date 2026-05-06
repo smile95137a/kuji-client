@@ -2,7 +2,7 @@
   <section class="banner-section">
     <div class="swiper" ref="swiperEl">
       <div class="swiper-wrapper">
-        <div v-for="banner in banners" :key="banner.id" class="swiper-slide">
+        <div v-for="banner in banners" :key="banner.id" class="swiper-slide" style="cursor:pointer" @click="goToStore(banner)">
           <!-- 圖片，用 object-fit -->
           <div class="banner-image-wrapper">
             <img
@@ -76,6 +76,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue';
+import { useRouter } from 'vue-router';
 import Swiper from 'swiper';
 import {
   EffectCoverflow,
@@ -88,11 +89,21 @@ import {
 import 'swiper/css';
 import 'swiper/css/pagination';
 import 'swiper/css/effect-coverflow';
-import { getActiveBanners } from '@/services/bannerService';
+import { getActiveBanners, type BannerRes } from '@/services/bannerService';
 import { executeApi } from '@/utils/executeApiUtils';
 import { getBannerTag } from '@/utils/timeUtils';
 
-const banners = ref<any[]>([]);
+const banners = ref<BannerRes[]>([]);
+
+const router = useRouter();
+
+const goToStore = (banner: BannerRes) => {
+  if (banner.storeId) {
+    router.push({ name: 'StoreDetail', params: { id: banner.storeId } });
+  } else if (banner.linkUrl) {
+    window.open(banner.linkUrl, banner.linkTarget ?? '_self');
+  }
+};
 
 const swiperEl = ref<HTMLDivElement | null>(null);
 const prevBtnEl = ref<HTMLButtonElement | null>(null);

@@ -1,5 +1,6 @@
 // services/orderService.ts
 import { api } from './FrontAPI';
+import type { ApiResponse, PaginatedApiResponse } from '@/types/api';
 
 const basePath = '/order';
 
@@ -7,10 +8,20 @@ interface RequestData {
   [key: string]: any;
 }
 
+export interface OrderListRow {
+  id: string;
+  orderNo: string;
+  totalAmount: number;
+  createdAt: string;
+  shippingStatus: string;
+  shippingStatusName?: string;
+  payMethodName?: string;
+}
+
 /** 前台 - 查詢我的訂單列表 POST /api/order/list */
 export const getMyOrders = async (
   req?: RequestData,
-): Promise<ApiResponse<any>> => {
+): Promise<PaginatedApiResponse<OrderListRow>> => {
   try {
     const res = await api.post(`${basePath}/list`, req ?? null);
     return res.data;

@@ -236,10 +236,14 @@
               <span>訂單筆數</span>
               <span>{{ storeGroups.length }} 筆（每家門市各一筆）</span>
             </div>
+            <div v-if="selectedShipping && storeGroups.length > 1 && selectedShipping.fee > 0" class="ship-dialog__summary-row ship-dialog__summary-row--hint">
+              <span>運費明細</span>
+              <span>NT$ {{ selectedShipping.fee }} × {{ storeGroups.length }} 筆</span>
+            </div>
             <div class="ship-dialog__summary-row ship-dialog__summary-row--total">
               <span>運費</span>
-              <span v-if="selectedShipping" :class="selectedShipping.fee === 0 ? 'ship-dialog__free' : ''">
-                {{ selectedShipping.fee === 0 ? '免費' : `NT$ ${selectedShipping.fee}` }}
+              <span v-if="totalShippingFee !== null" :class="totalShippingFee === 0 ? 'ship-dialog__free' : ''">
+                {{ totalShippingFee === 0 ? '免費' : `NT$ ${totalShippingFee}` }}
               </span>
               <span v-else class="ship-dialog__hint">請先選擇配送方式</span>
             </div>
@@ -345,6 +349,11 @@ onBeforeUnmount(() => {
 });
 
 const totalCount = computed(() => props.items.length);
+
+const totalShippingFee = computed(() => {
+  if (!selectedShipping.value) return null;
+  return selectedShipping.value.fee * storeGroups.value.length;
+});
 
 function onAddressSelect(event: Event) {
   const id = (event.target as HTMLSelectElement).value;

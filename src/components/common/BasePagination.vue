@@ -6,7 +6,11 @@ import { FontAwesomeIcon } from '@fortawesome/vue-fontawesome';
 const props = withDefaults(
   defineProps<{
     page: number;
-    totalPages: number;
+    totalPages?: number;
+    total?: number;
+    size?: number;
+    hasNext?: boolean;
+    hasPrevious?: boolean;
     maxVisible?: number;
   }>(),
   {
@@ -21,13 +25,29 @@ const emit = defineEmits<{
 const currentPage = computed({
   get: () => props.page,
   set: (val: number) => {
-    if (val < 1 || val > props.totalPages) return;
+    if (val < 1 || val > effectiveTotalPages.value) return;
     emit('update:page', val);
   },
 });
 
+const effectiveTotalPages = computed(() => {
+  if (props.totalPages && props.totalPages > 0) return props.totalPages;
+  if (props.total != null && props.size && props.size > 0) {
+    return Math.max(1, Math.ceil(props.total / props.size));
+  }
+  return 1;
+});
+
+const canGoPrevious = computed(
+  () => props.hasPrevious ?? currentPage.value > 1,
+);
+
+const canGoNext = computed(
+  () => props.hasNext ?? currentPage.value < effectiveTotalPages.value,
+);
+
 const pages = computed<(number | '...')[]>(() => {
-  const total = props.totalPages;
+  const total = effectiveTotalPages.value;
   const current = currentPage.value;
   const max = props.maxVisible;
 
@@ -66,18 +86,24 @@ const pages = computed<(number | '...')[]>(() => {
 });
 
 const goFirst = () => (currentPage.value = 1);
-const goLast = () => (currentPage.value = props.totalPages);
-const goPrev = () => (currentPage.value = currentPage.value - 1);
-const goNext = () => (currentPage.value = currentPage.value + 1);
+const goLast = () => (currentPage.value = effectiveTotalPages.value);
+const goPrev = () => {
+  if (!canGoPrevious.value) return;
+  currentPage.value = currentPage.value - 1;
+};
+const goNext = () => {
+  if (!canGoNext.value) return;
+  currentPage.value = currentPage.value + 1;
+};
 const goTo = (p: number) => (currentPage.value = p);
 </script>
 
 <template>
-  <nav v-if="totalPages > 1" class="pagination" aria-label="pagination">
+  <nav v-if="effectiveTotalPages > 1" class="pagination" aria-label="pagination">
     <button
       type="button"
       class="pagination__btn"
-      :disabled="currentPage === 1"
+      :disabled="!canGoPrevious"
       @click="goFirst"
     >
       <font-awesome-icon :icon="['fas', 'angles-left']" />
@@ -86,7 +112,7 @@ const goTo = (p: number) => (currentPage.value = p);
     <button
       type="button"
       class="pagination__btn"
-      :disabled="currentPage === 1"
+      :disabled="!canGoPrevious"
       @click="goPrev"
     >
       <font-awesome-icon :icon="['fas', 'angle-left']" />
@@ -110,7 +136,7 @@ const goTo = (p: number) => (currentPage.value = p);
     <button
       type="button"
       class="pagination__btn"
-      :disabled="currentPage === totalPages"
+      :disabled="!canGoNext"
       @click="goNext"
     >
       <font-awesome-icon :icon="['fas', 'angle-right']" />
@@ -119,7 +145,7 @@ const goTo = (p: number) => (currentPage.value = p);
     <button
       type="button"
       class="pagination__btn"
-      :disabled="currentPage === totalPages"
+      :disabled="!canGoNext"
       @click="goLast"
     >
       <font-awesome-icon :icon="['fas', 'angles-right']" />

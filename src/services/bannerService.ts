@@ -13,6 +13,8 @@ export interface BannerRes {
   sortOrder: number;
   startAt: string | null;
   endAt: string | null;
+  storeId: string | null;
+  storeName: string | null;
 }
 
 interface RequestData {

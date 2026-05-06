@@ -1,5 +1,6 @@
 // services/rechargeService.ts
 import { api } from './FrontAPI';
+import type { ApiResponse, PaginatedApiResponse } from '@/types/api';
 
 const basePath = '/recharge';
 
@@ -21,6 +22,20 @@ export interface RechargeRes {
   paymentUrl: string | null;
   completedAt: string | null;
   createdAt: string;
+}
+
+export interface RechargeHistoryRow {
+  id: string;
+  planId: string;
+  planName?: string;
+  amount: number;
+  goldCoins: number;
+  bonusCoins: number;
+  paymentMethod: string;
+  paymentStatus: RechargeStatus;
+  transactionId: string;
+  createdAt: string;
+  paidAt?: string | null;
 }
 
 /**
@@ -47,7 +62,7 @@ export const createRechargeRequest = async (
 export const getMyRechargeHistory = async (req?: {
   page?: number;
   size?: number;
-}): Promise<ApiResponse<any>> => {
+}): Promise<PaginatedApiResponse<RechargeHistoryRow>> => {
   try {
     const params = {
       page: req?.page ?? 1,

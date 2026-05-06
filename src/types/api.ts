@@ -13,9 +13,14 @@ export interface ApiResponse<T> {
 
 /** Paginated result wrapper */
 export interface PageResult<T> {
-  items: T[];
-  total: number;
   page: number;
   size: number;
+  total: number;
   totalPages: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+  data: T[];
 }
+
+/** Standard wrapper for paginated API responses */
+export type PaginatedApiResponse<T> = ApiResponse<PageResult<T>>;

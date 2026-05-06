@@ -43,14 +43,15 @@
       <!--  固定內容高度，避免空資料造成跳動 -->
       <div class="gacha__content">
         <!-- 空資料狀態（用佔位高度，不會跑版） -->
-        <div v-if="filteredList.length === 0" class="gacha__state">
+        <div v-if="loading" class="gacha__state">載入中...</div>
+        <div v-else-if="kujiList.length === 0" class="gacha__state">
           目前沒有商品
         </div>
 
         <!-- 列表 -->
         <section v-else class="gacha__grid">
           <IchibanKujiCard
-            v-for="item in pagedList"
+            v-for="item in kujiList"
             :key="item.id"
             class="ichibanList__card"
             :item="item"
@@ -62,12 +63,17 @@
       <!--  分頁永遠保留空間，避免跳動 -->
       <div
         class="gacha__pagination"
-        :class="{ 'is-hidden': filteredList.length === 0 }"
+        :class="{ 'is-hidden': kujiList.length === 0 }"
       >
         <BasePagination
           v-model:page="page"
+          :total="total"
+          :size="size"
           :total-pages="totalPages"
+          :has-next="hasNext"
+          :has-previous="hasPrevious"
           :max-visible="5"
+          @update:page="goToPage"
         />
       </div>
     </div>
@@ -75,7 +81,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue';
+import { ref, watch, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 
 import IchibanKujiCard from '@/components/IchibanKujiCard.vue';
@@ -83,6 +89,10 @@ import MSelect from '@/components/common/MSelect.vue';
 import MSearch from '@/components/common/MSearch.vue';
 import BasePagination from '@/components/common/BasePagination.vue';
 
+import { queryBrowseLotteries, type BrowseCondition } from '@/services/lotteryBrowseService';
+import { queryThemes, type CategoryRes } from '@/services/categoryService';
+import { executeApi } from '@/utils/executeApiUtils';
+import { useServerPagination } from '@/composables/useServerPagination';
 import gachaBg from '@/assets/image/blindboxbg.png';
 
 type GachaItem = {
@@ -98,11 +108,7 @@ type GachaItem = {
   remainingDraws?: number;
 };
 
-const themeOptions = [
-  { label: '咒術迴戰', value: '咒術迴戰' },
-  { label: '鋼彈', value: '鋼彈' },
-  { label: '航海王', value: '航海王' },
-];
+const themeOptions = ref<Array<{ label: string; value: string }>>([]);
 
 const statusOptions = [
   { label: '已上架', value: 'ON_SHELF' },
@@ -112,85 +118,85 @@ const statusOptions = [
 const filterTheme = ref('');
 const filterStatus = ref('');
 const keyword = ref('');
+const loading = ref(true);
 
 const router = useRouter();
 
-const list = ref<GachaItem[]>([
-  {
-    id: 'gacha-001',
-    imageUrl: 'https://picsum.photos/seed/gacha_001/800/800',
-    title: '咒術迴戰 扭蛋 Vol.1',
-    theme: '咒術迴戰',
-    status: 'ON_SHELF',
-    storeName: 'KUJI 測試商店',
-    currentPrice: 120,
-    remainingDraws: 28,
-    tags: ['新品', '收藏'],
-  },
-  {
-    id: 'gacha-002',
-    imageUrl: 'https://picsum.photos/seed/gacha_002/800/800',
-    title: '鋼彈 扭蛋 機體收藏',
-    theme: '鋼彈',
-    status: 'OFF_SHELF',
-    storeName: 'KUJI 測試商店',
-    currentPrice: 150,
-    remainingDraws: 12,
-    tags: ['熱銷'],
-  },
-  ...Array.from({ length: 10 }).map((_, i) => ({
-    id: `gacha-${String(i + 3).padStart(3, '0')}`,
-    imageUrl: `https://picsum.photos/seed/gacha_${i + 3}/800/800`,
-    title: `航海王 扭蛋 角色系列 ${i + 1}`,
-    theme: i % 2 === 0 ? '航海王' : '咒術迴戰',
-    status: i % 3 === 0 ? 'ON_SHELF' : 'OFF_SHELF',
-    storeName: 'KUJI 測試商店',
-    currentPrice: 100 + i * 10,
-    remainingDraws: 30 - i,
-    tags: i % 2 === 0 ? ['新品'] : ['收藏'],
-  })),
-]);
-
-const filteredList = computed(() => {
-  const kw = keyword.value.trim().toLowerCase();
-
-  return list.value.filter((x) => {
-    const okTheme = !filterTheme.value || x.theme === filterTheme.value;
-    const okStatus = !filterStatus.value || x.status === filterStatus.value;
-
-    const title = String(x.title ?? '').toLowerCase();
-    const okKw = !kw || title.includes(kw);
-
-    return okTheme && okStatus && okKw;
-  });
-});
-
-const page = ref(1);
-const pageSize = 6;
-
-const totalPages = computed(() =>
-  Math.max(1, Math.ceil(filteredList.value.length / pageSize)),
-);
-
-const pagedList = computed(() => {
-  const start = (page.value - 1) * pageSize;
-  return filteredList.value.slice(start, start + pageSize);
-});
+const { page, size, total, totalPages, hasNext, hasPrevious, sync } =
+  useServerPagination(6);
+const kujiList = ref<GachaItem[]>([]);
 
 const onSearch = () => {
   page.value = 1;
+  fetchList();
+};
+
+const goToPage = () => {
+  fetchList();
 };
 
 const goDetail = (id: string) => {
   router.push({ name: 'IchibanDetail', params: { id } });
 };
 
+const loadThemeOptions = async () => {
+  await executeApi({
+    fn: () => queryThemes(),
+    showCatchDialog: false,
+    showFailDialog: false,
+    onSuccess: (res: any) => {
+      const list: CategoryRes[] = Array.isArray(res) ? res : (res?.data ?? []);
+      themeOptions.value = Array.from(
+        new Set(
+          list
+            .map((item) => String(item?.name ?? '').trim())
+            .filter(Boolean),
+        ),
+      )
+        .sort((a, b) => a.localeCompare(b, 'zh-Hant'))
+        .map((value) => ({ label: value, value }));
+    },
+  });
+};
+
+const fetchList = async () => {
+  loading.value = true;
+  const condition: BrowseCondition = {
+    category: 'GACHA',
+    theme: filterTheme.value || undefined,
+    status: (filterStatus.value || undefined) as any,
+    keyword: keyword.value.trim() || undefined,
+  };
+
+  await executeApi({
+    fn: () =>
+      queryBrowseLotteries({
+        condition,
+        page: page.value,
+        size: size.value,
+      }),
+    onSuccess: (result) => {
+      const arr = result?.data ?? [];
+      kujiList.value = arr.map((x: any) => ({
+        ...x.lottery,
+        prizes: x.prizes,
+      }));
+      sync(result);
+    },
+    onFinal: () => {
+      loading.value = false;
+    },
+  });
+};
+
 watch([filterTheme, filterStatus], () => {
   page.value = 1;
+  fetchList();
 });
 
-watch(totalPages, (tp) => {
-  if (page.value > tp) page.value = tp;
+onMounted(async () => {
+  await loadThemeOptions();
+  await fetchList();
 });
 </script>
 

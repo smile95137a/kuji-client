@@ -1,5 +1,6 @@
 // services/lotteryBrowseService.ts
 import { api } from './FrontAPI';
+import type { ApiResponse, PaginatedApiResponse, PageResult } from '@/types/api';
 
 const basePath = '/lottery/browse';
 
@@ -50,6 +51,25 @@ export interface LotteryTicketRes {
   drawnAt?: string;
 }
 
+export interface LotteryBrowseListItemRes {
+  lottery: LotteryRes;
+  prizes: LotteryPrizeRes[];
+  tickets: LotteryTicketRes[] | null;
+  session: SessionRes | null;
+  designatedNumbers?: { revealedNumber: number }[];
+  designatedWinningNumbers?: { revealedNumber: number }[];
+}
+
+/** 詳細頁 API 可能回傳扁平結構，也可能保留舊版 `lottery` 包裝。 */
+export interface LotteryDetailRes extends Partial<LotteryRes> {
+  lottery?: LotteryRes;
+  prizes: LotteryPrizeRes[];
+  tickets: LotteryTicketRes[] | null;
+  session: SessionRes | null;
+  designatedNumbers?: { revealedNumber: number }[];
+  designatedWinningNumbers?: { revealedNumber: number }[];
+}
+
 export interface SessionRes {
   lotteryId: string;
   isOpener: boolean;
@@ -59,14 +79,6 @@ export interface SessionRes {
   totalDrawnCount: number;
   remainingCount: number;
   designationDeadline: string | null;
-}
-
-export interface LotteryDetailRes {
-  lottery: LotteryRes;
-  prizes: LotteryPrizeRes[];
-  tickets: LotteryTicketRes[] | null;
-  session: SessionRes | null;
-  designatedNumbers?: { revealedNumber: number }[];
 }
 
 // ── Request types ────────────────────────────────────────────────
@@ -95,7 +107,7 @@ export interface BrowseQueryReq {
 
 export const queryBrowseLotteries = async (
   req?: BrowseQueryReq,
-): Promise<ApiResponse<LotteryDetailRes[]>> => {
+): Promise<PaginatedApiResponse<LotteryBrowseListItemRes>> => {
   try {
     const res = await api.post(`${basePath}/list`, req ?? undefined);
     return res.data;
@@ -119,7 +131,7 @@ export const getBrowseLotteryById = async (
 
 export const getBrowseLotteriesByStore = async (
   storeId: string,
-): Promise<ApiResponse<LotteryDetailRes[]>> => {
+): Promise<PaginatedApiResponse<LotteryDetailRes>> => {
   try {
     const res = await api.get(`${basePath}/store/${storeId}`);
     return res.data;

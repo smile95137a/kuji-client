@@ -1495,17 +1495,33 @@ const reload = async () => {
       showCatchDialog: false,
       showFailDialog: false,
       onSuccess: async (data) => {
-        detail.value = data?.lottery ?? null;
-        prizesData.value = Array.isArray(data?.prizes) ? data.prizes : [];
-        ticketData.value = Array.isArray(data?.tickets)
-          ? data.tickets.map((t) => ({ ...t, ticketNumber: Number(t.ticketNumber) }))
-          : [];
+        const payload = (data ?? {}) as any;
+        const lottery = payload.lottery ?? payload;
+
+        detail.value = lottery ?? null;
+        prizesData.value = Array.isArray(payload.prizes)
+          ? payload.prizes
+          : Array.isArray(lottery?.prizes)
+            ? lottery.prizes
+            : [];
+        ticketData.value = Array.isArray(payload.tickets)
+          ? payload.tickets.map((t: any) => ({
+              ...t,
+              ticketNumber: Number(t.ticketNumber),
+            }))
+          : Array.isArray(lottery?.tickets)
+            ? lottery.tickets.map((t: any) => ({
+                ...t,
+                ticketNumber: Number(t.ticketNumber),
+              }))
+            : [];
 
         // ✅ 新增：取得 designatedWinningNumbers（刮刮樂大獎中獎號碼）
         designatedWinningNumbers.value = Array.isArray(
-          data?.designatedWinningNumbers,
+          payload.designatedWinningNumbers ?? lottery?.designatedWinningNumbers,
         )
-          ? (data.designatedWinningNumbers as DesignatedWinningNumber[])
+          ? ((payload.designatedWinningNumbers ??
+              lottery?.designatedWinningNumbers) as DesignatedWinningNumber[])
           : [];
       },
       onFail: async () => {

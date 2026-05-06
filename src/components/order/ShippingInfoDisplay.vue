@@ -28,7 +28,7 @@ defineProps<{
 
 <style scoped>
 .shippingDisplay {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(0, 0, 0, 0.03);
   border-radius: 10px;
   padding: 16px;
   display: flex;
@@ -37,32 +37,38 @@ defineProps<{
 }
 
 .shippingDisplay__title {
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-weight: 700;
-  color: rgba(255, 255, 255, 0.8);
+  color: #111;
   margin: 0;
 }
 
 .shippingDisplay__grid {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 12px;
 }
 
 .shippingDisplay__row {
   display: flex;
-  gap: 12px;
-  font-size: 0.875rem;
+  gap: 16px;
+  font-size: 1rem;
+  align-items: baseline;
 }
 
 .shippingDisplay__key {
   flex-shrink: 0;
-  width: 60px;
-  color: rgba(255, 255, 255, 0.45);
+  width: 52px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #555;
 }
 
 .shippingDisplay__val {
-  color: rgba(255, 255, 255, 0.85);
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111;
   word-break: break-all;
+  line-height: 1.5;
 }
 </style>

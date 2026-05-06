@@ -3,45 +3,43 @@
   <div class="transactionItem">
     <div class="transactionItem__top">
       <span class="transactionItem__badge">{{ item.typeName || item.type }}</span>
-      <span class="transactionItem__coinType">{{ coinTypeLabel }}</span>
       <span class="transactionItem__date">{{ item.createdAtText }}</span>
     </div>
 
+    <div v-if="item.lotteryTitle" class="transactionItem__lottery">
+      🎯 {{ item.lotteryTitle }}
+    </div>
+
     <div class="transactionItem__body">
-      <p
-        class="transactionItem__amount"
-        :class="{
-          'transactionItem__amount--income': item.isIncome,
-          'transactionItem__amount--expense': !item.isIncome,
-        }"
-      >
-        {{ item.isIncome ? '+' : '' }}{{ item.amount.toLocaleString() }}
-      </p>
+      <div class="transactionItem__amounts">
+        <p v-if="item.goldAmount > 0" class="transactionItem__amountRow">
+          <span class="transactionItem__amountLabel">金幣</span>
+          <span class="transactionItem__amountVal transactionItem__amount--expense">-{{ item.goldAmount.toLocaleString() }}</span>
+        </p>
+        <p v-if="item.bonusAmount > 0" class="transactionItem__amountRow">
+          <span class="transactionItem__amountLabel">紅利</span>
+          <span class="transactionItem__amountVal transactionItem__amount--expense">-{{ item.bonusAmount.toLocaleString() }}</span>
+        </p>
+        <p v-if="item.goldAmount === 0 && item.bonusAmount === 0 && item.amount !== 0" class="transactionItem__amountRow">
+          <span class="transactionItem__amountLabel">金額</span>
+          <span
+            class="transactionItem__amountVal"
+            :class="item.isIncome ? 'transactionItem__amount--income' : 'transactionItem__amount--expense'"
+          >{{ item.isIncome ? '+' : '' }}{{ item.amount.toLocaleString() }}</span>
+        </p>
+      </div>
 
       <div class="transactionItem__details">
-        <p v-if="item.description" class="transactionItem__desc">
-          {{ item.description }}
-        </p>
-        <p class="transactionItem__balance">
-          餘額：{{ item.balanceAfter.toLocaleString() }}
-        </p>
-        <p v-if="item.referenceId" class="transactionItem__ref">
-          參考 ID：{{ item.referenceId }}
-        </p>
+        <p v-if="item.description" class="transactionItem__desc">{{ item.description }}</p>
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue';
 import type { WalletTransactionRow } from '@/composables/useTransactionHistory';
 
-const props = defineProps<{ item: WalletTransactionRow }>();
-
-const coinTypeLabel = computed(() =>
-  props.item.coinType === 'GOLD' ? '金幣' : '紅利',
-);
+defineProps<{ item: WalletTransactionRow }>();
 </script>
 
 <style scoped lang="scss">
@@ -55,7 +53,7 @@ const coinTypeLabel = computed(() =>
     display: flex;
     align-items: center;
     gap: 8px;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
   }
 
   &__badge {
@@ -66,15 +64,17 @@ const coinTypeLabel = computed(() =>
     font-weight: 600;
   }
 
-  &__coinType {
-    font-size: 12px;
-    opacity: 0.6;
-  }
-
   &__date {
     margin-left: auto;
     font-size: 12px;
     opacity: 0.55;
+  }
+
+  &__lottery {
+    font-size: 14px;
+    font-weight: 700;
+    color: #111;
+    margin-bottom: 8px;
   }
 
   &__body {
@@ -84,20 +84,32 @@ const coinTypeLabel = computed(() =>
     gap: 12px;
   }
 
-  &__amount {
-    margin: 0;
-    font-size: 20px;
-    font-weight: 800;
-    flex-shrink: 0;
-
-    &--income {
-      color: #27ae60;
-    }
-
-    &--expense {
-      color: #c0392b;
-    }
+  &__amounts {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
   }
+
+  &__amountRow {
+    margin: 0;
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+  }
+
+  &__amountLabel {
+    font-size: 12px;
+    color: #888;
+    min-width: 28px;
+  }
+
+  &__amountVal {
+    font-size: 18px;
+    font-weight: 800;
+  }
+
+  &__amount--income { color: #27ae60; }
+  &__amount--expense { color: #c0392b; }
 
   &__details {
     flex: 1;
@@ -105,23 +117,10 @@ const coinTypeLabel = computed(() =>
   }
 
   &__desc {
-    margin: 0 0 4px;
-    font-size: 13px;
-    opacity: 0.75;
-    line-height: 1.4;
-  }
-
-  &__balance {
     margin: 0;
-    font-size: 12px;
-    opacity: 0.55;
-  }
-
-  &__ref {
-    margin: 4px 0 0;
-    font-size: 11px;
-    opacity: 0.45;
-    font-family: monospace;
+    font-size: 13px;
+    opacity: 0.65;
+    line-height: 1.4;
   }
 }
 </style>

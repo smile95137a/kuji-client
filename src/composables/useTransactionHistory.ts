@@ -1,6 +1,8 @@
 // src/composables/useTransactionHistory.ts
-import { ref, computed } from 'vue';
-import { getMyConsumptionRecords } from '@/services/consumptionRecordService';
+import { ref } from 'vue';
+import { getWalletTransactions } from '@/services/consumptionRecordService';
+import { useServerPagination } from '@/composables/useServerPagination';
+import type { PageResult } from '@/types/api';
 
 export type WalletTransactionType =
   | 'RECHARGE'
@@ -27,8 +29,12 @@ export interface WalletTransactionRow {
   typeName: string;
   coinType: 'GOLD' | 'BONUS';
   amount: number;
+  goldAmount: number;
+  bonusAmount: number;
   balanceAfter: number;
   description: string;
+  lotteryId: string | null;
+  lotteryTitle: string | null;
   referenceId: string | null;
   createdAt: string;
   createdAtText: string;
@@ -45,15 +51,22 @@ function formatDateTime(value: any): string {
 }
 
 function mapRow(x: any): WalletTransactionRow {
-  const amount = Number(x.amount ?? 0);
+  const goldAmount = Number(x.goldAmount ?? 0);
+  const bonusAmount = Number(x.bonusAmount ?? 0);
+  // fallback: 若後端直接給 amount 也能用
+  const amount = goldAmount || bonusAmount || Number(x.amount ?? 0);
   return {
     id: String(x.id ?? ''),
     type: x.type ?? '',
-    typeName: TYPE_LABELS[x.type] ?? x.type ?? '',
-    coinType: x.coinType ?? 'GOLD',
+    typeName: x.typeName || (TYPE_LABELS[x.type] ?? x.type ?? ''),
+    coinType: x.coinType ?? (bonusAmount > 0 && goldAmount === 0 ? 'BONUS' : 'GOLD'),
     amount,
+    goldAmount,
+    bonusAmount,
     balanceAfter: Number(x.balanceAfter ?? 0),
     description: x.description ?? '',
+    lotteryId: x.lotteryId ?? null,
+    lotteryTitle: x.lotteryTitle ?? null,
     referenceId: x.referenceId ?? null,
     createdAt: String(x.createdAt ?? ''),
     createdAtText: formatDateTime(x.createdAt),
@@ -61,22 +74,23 @@ function mapRow(x: any): WalletTransactionRow {
   };
 }
 
-const PAGE_SIZE = 10;
-
 export function useTransactionHistory() {
   const items = ref<WalletTransactionRow[]>([]);
   const isLoading = ref(false);
   const error = ref<string | null>(null);
-  const totalItems = ref(0);
-  const page = ref(1);
+  const {
+    page,
+    size,
+    total,
+    totalPages,
+    hasNext,
+    hasPrevious,
+    sync,
+  } = useServerPagination(10);
 
   const typeFilter = ref('');
   const dateStart = ref('');
   const dateEnd = ref('');
-
-  const totalPages = computed(() =>
-    Math.max(1, Math.ceil(totalItems.value / PAGE_SIZE)),
-  );
 
   async function fetch() {
     isLoading.value = true;
@@ -89,31 +103,27 @@ export function useTransactionHistory() {
           createdAtEnd: dateEnd.value || undefined,
         },
         page: page.value,
-        size: PAGE_SIZE,
+        size: size.value,
         sortOrder: 'DESC',
       };
 
-      const res = await getMyConsumptionRecords(req);
+      const res = await getWalletTransactions(req);
 
       if (res?.success) {
-        const data = res.data as any;
-        const list: any[] = Array.isArray(data)
-          ? data
-          : (data?.content ?? data?.list ?? data?.records ?? []);
-        const total: number =
-          data?.totalElements ?? data?.total ?? data?.totalRecords ?? list.length;
+        const data = res.data as PageResult<any> | null;
+        const list: any[] = data?.data ?? [];
 
         items.value = list.map(mapRow);
-        totalItems.value = total;
+        sync(data);
       } else {
         error.value = res?.message || '查詢失敗';
         items.value = [];
-        totalItems.value = 0;
+        sync(null);
       }
     } catch (e: any) {
       error.value = e?.message ?? '查詢失敗，請稍後再試';
       items.value = [];
-      totalItems.value = 0;
+      sync(null);
     } finally {
       isLoading.value = false;
     }
@@ -134,15 +144,18 @@ export function useTransactionHistory() {
 
   function goToPage(p: number) {
     page.value = p;
-    fetch();
+    return fetch();
   }
 
   return {
     items,
     isLoading,
     error,
-    totalItems,
+    totalItems: total,
+    hasNext,
+    hasPrevious,
     totalPages,
+    size,
     page,
     typeFilter,
     dateStart,
