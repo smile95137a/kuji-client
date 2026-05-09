@@ -16,12 +16,15 @@
           <div class="cooperation__heroActions">
             <button
               class="cooperation__btn cooperation__btn--primary"
+              type="button"
               @click="scrollTo('form')"
             >
               填寫表單
             </button>
+
             <button
               class="cooperation__btn cooperation__btn--ghost"
+              type="button"
               @click="scrollTo('guide')"
             >
               合作說明
@@ -46,14 +49,18 @@
             </div>
 
             <div class="cooperation__quick">
-              <button class="cooperation__chip" @click="goFaq">
+              <button class="cooperation__chip" type="button" @click="goFaq">
                 <span class="cooperation__chipIcon" aria-hidden="true">
                   <font-awesome-icon :icon="['fas', 'circle-question']" />
                 </span>
                 常見問題
               </button>
 
-              <button class="cooperation__chip" @click="goTransaction">
+              <button
+                class="cooperation__chip"
+                type="button"
+                @click="goTransaction"
+              >
                 <span class="cooperation__chipIcon" aria-hidden="true">
                   <font-awesome-icon :icon="['fas', 'receipt']" />
                 </span>
@@ -74,6 +81,7 @@
             <div class="cooperation__panelFooter">
               <button
                 class="cooperation__miniBtn cooperation__miniBtn--gold"
+                type="button"
                 @click="scrollTo('form')"
               >
                 立即洽談
@@ -95,71 +103,26 @@
         </header>
 
         <div class="cooperation__grid">
-          <article class="cooperation__card">
+          <article
+            v-for="item in cooperationCards"
+            :key="item.title"
+            class="cooperation__card"
+          >
             <div class="cooperation__cardHead">
               <span class="cooperation__cardIcon" aria-hidden="true">
-                <font-awesome-icon :icon="['fas', 'copyright']" />
+                <font-awesome-icon :icon="item.icon" />
               </span>
-              <p class="cooperation__cardTitle">IP / 授權合作</p>
+              <p class="cooperation__cardTitle">{{ item.title }}</p>
             </div>
-            <p class="cooperation__cardDesc">
-              系列企劃、聯名抽賞、限定獎品、授權素材整合與上架規劃。
-            </p>
-            <ul class="cooperation__list">
-              <li>授權範圍與期間</li>
-              <li>素材交付與審稿流程</li>
-              <li>上架節奏與宣傳協作</li>
-            </ul>
-          </article>
 
-          <article class="cooperation__card">
-            <div class="cooperation__cardHead">
-              <span class="cooperation__cardIcon" aria-hidden="true">
-                <font-awesome-icon :icon="['fas', 'boxes-stacked']" />
-              </span>
-              <p class="cooperation__cardTitle">供應 / 物流合作</p>
-            </div>
             <p class="cooperation__cardDesc">
-              商品供應、倉儲與配送、包材規格與出貨 SOP 協作。
+              {{ item.desc }}
             </p>
-            <ul class="cooperation__list">
-              <li>備貨量與交期</li>
-              <li>包裝規格與品檢</li>
-              <li>退換貨與異常處理</li>
-            </ul>
-          </article>
 
-          <article class="cooperation__card">
-            <div class="cooperation__cardHead">
-              <span class="cooperation__cardIcon" aria-hidden="true">
-                <font-awesome-icon :icon="['fas', 'store']" />
-              </span>
-              <p class="cooperation__cardTitle">通路 / 門市合作</p>
-            </div>
-            <p class="cooperation__cardDesc">
-              門市導流、線下活動、取貨/展示點、共同宣傳與會員互通。
-            </p>
             <ul class="cooperation__list">
-              <li>門市位置與合作模式</li>
-              <li>活動檔期與人流目標</li>
-              <li>導流與成效回報</li>
-            </ul>
-          </article>
-
-          <article class="cooperation__card">
-            <div class="cooperation__cardHead">
-              <span class="cooperation__cardIcon" aria-hidden="true">
-                <font-awesome-icon :icon="['fas', 'bullhorn']" />
-              </span>
-              <p class="cooperation__cardTitle">行銷 / 活動合作</p>
-            </div>
-            <p class="cooperation__cardDesc">
-              社群活動、媒體合作、跨品牌共同曝光與抽賞企劃。
-            </p>
-            <ul class="cooperation__list">
-              <li>曝光渠道與素材形式</li>
-              <li>活動機制與贈品配置</li>
-              <li>檔期與投放規劃</li>
+              <li v-for="text in item.list" :key="text">
+                {{ text }}
+              </li>
             </ul>
           </article>
         </div>
@@ -171,9 +134,11 @@
               直接在表單用一句話描述你的目標，我們會回覆可行的合作方向與下一步。
             </p>
           </div>
+
           <div class="cooperation__ctaRight">
             <button
               class="cooperation__btn cooperation__btn--primary"
+              type="button"
               @click="scrollTo('form')"
             >
               前往表單
@@ -270,14 +235,21 @@
             </div>
 
             <div class="cooperation__formActions">
-              <button class="cooperation__btn2" type="button" @click="reset">
+              <button
+                class="cooperation__btn2"
+                type="button"
+                :disabled="submitting"
+                @click="reset"
+              >
                 清除
               </button>
+
               <button
                 class="cooperation__btn2 cooperation__btn2--primary"
                 type="submit"
+                :disabled="submitting"
               >
-                送出洽談
+                {{ submitting ? '送出中...' : '送出洽談' }}
               </button>
             </div>
 
@@ -305,9 +277,9 @@
               <p class="cooperation__sideTitle">其他聯繫方式</p>
               <p class="cooperation__sideText">
                 你也可以直接寄信至：
-                <a class="cooperation__sideLink" :href="mailtoHref">{{
-                  contactEmail
-                }}</a>
+                <a class="cooperation__sideLink" :href="mailtoHref">
+                  {{ contactEmail }}
+                </a>
               </p>
               <div class="cooperation__sideBtns">
                 <button
@@ -330,19 +302,6 @@
         </div>
       </div>
     </section>
-
-    <!-- Toast -->
-    <div
-      v-if="toastOpen"
-      class="cooperation__toast"
-      role="status"
-      aria-live="polite"
-    >
-      <span class="cooperation__toastIcon" aria-hidden="true">
-        <font-awesome-icon :icon="['fas', 'check']" />
-      </span>
-      <span class="cooperation__toastText">{{ toastText }}</span>
-    </div>
   </div>
 </template>
 
@@ -350,10 +309,16 @@
 import { computed, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
+import { submitCooperationInquiry } from '@/services/cooperationService';
+import { useOverlayStore } from '@/stores/overlay';
+import { ichibanInfoDialog } from '@/utils/dialog/ichibanInfoDialog';
+
 type CooperationType = 'IP' | 'SUPPLY' | 'CHANNEL' | 'MARKETING';
 
+type IchibanInfoDialogOptions = Parameters<typeof ichibanInfoDialog>[0];
+
 const router = useRouter();
-const year = computed(() => new Date().getFullYear());
+const overlay = useOverlayStore();
 
 const contactEmail = 'a@gmail.com';
 const mailtoHref = computed(() => `mailto:${contactEmail}`);
@@ -369,6 +334,33 @@ const typeOptions: Array<{
   { value: 'MARKETING', label: '行銷 / 活動', icon: ['fas', 'bullhorn'] },
 ];
 
+const cooperationCards = [
+  {
+    title: 'IP / 授權合作',
+    icon: ['fas', 'copyright'],
+    desc: '系列企劃、聯名抽賞、限定獎品、授權素材整合與上架規劃。',
+    list: ['授權範圍與期間', '素材交付與審稿流程', '上架節奏與宣傳協作'],
+  },
+  {
+    title: '供應 / 物流合作',
+    icon: ['fas', 'boxes-stacked'],
+    desc: '商品供應、倉儲與配送、包材規格與出貨 SOP 協作。',
+    list: ['備貨量與交期', '包裝規格與品檢', '退換貨與異常處理'],
+  },
+  {
+    title: '通路 / 門市合作',
+    icon: ['fas', 'store'],
+    desc: '門市導流、線下活動、取貨/展示點、共同宣傳與會員互通。',
+    list: ['門市位置與合作模式', '活動檔期與人流目標', '導流與成效回報'],
+  },
+  {
+    title: '行銷 / 活動合作',
+    icon: ['fas', 'bullhorn'],
+    desc: '社群活動、媒體合作、跨品牌共同曝光與抽賞企劃。',
+    list: ['曝光渠道與素材形式', '活動機制與贈品配置', '檔期與投放規劃'],
+  },
+];
+
 const form = ref({
   company: '',
   name: '',
@@ -378,30 +370,23 @@ const form = ref({
   message: '',
 });
 
-const toastOpen = ref(false);
-const toastText = ref('');
+const submitting = ref(false);
 
-const showToast = (text: string) => {
-  toastText.value = text;
-  toastOpen.value = true;
-  window.setTimeout(() => {
-    toastOpen.value = false;
-  }, 1800);
+/**
+ * 統一包 ichibanInfoDialog
+ * 參考 Login.vue 的 overlay.open() / overlay.close() 寫法
+ */
+const openCooperationInfoDialog = async (options: IchibanInfoDialogOptions) => {
+  overlay.open();
+
+  try {
+    return await ichibanInfoDialog(options);
+  } finally {
+    overlay.close();
+  }
 };
 
-const goHome = () => router.push({ name: 'Home' });
-const goFaq = () => router.push({ path: '/faq' });
-const goTransaction = () => router.push({ path: '/transaction' });
-const goShop = () => router.push({ name: 'Mall' });
-
-const scrollTo = (id: string) => {
-  const el = document.getElementById(id);
-  el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-};
-
-const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
-
-const reset = () => {
+const resetForm = () => {
   form.value = {
     company: '',
     name: '',
@@ -410,27 +395,96 @@ const reset = () => {
     type: 'IP',
     message: '',
   };
-  showToast('已清除');
 };
 
-const submit = () => {
-  // 這裡先做前端示意。之後串 API 也很簡單：把 form.value 送到後端即可。
-  // 基本檢查（最少必要）
+const reset = async () => {
+  resetForm();
+
+  await openCooperationInfoDialog({
+    title: '提示訊息',
+    content: '已清除',
+  });
+};
+
+const goFaq = () => router.push({ path: '/faq' });
+const goTransaction = () => router.push({ path: '/transaction' });
+
+const scrollTo = (id: string) => {
+  const el = document.getElementById(id);
+  el?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+};
+
+const validateForm = async () => {
   if (!form.value.name || !form.value.email || !form.value.message) {
-    showToast('請至少填寫：姓名、Email、需求簡述');
-    return;
+    await openCooperationInfoDialog({
+      title: '提示訊息',
+      content: '請至少填寫：姓名、Email、需求簡述',
+    });
+
+    return false;
   }
 
-  showToast('已送出，我們會盡快回覆');
-  reset();
+  return true;
+};
+
+const submit = async () => {
+  if (submitting.value) return;
+
+  const valid = await validateForm();
+  if (!valid) return;
+
+  submitting.value = true;
+
+  try {
+    const res = await submitCooperationInquiry({
+      company: form.value.company,
+      name: form.value.name,
+      email: form.value.email,
+      phone: form.value.phone,
+      type: form.value.type,
+      message: form.value.message,
+    });
+
+    if (res?.success === false) {
+      await openCooperationInfoDialog({
+        title: '提示訊息',
+        content: res.message || '送出失敗，請稍後再試',
+      });
+
+      return;
+    }
+
+    await openCooperationInfoDialog({
+      title: '提示訊息',
+      content: '已送出，我們會盡快回覆',
+    });
+
+    resetForm();
+  } catch (error) {
+    console.error('[Cooperation] submit failed:', error);
+
+    await openCooperationInfoDialog({
+      title: '提示訊息',
+      content: '送出失敗，請稍後再試',
+    });
+  } finally {
+    submitting.value = false;
+  }
 };
 
 const copyEmail = async () => {
   try {
     await navigator.clipboard.writeText(contactEmail);
-    showToast('已複製信箱');
+
+    await openCooperationInfoDialog({
+      title: '提示訊息',
+      content: '已複製信箱',
+    });
   } catch {
-    showToast('複製失敗，請手動複製');
+    await openCooperationInfoDialog({
+      title: '提示訊息',
+      content: '複製失敗，請手動複製',
+    });
   }
 };
 
@@ -438,7 +492,6 @@ const openMail = () => {
   window.location.href = mailtoHref.value;
 };
 </script>
-
 <style scoped lang="scss">
 .cooperation {
   background: linear-gradient(180deg, #f4e1cc 0%, #f8efe3 40%, #ffffff 100%);
@@ -452,7 +505,6 @@ const openMail = () => {
     padding: 0 24px;
   }
 
-  /* Hero */
   &__hero {
     background: #000;
     color: #fff;
@@ -463,7 +515,6 @@ const openMail = () => {
     max-width: 1200px;
     margin: 0 auto;
     padding: 0 24px;
-
     display: grid;
     grid-template-columns: 1.12fr 0.88fr;
     gap: 24px;
@@ -547,7 +598,6 @@ const openMail = () => {
     border-radius: 12px;
     display: grid;
     place-items: center;
-
     background: rgba(229, 166, 87, 0.12);
     border: 1px solid rgba(229, 166, 87, 0.22);
     color: rgba(229, 166, 87, 0.95);
@@ -603,11 +653,9 @@ const openMail = () => {
     gap: 10px;
     padding: 12px 12px;
     border-radius: 14px;
-
     background: rgba(0, 0, 0, 0.35);
     border: 1px solid rgba(255, 255, 255, 0.12);
     color: rgba(255, 255, 255, 0.9);
-
     font-weight: 1000;
     letter-spacing: 0.4px;
     font-size: 14px;
@@ -625,7 +673,6 @@ const openMail = () => {
     border-radius: 12px;
     display: grid;
     place-items: center;
-
     background: rgba(229, 166, 87, 0.12);
     border: 1px solid rgba(229, 166, 87, 0.22);
     color: rgba(229, 166, 87, 0.95);
@@ -656,7 +703,6 @@ const openMail = () => {
     }
   }
 
-  /* Sections */
   &__section {
     padding: 34px 0 40px;
 
@@ -709,7 +755,6 @@ const openMail = () => {
     border-radius: 14px;
     display: grid;
     place-items: center;
-
     background: rgba(178, 71, 58, 0.08);
     border: 1px solid rgba(178, 71, 58, 0.14);
     color: rgba(178, 71, 58, 0.95);
@@ -740,14 +785,12 @@ const openMail = () => {
     font-size: 14px;
   }
 
-  /* CTA */
   &__cta {
     margin-top: 18px;
     border-radius: 18px;
     padding: 18px;
     background: linear-gradient(135deg, #b2473a, #7a1a12);
     color: #fff;
-
     display: flex;
     justify-content: space-between;
     gap: 16px;
@@ -769,13 +812,6 @@ const openMail = () => {
     font-size: 14px;
   }
 
-  &__ctaRight {
-    display: flex;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-
-  /* Form */
   &__formWrap {
     display: grid;
     grid-template-columns: 1.15fr 0.85fr;
@@ -870,7 +906,6 @@ const openMail = () => {
     border-radius: 10px;
     display: grid;
     place-items: center;
-
     background: rgba(229, 166, 87, 0.12);
     border: 1px solid rgba(229, 166, 87, 0.22);
     color: rgba(229, 166, 87, 0.95);
@@ -892,6 +927,11 @@ const openMail = () => {
     background: rgba(255, 255, 255, 0.85);
     font-weight: 1000;
     cursor: pointer;
+
+    &:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+    }
 
     &--primary {
       background: rgba(178, 71, 58, 0.95);
@@ -976,74 +1016,6 @@ const openMail = () => {
     flex-wrap: wrap;
   }
 
-  /* Footer */
-  &__footer {
-    padding: 18px 0 24px;
-  }
-
-  &__footerInner {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-  }
-
-  &__footerText {
-    margin: 0;
-    color: rgba(0, 0, 0, 0.6);
-    font-size: 13px;
-  }
-
-  &__footerTop {
-    height: 40px;
-    padding: 0 12px;
-    border-radius: 12px;
-    border: 1px solid rgba(0, 0, 0, 0.12);
-    background: rgba(255, 255, 255, 0.7);
-    font-weight: 900;
-    cursor: pointer;
-  }
-
-  /* Toast */
-  &__toast {
-    position: fixed;
-    left: 50%;
-    bottom: 18px;
-    transform: translateX(-50%);
-    z-index: 99999;
-
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 14px;
-    border-radius: 999px;
-
-    background: rgba(0, 0, 0, 0.92);
-    color: #fff;
-    border: 1px solid rgba(255, 255, 255, 0.14);
-  }
-
-  &__toastIcon {
-    width: 28px;
-    height: 28px;
-    border-radius: 12px;
-    display: grid;
-    place-items: center;
-
-    background: rgba(229, 166, 87, 0.12);
-    border: 1px solid rgba(229, 166, 87, 0.22);
-    color: rgba(229, 166, 87, 0.95);
-    flex: 0 0 auto;
-  }
-
-  &__toastText {
-    font-weight: 900;
-    letter-spacing: 0.2px;
-    font-size: 13px;
-  }
-
-  /* RWD */
   @media (max-width: 1024px) {
     &__heroInner {
       grid-template-columns: 1fr;
