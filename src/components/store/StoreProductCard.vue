@@ -26,9 +26,20 @@ const displayImage = computed(
   () => props.product.imageUrl || props.product.bannerImageUrl || 'https://via.placeholder.com/800x800?text=KUJI',
 );
 
-const isSoldOut = computed(
-  () => String(props.product.status ?? '').toUpperCase() === 'SOLD_OUT',
+const normalizedStatus = computed(() =>
+  String(props.product.status ?? '').toUpperCase(),
 );
+
+const statusLabel = computed(() => {
+  if (normalizedStatus.value === 'GRAND_PRIZE_DRAWN') return '大獎已抽完';
+  if (normalizedStatus.value === 'ALL_DRAWN' || normalizedStatus.value === 'SOLD_OUT') {
+    return '已售完';
+  }
+  if (['OFF_SHELF', 'FORCED_OFF', 'DELETED', 'INACTIVE'].includes(normalizedStatus.value)) {
+    return '已下架';
+  }
+  return '';
+});
 </script>
 
 <template>
@@ -42,9 +53,7 @@ const isSoldOut = computed(
 
       <div class="storeProductCard__topRow">
         <span class="storeProductCard__category">{{ categoryLabel }}</span>
-        <span v-if="isSoldOut" class="storeProductCard__status">
-          已售完
-        </span>
+        <span v-if="statusLabel" class="storeProductCard__status">{{ statusLabel }}</span>
       </div>
     </div>
 

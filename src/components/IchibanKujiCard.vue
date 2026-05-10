@@ -17,12 +17,17 @@
         />
       </div>
 
-      <!-- Status overlay: SOLD_OUT / INACTIVE -->
-      <div v-if="isSoldOut" class="kuji-card__status-overlay kuji-card__status-overlay--sold-out">
-        <span>售完</span>
-      </div>
-      <div v-else-if="isInactive" class="kuji-card__status-overlay kuji-card__status-overlay--inactive">
-        <span>已下架</span>
+      <!-- Status overlay -->
+      <div
+        v-if="terminalStatusLabel"
+        :class="[
+          'kuji-card__status-overlay',
+          isTerminalSoldOut
+            ? 'kuji-card__status-overlay--sold-out'
+            : 'kuji-card__status-overlay--inactive',
+        ]"
+      >
+        <span>{{ terminalStatusLabel }}</span>
       </div>
 
       <!-- Bottom overlay -->
@@ -117,6 +122,10 @@ const resolvedImgSrc = computed(() => {
   return url ? url : demo1;
 });
 
+const normalizedStatus = computed(() =>
+  String(props.item?.status ?? '').toUpperCase(),
+);
+
 const isScratchMode = computed(
   () => String(props.item?.playMode ?? '').toUpperCase() === 'SCRATCH_MODE',
 );
@@ -135,10 +144,22 @@ const resolvedTotalPrizes = computed(() => {
   return ~~(props.item?.totalTickets ?? props.item?.totalPrizes ?? props.item?.totalDraws ?? 0);
 });
 
-const isSoldOut = computed(() =>
-  props.item?.status === 'SOLD_OUT' || resolvedRemainingPrizes.value === 0
+const isTerminalSoldOut = computed(
+  () =>
+    normalizedStatus.value === 'ALL_DRAWN' ||
+    normalizedStatus.value === 'SOLD_OUT' ||
+    resolvedRemainingPrizes.value === 0,
 );
-const isInactive = computed(() => props.item?.status === 'INACTIVE');
+
+const terminalStatusLabel = computed(() => {
+  if (normalizedStatus.value === 'GRAND_PRIZE_DRAWN') return '大獎已抽完';
+  if (isTerminalSoldOut.value) return '已售完';
+  if (['OFF_SHELF', 'FORCED_OFF', 'DELETED', 'INACTIVE'].includes(normalizedStatus.value)) {
+    return '已下架';
+  }
+  return '';
+});
+
 
 const resolvedTagText = computed(() => {
   return props.item?.storeName || 'KUJI';

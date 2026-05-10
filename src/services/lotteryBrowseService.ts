@@ -4,6 +4,16 @@ import type { ApiResponse, PaginatedApiResponse, PageResult } from '@/types/api'
 
 const basePath = '/lottery/browse';
 
+export type LotteryLifecycleStatus =
+  | 'DRAFT'
+  | 'WAITING_ON_SHELF'
+  | 'ON_SHELF'
+  | 'OFF_SHELF'
+  | 'GRAND_PRIZE_DRAWN'
+  | 'ALL_DRAWN'
+  | 'FORCED_OFF'
+  | 'DELETED';
+
 // ── Response types ──────────────────────────────────────────────
 
 export interface LotteryRes {
@@ -91,7 +101,7 @@ export interface BrowseCondition {
   createdAtEnd?: string;
   // 向後相容欄位（既有元件使用）
   theme?: string;
-  status?: 'ON_SHELF' | 'OFF_SHELF' | 'SOLD_OUT';
+  status?: LotteryLifecycleStatus;
   tags?: string[];
 }
 

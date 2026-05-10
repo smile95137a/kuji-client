@@ -3,12 +3,22 @@ import { api } from './FrontAPI';
 
 const basePath = '/category';
 
+export type LotteryLifecycleStatus =
+  | 'DRAFT'
+  | 'WAITING_ON_SHELF'
+  | 'ON_SHELF'
+  | 'OFF_SHELF'
+  | 'GRAND_PRIZE_DRAWN'
+  | 'ALL_DRAWN'
+  | 'FORCED_OFF'
+  | 'DELETED';
+
 /**
  * 類別查詢條件
  */
 export interface CategoryCondition {
   /** 商品狀態 */
-  status?: 'ON_SHELF' | 'OFF_SHELF' | 'SOLD_OUT';
+  status?: LotteryLifecycleStatus;
   /** 主題名稱 */
   theme?: string;
   /** 類別 */
