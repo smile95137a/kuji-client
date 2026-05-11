@@ -32,7 +32,7 @@ const normalizedStatus = computed(() =>
 
 const statusLabel = computed(() => {
   if (normalizedStatus.value === 'GRAND_PRIZE_DRAWN') return '大獎已抽完';
-  if (normalizedStatus.value === 'ALL_DRAWN' || normalizedStatus.value === 'SOLD_OUT') {
+  if (normalizedStatus.value === 'ALL_DRAWN') {
     return '已售完';
   }
   if (['OFF_SHELF', 'FORCED_OFF', 'DELETED', 'INACTIVE'].includes(normalizedStatus.value)) {
