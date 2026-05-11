@@ -1,12 +1,10 @@
 // src/composables/useRegister.ts
 import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/useAuthStore';
 import { register } from '@/services/AuthService';
 
 export function useRegister() {
   const router = useRouter();
-  const authStore = useAuthStore();
 
   const email = ref('');
   const password = ref('');
@@ -49,15 +47,13 @@ export function useRegister() {
         return;
       }
 
-      // Auto-login: set auth state from register response
-      authStore.setAuth({
-        accessToken: res.data?.accessToken,
-        refreshToken: res.data?.refreshToken,
-        tokenType: res.data?.tokenType ?? 'Bearer',
-        user: res.data?.user,
+      await router.push({
+        path: '/login',
+        query: {
+          registered: '1',
+          email: email.value,
+        },
       });
-
-      await router.push('/member-center/profile');
     } catch (err: any) {
       const status = err?.response?.status;
       if (status === 409) {

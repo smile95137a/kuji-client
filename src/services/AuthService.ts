@@ -11,7 +11,8 @@ export interface AuthUserRes {
   id: string;
   email: string;
   nickname: string;
-  avatarUrl: string | null;
+  avatarUrl?: string | null;
+  avatar?: string | null;
   provider: 'EMAIL' | 'GOOGLE';
   status: 'ACTIVE' | 'INACTIVE' | 'SUSPENDED';
   goldCoins: number;
@@ -21,11 +22,13 @@ export interface AuthUserRes {
 }
 
 export interface AuthRes {
-  accessToken: string;
-  refreshToken: string;
-  expiresIn: number;
-  tokenType: 'Bearer';
-  user: AuthUserRes;
+  // 註冊成功後可能不回傳 token（需先完成 Email 驗證）
+  accessToken?: string;
+  refreshToken?: string;
+  expiresIn?: number;
+  tokenType?: 'Bearer';
+  forceChangePassword?: boolean;
+  user?: AuthUserRes;
 }
 
 // ── Request types ────────────────────────────────────────────────
@@ -194,8 +197,9 @@ export const validateReferralCode = async (
   signal?: AbortSignal,
 ): Promise<ApiResponse<{ isValid: boolean; ownerName?: string; errorCode?: string }>> => {
   try {
-    const res = await api.get(`${basePath}/referral/validate`, {
-      params: { code },
+    const res = await api.post(`${basePath}/validate-referral`, {
+      code,
+    }, {
       signal,
     });
     return res.data;
