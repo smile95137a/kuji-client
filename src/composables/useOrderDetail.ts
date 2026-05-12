@@ -2,9 +2,11 @@
 import { ref } from 'vue';
 import {
   getOrderDetail,
+  repayShipping,
   submitShippingInfo,
   type ShippingInfoReq,
 } from '@/services/orderService';
+import type { PaymentMethodCode } from '@/services/rechargeService';
 
 export function useOrderDetail(orderId: string) {
   const order = ref<any>(null);
@@ -12,6 +14,7 @@ export function useOrderDetail(orderId: string) {
   const isSubmitting = ref(false);
   const error = ref<string | null>(null);
   const submitError = ref<string | null>(null);
+  const repayError = ref<string | null>(null);
 
   const normalizeOrder = (raw: any) => {
     const data = raw?.data?.data ?? raw?.data ?? raw;
@@ -34,6 +37,8 @@ export function useOrderDetail(orderId: string) {
       shippingFee: data.shippingFee ?? 0,
       discount: data.discount ?? 0,
       totalAmount: data.totalAmount ?? 0,
+      paymentStatus: data.paymentStatus ?? '',
+      paymentMethod: data.paymentMethod ?? '',
       createdAt: data.createdAt,
       updatedAt: data.updatedAt,
       items: Array.isArray(data.items) ? data.items : [],
@@ -70,13 +75,27 @@ export function useOrderDetail(orderId: string) {
     }
   }
 
+  async function repay(paymentMethod: PaymentMethodCode): Promise<string | null> {
+    if (!orderId) return null;
+    repayError.value = null;
+    try {
+      const res = await repayShipping(orderId, paymentMethod);
+      return res?.data?.paymentUrl ?? null;
+    } catch (e: any) {
+      repayError.value = e?.response?.data?.error?.message ?? '重新付款失敗';
+      return null;
+    }
+  }
+
   return {
     order,
     isLoading,
     isSubmitting,
     error,
     submitError,
+    repayError,
     fetchDetail,
     submitShipping,
+    repay,
   };
 }

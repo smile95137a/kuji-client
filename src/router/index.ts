@@ -33,12 +33,14 @@ import MemberCenter from '@/views/member/MemberCenter.vue';
 import MemberProfile from '@/views/member/MemberProfile.vue';
 import Deposit from '@/views/member/Deposit.vue';
 import DepositHistory from '@/views/member/DepositHistory.vue';
+import DepositPaymentResult from '@/views/member/DepositPaymentResult.vue';
 import TransactionHistory from '@/views/member/TransactionHistory.vue';
 import Notifications from '@/views/member/Notifications.vue';
 import ProfileEdit from '@/views/member/ProfileEdit.vue';
 import PrizeBox from '@/views/member/PrizeBox.vue';
 import OrderHistory from '@/views/member/OrderHistory.vue';
 import OrderDetail from '@/views/member/OrderDetail.vue';
+import OrderPaymentResult from '@/views/member/OrderPaymentResult.vue';
 import ReferralCode from '@/views/member/ReferralCode.vue';
 import VerifyEmail from '@/views/VerifyEmail.vue';
 import Maintenance from '@/views/Maintenance.vue';
@@ -186,9 +188,21 @@ export const routes: Array<RouteRecordRaw> = [
             meta: { requiresAuth: true },
           },
           {
+            path: 'deposit-payment-result',
+            name: 'DepositPaymentResult',
+            component: DepositPaymentResult,
+            meta: { requiresAuth: true },
+          },
+          {
             path: 'order-history',
             name: 'OrderHistory',
             component: OrderHistory,
+            meta: { requiresAuth: true },
+          },
+          {
+            path: 'order-payment-result',
+            name: 'OrderPaymentResult',
+            component: OrderPaymentResult,
             meta: { requiresAuth: true },
           },
 

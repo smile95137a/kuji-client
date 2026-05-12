@@ -1,6 +1,7 @@
 // services/orderService.ts
 import { api } from './FrontAPI';
 import type { ApiResponse, PaginatedApiResponse } from '@/types/api';
+import type { PaymentMethodCode } from './rechargeService';
 
 const basePath = '/order';
 
@@ -16,6 +17,16 @@ export interface OrderListRow {
   shippingStatus: string;
   shippingStatusName?: string;
   payMethodName?: string;
+}
+
+export interface OrderPaymentInitRes {
+  orderId: string;
+  orderNumber: string;
+  shippingFee: number;
+  paymentStatus: string;
+  paymentMethod?: PaymentMethodCode | string;
+  paymentUrl: string | null;
+  gatewayTradeNo: string | null;
 }
 
 /** 前台 - 查詢我的訂單列表 POST /api/order/list */
@@ -63,6 +74,33 @@ export const submitShippingInfo = async (
     return res.data;
   } catch (e) {
     console.error('Order - submitShippingInfo error:', e);
+    throw e;
+  }
+};
+
+export const repayShipping = async (
+  orderId: string,
+  paymentMethod: PaymentMethodCode,
+): Promise<ApiResponse<OrderPaymentInitRes>> => {
+  try {
+    const res = await api.post(`${basePath}/${orderId}/repay`, null, {
+      params: { paymentMethod },
+    });
+    return res.data;
+  } catch (e) {
+    console.error('Order - repayShipping error:', e);
+    throw e;
+  }
+};
+
+export const getPaymentGroupOrders = async (
+  merchantOrderNo: string,
+): Promise<ApiResponse<OrderPaymentInitRes[]>> => {
+  try {
+    const res = await api.get(`${basePath}/payment-group/${merchantOrderNo}`);
+    return res.data;
+  } catch (e) {
+    console.error('Order - getPaymentGroupOrders error:', e);
     throw e;
   }
 };

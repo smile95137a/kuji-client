@@ -225,6 +225,26 @@
             </div>
           </section>
 
+          <section class="ship-dialog__section">
+            <h3 class="ship-dialog__section-title">付款方式</h3>
+            <div class="ship-dialog__payment-list">
+              <label class="ship-dialog__payment-item" :class="{ 'is-selected': selectedPaymentMethod === 'CREDIT_CARD' }">
+                <input v-model="selectedPaymentMethod" type="radio" value="CREDIT_CARD" />
+                <div>
+                  <div class="ship-dialog__shipping-name">信用卡</div>
+                  <div class="ship-dialog__shipping-desc">跳轉 GoMyPay 信用卡頁面付款</div>
+                </div>
+              </label>
+              <label class="ship-dialog__payment-item" :class="{ 'is-selected': selectedPaymentMethod === 'BANK_TRANSFER' }">
+                <input v-model="selectedPaymentMethod" type="radio" value="BANK_TRANSFER" />
+                <div>
+                  <div class="ship-dialog__shipping-name">銀行轉帳</div>
+                  <div class="ship-dialog__shipping-desc">取得虛擬帳號後再進行轉帳</div>
+                </div>
+              </label>
+            </div>
+          </section>
+
           <!-- ④ 費用摘要 -->
           <section class="ship-dialog__section ship-dialog__section--summary">
             <h3 class="ship-dialog__section-title">費用摘要</h3>
@@ -311,6 +331,8 @@ const {
   shippingMethodsLoading,
   selectedShippingId,
   selectedShipping,
+  selectedPaymentMethod,
+  paymentUrl,
   isHomeDelivery,
   isConvenienceStorePickup,
 } = usePrizeBoxShip(itemsRef);
@@ -373,6 +395,10 @@ function tryClose() {
 async function onSubmit() {
   const ok = await submit();
   if (ok) {
+    if (paymentUrl.value) {
+      window.location.href = paymentUrl.value;
+      return;
+    }
     emit('success');
   }
 }
@@ -566,6 +592,27 @@ async function onSubmit() {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.ship-dialog__payment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ship-dialog__payment-item {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.ship-dialog__payment-item.is-selected {
+  border-color: #111827;
+  box-shadow: 0 0 0 1px rgba(17, 24, 39, 0.12);
 }
 
 .ship-dialog__shipping-item {

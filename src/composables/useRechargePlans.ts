@@ -1,8 +1,10 @@
 // src/composables/useRechargePlans.ts
 import { ref } from 'vue';
 import { getActiveRechargePlans } from '@/services/rechargePlanService';
-import { createRechargeRequest } from '@/services/rechargeService';
-import { useMemberWalletStore } from '@/stores/memberWallet';
+import {
+  createWalletRechargeOrder,
+  type PaymentMethodCode,
+} from '@/services/rechargeService';
 
 export interface RechargePlan {
   id: string;
@@ -29,13 +31,12 @@ function normalizePlan(x: any): RechargePlan {
 }
 
 export function useRechargePlans() {
-  const memberWallet = useMemberWalletStore();
-
   const plans = ref<RechargePlan[]>([]);
   const isLoading = ref(false);
   const isSubmitting = ref(false);
   const error = ref<string | null>(null);
   const paymentUrl = ref<string | null>(null);
+  const rechargeOrderId = ref<string | null>(null);
   const lastSuccessful = ref(false);
 
   async function fetchPlans() {
@@ -57,22 +58,24 @@ export function useRechargePlans() {
     }
   }
 
-  async function createRecharge(planId: string): Promise<{ success: boolean; message?: string }> {
+  async function createRecharge(
+    planId: string,
+    paymentMethod: PaymentMethodCode,
+  ): Promise<{ success: boolean; message?: string }> {
     isSubmitting.value = true;
     lastSuccessful.value = false;
     paymentUrl.value = null;
+    rechargeOrderId.value = null;
     error.value = null;
 
     try {
-      const res = await createRechargeRequest({ planId, paymentMethod: 'GOMYPAY' });
+      const res = await createWalletRechargeOrder({ planId, paymentMethod });
 
       if (res?.success) {
         const data = res.data as any;
-        paymentUrl.value = data?.paymentUrl ?? null;
+        paymentUrl.value = data?.payUrl ?? null;
+        rechargeOrderId.value = data?.rechargeOrderId ?? null;
         lastSuccessful.value = true;
-
-        // Refresh wallet balance after successful recharge
-        await memberWallet.loadMe();
 
         return { success: true };
       } else {
@@ -95,6 +98,7 @@ export function useRechargePlans() {
     isSubmitting,
     error,
     paymentUrl,
+    rechargeOrderId,
     lastSuccessful,
     fetchPlans,
     createRecharge,

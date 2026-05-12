@@ -21,6 +21,22 @@
       <p v-if="planError" class="deposit__error">{{ planError }}</p>
     </div>
 
+    <div class="deposit__card">
+      <p class="deposit__section-title">選擇付款方式</p>
+      <div class="deposit__paymentList">
+        <label class="deposit__paymentItem" :class="{ 'is-active': selectedPaymentMethod === 'CREDIT_CARD' }">
+          <input v-model="selectedPaymentMethod" type="radio" value="CREDIT_CARD" />
+          <span class="deposit__paymentTitle">信用卡</span>
+          <span class="deposit__paymentDesc">立即付款，完成後回到儲值結果頁</span>
+        </label>
+        <label class="deposit__paymentItem" :class="{ 'is-active': selectedPaymentMethod === 'BANK_TRANSFER' }">
+          <input v-model="selectedPaymentMethod" type="radio" value="BANK_TRANSFER" />
+          <span class="deposit__paymentTitle">銀行轉帳</span>
+          <span class="deposit__paymentDesc">取得虛擬帳號後再轉帳，系統入帳後更新餘額</span>
+        </label>
+      </div>
+    </div>
+
     <!-- 確認按鈕 -->
     <div class="deposit__footer">
       <button
@@ -38,6 +54,7 @@
     <RechargeConfirmDialog
       :visible="confirmOpen"
       :plan="selectedPlan"
+      :payment-method-label="paymentMethodLabel"
       :submitting="isSubmitting"
       @confirm="onConfirm"
       @cancel="confirmOpen = false"
@@ -56,6 +73,7 @@ import { useRechargePlans } from '@/composables/useRechargePlans';
 import { useWallet } from '@/composables/useWallet';
 import { ichibanInfoDialog } from '@/utils/dialog/ichibanInfoDialog';
 import { useOverlayStore } from '@/stores/overlay';
+import type { PaymentMethodCode } from '@/services/rechargeService';
 
 import type { RechargePlan } from '@/composables/useRechargePlans';
 
@@ -72,11 +90,16 @@ const {
 } = useRechargePlans();
 
 const selectedPlanId = ref('');
+const selectedPaymentMethod = ref<PaymentMethodCode>('CREDIT_CARD');
 const confirmOpen = ref(false);
 const planError = ref('');
 
 const selectedPlan = computed<RechargePlan | null>(
   () => plans.value.find((p) => p.id === selectedPlanId.value) ?? null,
+);
+
+const paymentMethodLabel = computed(() =>
+  selectedPaymentMethod.value === 'BANK_TRANSFER' ? '銀行轉帳（虛擬帳號）' : '信用卡',
 );
 
 function onSelectPlan(plan: RechargePlan) {
@@ -94,19 +117,16 @@ function openConfirm() {
 
 async function onConfirm() {
   confirmOpen.value = false;
-  const result = await createRecharge(selectedPlanId.value);
+  const result = await createRecharge(selectedPlanId.value, selectedPaymentMethod.value);
 
   if (result.success) {
     if (paymentUrl.value) {
-      // Production: redirect to payment gateway
       window.location.href = paymentUrl.value;
     } else {
-      // Test mode: coins credited directly
-      await refresh();
       overlay.open();
       await ichibanInfoDialog({
-        title: '儲值成功',
-        content: '此為測試模式，儲值後金幣直接到帳，餘額已更新。',
+        title: '建立付款失敗',
+        content: '未取得付款連結，請稍後再試。',
       });
       overlay.close();
     }
@@ -194,6 +214,40 @@ onMounted(async () => {
     font-size: 12px;
     opacity: 0.7;
     text-align: center;
+  }
+
+  &__paymentList {
+    display: grid;
+    gap: 12px;
+  }
+
+  &__paymentItem {
+    display: grid;
+    grid-template-columns: 20px 1fr;
+    gap: 6px 12px;
+    padding: 14px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    cursor: pointer;
+
+    input {
+      margin-top: 2px;
+    }
+
+    &.is-active {
+      border-color: #111;
+      box-shadow: 0 0 0 1px rgba(17, 17, 17, 0.2);
+    }
+  }
+
+  &__paymentTitle {
+    font-weight: 700;
+  }
+
+  &__paymentDesc {
+    grid-column: 2;
+    font-size: 13px;
+    opacity: 0.7;
   }
 }
 </style>

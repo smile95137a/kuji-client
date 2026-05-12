@@ -3,6 +3,7 @@ import { computed, reactive, ref, watch, type Ref } from 'vue';
 import { useAddressBook, type AddressItem } from './useAddressBook';
 import { shipPrizeBoxItems, type PrizeBoxShipReq } from '@/services/prizeBoxService';
 import { getShippingMethods, type ShippingMethod } from '@/services/shippingMethodService';
+import type { PaymentMethodCode } from '@/services/rechargeService';
 
 export type { ShippingMethod };
 
@@ -55,6 +56,8 @@ export function usePrizeBoxShip(items: Ref<PrizeBoxItem[]>) {
   const shippingMethods = ref<ShippingMethod[]>([]);
   const shippingMethodsLoading = ref(false);
   const selectedShippingId = ref<string>('');
+  const selectedPaymentMethod = ref<PaymentMethodCode>('CREDIT_CARD');
+  const paymentUrl = ref<string | null>(null);
 
   const selectedShipping = computed<ShippingMethod | null>(
     () => shippingMethods.value.find((m) => m.id === selectedShippingId.value) ?? null,
@@ -137,6 +140,8 @@ export function usePrizeBoxShip(items: Ref<PrizeBoxItem[]>) {
     selectedAddressId.value = '';
     selectedAddressSnapshot.value = null;
     selectedShippingId.value = '';
+    selectedPaymentMethod.value = 'CREDIT_CARD';
+    paymentUrl.value = null;
     error.value = '';
   }
 
@@ -267,47 +272,37 @@ export function usePrizeBoxShip(items: Ref<PrizeBoxItem[]>) {
     isSubmitting.value = true;
     error.value = '';
 
-    const errors: string[] = [];
+    const req: PrizeBoxShipReq = {
+      prizeBoxIds: items.value.map((i) => i.id),
+      shippingMethod: shippingCode,
+      shippingMethodId: shipping.id,
+      shippingFee: shipping.fee,
+      paymentMethod: selectedPaymentMethod.value,
+      recipientName: form.recipientName.trim(),
+      recipientPhone: form.recipientPhone.trim(),
+      recipientAddress: recipientAddress || null,
+      storeCode: isConvenienceStorePickup.value ? form.storeCode.trim() : null,
+      storeName: isConvenienceStorePickup.value ? form.storeName.trim() : null,
+      storeAddress: isConvenienceStorePickup.value ? form.storeAddress.trim() : null,
+      remark: form.remark.trim() || null,
+      userAddressId,
+    };
 
-    for (const group of storeGroups.value) {
-      const req: PrizeBoxShipReq = {
-        prizeBoxIds: group.items.map((i) => i.id),
-        shippingMethod: shippingCode,
-        shippingMethodId: shipping.id,
-        shippingFee: shipping.fee,
-        recipientName: form.recipientName.trim(),
-        recipientPhone: form.recipientPhone.trim(),
-        recipientAddress: recipientAddress || null,
-        storeCode: isConvenienceStorePickup.value ? form.storeCode.trim() : null,
-        storeName: isConvenienceStorePickup.value ? form.storeName.trim() : null,
-        storeAddress: isConvenienceStorePickup.value
-          ? form.storeAddress.trim()
-          : null,
-        remark: form.remark.trim() || null,
-        userAddressId,
-      };
-
-      try {
-        const res = await shipPrizeBoxItems(req);
-        if (res && !res.success) {
-          errors.push(`【${group.storeName}】${getSubmitErrorMessage(res)}`);
-        }
-      } catch (e: any) {
-        errors.push(
-          `【${group.storeName}】${getSubmitErrorMessage(
-            e?.response?.data,
-            '出貨時發生錯誤',
-          )}`,
-        );
+    try {
+      const res = await shipPrizeBoxItems(req);
+      if (res && !res.success) {
+        error.value = getSubmitErrorMessage(res);
+        isSubmitting.value = false;
+        return false;
       }
+      paymentUrl.value = res?.data?.[0]?.paymentUrl ?? null;
+    } catch (e: any) {
+      error.value = getSubmitErrorMessage(e?.response?.data, '出貨時發生錯誤');
+      isSubmitting.value = false;
+      return false;
     }
 
     isSubmitting.value = false;
-
-    if (errors.length > 0) {
-      error.value = errors.join('\n');
-      return false;
-    }
 
     return true;
   }
@@ -324,6 +319,8 @@ export function usePrizeBoxShip(items: Ref<PrizeBoxItem[]>) {
     shippingMethodsLoading,
     selectedShippingId,
     selectedShipping,
+    selectedPaymentMethod,
+    paymentUrl,
     isHomeDelivery,
     isConvenienceStorePickup,
     // 分組

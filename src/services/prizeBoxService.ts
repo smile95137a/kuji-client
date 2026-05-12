@@ -13,6 +13,7 @@ export interface PrizeBoxShipReq {
   shippingMethod: string;
   shippingMethodId?: string | null;
   shippingFee?: number | null;
+  paymentMethod?: 'CREDIT_CARD' | 'BANK_TRANSFER' | null;
   recipientName: string;
   recipientPhone: string;
   recipientAddress?: string | null;
@@ -28,6 +29,7 @@ export interface ShipOrderResult {
   orderNumber: string;
   shippingFee: number;
   paymentStatus: string;
+  paymentMethod?: string | null;
   paymentUrl: string | null;
   gatewayTradeNo: string | null;
 }

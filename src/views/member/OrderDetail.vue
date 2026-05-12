@@ -212,23 +212,61 @@
         :recipient-address="order?.recipientAddress"
       />
     </div>
+
+    <div
+      v-if="order && ['PAYMENT_PENDING', 'PAYMENT_FAILED'].includes(order.shippingStatus)"
+      class="orderDetail__card"
+    >
+      <div class="orderDetail__sectionHeader">
+        <h2 class="orderDetail__sectionTitle">運費付款</h2>
+        <p class="orderDetail__sectionHint">選擇付款方式後重新導向 GoMyPay</p>
+      </div>
+
+      <div class="orderDetail__paymentMethods">
+        <label class="orderDetail__paymentItem" :class="{ 'is-active': selectedPaymentMethod === 'CREDIT_CARD' }">
+          <input v-model="selectedPaymentMethod" type="radio" value="CREDIT_CARD" />
+          <div>
+            <div class="orderDetail__paymentTitle">信用卡</div>
+            <div class="orderDetail__paymentDesc">立即前往信用卡付款頁</div>
+          </div>
+        </label>
+        <label class="orderDetail__paymentItem" :class="{ 'is-active': selectedPaymentMethod === 'BANK_TRANSFER' }">
+          <input v-model="selectedPaymentMethod" type="radio" value="BANK_TRANSFER" />
+          <div>
+            <div class="orderDetail__paymentTitle">銀行轉帳</div>
+            <div class="orderDetail__paymentDesc">取得虛擬帳號後再轉帳</div>
+          </div>
+        </label>
+      </div>
+
+      <p v-if="repayError" class="orderDetail__error">{{ repayError }}</p>
+
+      <div class="orderDetail__actions">
+        <button class="orderDetail__btn" type="button" @click="onRepay">
+          重新付款
+        </button>
+      </div>
+    </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useOrderDetail } from '@/composables/useOrderDetail';
 import ShippingInfoForm from '@/components/order/ShippingInfoForm.vue';
 import ShippingInfoDisplay from '@/components/order/ShippingInfoDisplay.vue';
+import type { PaymentMethodCode } from '@/services/rechargeService';
 
 const route = useRoute();
 const router = useRouter();
 
 const orderIdVal = computed(() => String(route.params.orderId || ''));
 
-const { order, isLoading, isSubmitting, error, submitError, fetchDetail, submitShipping } =
+const { order, isLoading, isSubmitting, error, submitError, repayError, fetchDetail, submitShipping, repay } =
   useOrderDetail(orderIdVal.value);
+
+const selectedPaymentMethod = ref<PaymentMethodCode>('CREDIT_CARD');
 
 const items = computed(() => (order.value?.items ? order.value.items : []));
 
@@ -269,6 +307,13 @@ async function onShippingSubmit(form: {
   address: string;
 }) {
   await submitShipping(form);
+}
+
+async function onRepay() {
+  const paymentUrl = await repay(selectedPaymentMethod.value);
+  if (paymentUrl) {
+    window.location.href = paymentUrl;
+  }
 }
 
 onMounted(fetchDetail);
@@ -546,6 +591,45 @@ onMounted(fetchDetail);
     &--full {
       grid-column: 1 / -1;
     }
+  }
+
+  &__paymentMethods {
+    display: grid;
+    gap: 12px;
+  }
+
+  &__paymentItem {
+    display: grid;
+    grid-template-columns: 20px 1fr;
+    gap: 12px;
+    padding: 14px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 12px;
+    cursor: pointer;
+
+    &.is-active {
+      border-color: #111;
+      box-shadow: 0 0 0 1px rgba(17, 17, 17, 0.12);
+    }
+  }
+
+  &__paymentTitle {
+    font-weight: 800;
+  }
+
+  &__paymentDesc {
+    font-size: 13px;
+    opacity: 0.7;
+  }
+
+  &__actions {
+    margin-top: 12px;
+  }
+
+  &__error {
+    margin: 12px 0 0;
+    color: #d11;
+    font-size: 13px;
   }
 }
 </style>

@@ -3,10 +3,13 @@ import { api } from './FrontAPI';
 import type { ApiResponse, PaginatedApiResponse } from '@/types/api';
 
 const basePath = '/recharge';
+const walletBasePath = '/wallet/recharge';
+
+export type PaymentMethodCode = 'CREDIT_CARD' | 'BANK_TRANSFER';
 
 export interface RechargeReq {
   planId: string;
-  paymentMethod?: string;
+  paymentMethod?: PaymentMethodCode;
 }
 
 export type RechargeStatus = 'PENDING' | 'COMPLETED' | 'FAILED' | 'CANCELLED';
@@ -22,6 +25,16 @@ export interface RechargeRes {
   paymentUrl: string | null;
   completedAt: string | null;
   createdAt: string;
+}
+
+export interface RechargeOrderRes {
+  rechargeOrderId: string;
+  payUrl: string | null;
+  goldAmount: number;
+  bonusAmount: number;
+  priceTwd: number;
+  status: string;
+  expiredAt: string | null;
 }
 
 export interface RechargeHistoryRow {
@@ -89,6 +102,30 @@ export const getPaymentMethods = async (): Promise<ApiResponse<any[]>> => {
     return res.data;
   } catch (e) {
     console.error('Recharge - getPaymentMethods error:', e);
+    throw e;
+  }
+};
+
+export const createWalletRechargeOrder = async (
+  req: RechargeReq,
+): Promise<ApiResponse<RechargeOrderRes>> => {
+  try {
+    const res = await api.post(`${walletBasePath}`, req ?? null);
+    return res.data;
+  } catch (e) {
+    console.error('Recharge - createWalletRechargeOrder error:', e);
+    throw e;
+  }
+};
+
+export const getRechargeOrder = async (
+  rechargeOrderId: string,
+): Promise<ApiResponse<RechargeOrderRes>> => {
+  try {
+    const res = await api.get(`${walletBasePath}/${rechargeOrderId}`);
+    return res.data;
+  } catch (e) {
+    console.error('Recharge - getRechargeOrder error:', e);
     throw e;
   }
 };

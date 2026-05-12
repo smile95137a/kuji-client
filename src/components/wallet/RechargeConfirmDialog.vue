@@ -22,7 +22,7 @@
           <!-- Test-mode notice -->
           <div class="rechargeConfirmDialog__notice">
             <span class="rechargeConfirmDialog__noticeIcon">ℹ️</span>
-            此為測試模式，儲值後金幣直接到帳
+            送出後將跳轉至 GoMyPay 測試環境完成付款
           </div>
 
           <template v-if="plan">
@@ -47,6 +47,10 @@
               <span class="rechargeConfirmDialog__v rechargeConfirmDialog__v--bonus">
                 {{ plan.bonusCoins.toLocaleString() }}
               </span>
+            </div>
+            <div class="rechargeConfirmDialog__kv">
+              <span class="rechargeConfirmDialog__k">付款方式</span>
+              <span class="rechargeConfirmDialog__v">{{ paymentMethodLabel }}</span>
             </div>
           </template>
         </div>
@@ -80,6 +84,7 @@ import type { RechargePlan } from '@/composables/useRechargePlans';
 defineProps<{
   visible: boolean;
   plan: RechargePlan | null;
+  paymentMethodLabel: string;
   submitting?: boolean;
 }>();
 
