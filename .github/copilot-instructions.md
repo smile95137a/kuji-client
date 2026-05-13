@@ -26,6 +26,10 @@ npm run build     # 正式打包
 npm run preview   # 預覽打包結果
 ```
 
+## 完成門檻（必須）
+
+- 凡有程式碼異動，必須先通過本機 `npm run build`（或等效 compile/build）後，才可視為完成。
+
 ---
 
 ## 核心架構

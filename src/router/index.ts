@@ -17,6 +17,7 @@ import NotFound from '@/views/NotFound.vue';
 import Login from '@/views/Login.vue';
 import Register from '@/views/Register.vue';
 import ResetPassword from '@/views/ResetPassword.vue';
+import OAuth2Callback from '@/views/OAuth2Callback.vue';
 import Policy from '@/views/Policy.vue';
 import Privacy from '@/views/Privacy.vue';
 import IchibanList from '@/views/IchibanList.vue';
@@ -84,12 +85,14 @@ export const routes: Array<RouteRecordRaw> = [
 
       {
         path: 'store',
+        alias: 'stores',
         name: 'StoreList',
         component: StoreList,
       },
 
       {
         path: 'store/:id',
+        alias: 'stores/:id',
         name: 'StoreDetail',
         component: StoreDetail,
       },
@@ -108,6 +111,11 @@ export const routes: Array<RouteRecordRaw> = [
         component: ResetPassword,
         path: 'reset-password',
         name: 'ResetPassword',
+      },
+      {
+        component: OAuth2Callback,
+        path: 'oauth2/callback',
+        name: 'OAuth2Callback',
       },
       {
         // Public route: no requiresAuth — user arrives here from verification email link

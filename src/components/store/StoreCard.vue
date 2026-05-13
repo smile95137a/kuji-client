@@ -8,16 +8,31 @@
     role="button"
     :aria-label="store.name"
   >
-    <div class="storeCard__logo">
-      <img
-        v-if="store.logoUrl"
-        :src="store.logoUrl"
-        :alt="store.name"
-        class="storeCard__logoImg"
-      />
-      <div v-else class="storeCard__logoPlaceholder">
-        <span>{{ store.name.charAt(0) }}</span>
+    <div class="storeCard__cover">
+      <template v-if="activeCoverUrl">
+        <img
+          :src="activeCoverUrl"
+          :alt="store.name"
+          class="storeCard__coverImg"
+          :class="{ 'storeCard__coverImg--ready': coverLoaded }"
+          @load="onCoverLoad"
+          @error="onCoverError"
+        />
+        <div v-if="!coverLoaded" class="storeCard__coverSkeleton"></div>
+      </template>
+      <div v-else class="storeCard__coverPlaceholder">
+        <span>{{ storeInitial }}</span>
       </div>
+
+      <div v-if="store.logoUrl && !logoBroken" class="storeCard__logoBadge">
+        <img
+          :src="store.logoUrl"
+          :alt="`${store.name} logo`"
+          class="storeCard__logoImg"
+          @error="onLogoError"
+        />
+      </div>
+
       <div v-if="!store.isActive" class="storeCard__inactiveBadge">
         暫停服務
       </div>
@@ -38,10 +53,59 @@
 </template>
 
 <script setup lang="ts">
+import { computed, ref, watch } from 'vue';
 import type { Store } from '@/services/storeService';
 
-defineProps<{ store: Store }>();
+const props = defineProps<{ store: Store }>();
 defineEmits<{ click: [store: Store] }>();
+
+const coverCandidates = computed(() => {
+  const candidates = [
+    ...(props.store.coverImages ?? []),
+    props.store.coverImageUrl,
+    props.store.logoUrl,
+  ]
+    .map((item) => String(item ?? '').trim())
+    .filter(Boolean);
+
+  return Array.from(new Set(candidates));
+});
+
+const activeCoverUrl = ref('');
+const coverLoaded = ref(false);
+const logoBroken = ref(false);
+
+watch(
+  coverCandidates,
+  (candidates) => {
+    activeCoverUrl.value = candidates[0] ?? '';
+    coverLoaded.value = false;
+    logoBroken.value = false;
+  },
+  { immediate: true },
+);
+
+const onCoverLoad = () => {
+  coverLoaded.value = true;
+};
+
+const onCoverError = () => {
+  const candidates = coverCandidates.value;
+  const currentIndex = candidates.indexOf(activeCoverUrl.value);
+  const nextUrl = currentIndex >= 0 ? candidates[currentIndex + 1] : '';
+
+  activeCoverUrl.value = nextUrl ?? '';
+  coverLoaded.value = false;
+};
+
+const onLogoError = () => {
+  logoBroken.value = true;
+};
+
+const storeInitial = computed(() => {
+  const first = String(props.store.name || '').trim().charAt(0);
+  return first || '店';
+});
 </script>
 
 <style scoped lang="scss">
@@ -66,7 +130,7 @@ defineEmits<{ click: [store: Store] }>();
     filter: grayscale(0.4);
   }
 
-  &__logo {
+  &__cover {
     position: relative;
     width: 100%;
     aspect-ratio: 16 / 9;
@@ -75,13 +139,27 @@ defineEmits<{ click: [store: Store] }>();
     background: #f5f5f5;
   }
 
-  &__logoImg {
+  &__coverImg {
+    opacity: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
+    transition: opacity 0.18s ease;
   }
 
-  &__logoPlaceholder {
+  &__coverImg--ready {
+    opacity: 1;
+  }
+
+  &__coverSkeleton {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, #f3f3f3 25%, #ececec 50%, #f3f3f3 75%);
+    background-size: 200% 100%;
+    animation: storeCardShimmer 1.2s linear infinite;
+  }
+
+  &__coverPlaceholder {
     width: 100%;
     height: 100%;
     display: flex;
@@ -91,6 +169,25 @@ defineEmits<{ click: [store: Store] }>();
     font-size: 2.5rem;
     font-weight: 900;
     color: #fff;
+  }
+
+  &__logoBadge {
+    position: absolute;
+    right: 10px;
+    bottom: 10px;
+    width: 46px;
+    height: 46px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 2px solid rgba(255, 255, 255, 0.95);
+    background: #fff;
+    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.2);
+  }
+
+  &__logoImg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
   }
 
   &__inactiveBadge {
@@ -141,6 +238,16 @@ defineEmits<{ click: [store: Store] }>();
     height: 14px;
     flex-shrink: 0;
     margin-top: 1px;
+  }
+}
+
+@keyframes storeCardShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
   }
 }
 </style>

@@ -53,14 +53,14 @@ export interface CategoryRes {
 }
 
 /**
- * 查詢商品類別
- * POST /category/categories
+ * 查詢商品類別（顯示分類聚合）
+ * GET /category/categories
  */
 export const queryCategories = async (
-  req?: CategoryQueryReq,
+  _req?: CategoryQueryReq,
 ): Promise<ApiResponse<CategoryRes[]>> => {
   try {
-    const res = await api.post(`${basePath}/categories`, req ?? undefined);
+    const res = await api.get(`${basePath}/categories`);
     return res.data;
   } catch (e) {
     console.error('Category - queryCategories error:', e);

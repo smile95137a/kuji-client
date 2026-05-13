@@ -147,7 +147,6 @@ const resolvedTotalPrizes = computed(() => {
 const isTerminalSoldOut = computed(
   () =>
     normalizedStatus.value === 'ALL_DRAWN' ||
-    normalizedStatus.value === 'SOLD_OUT' ||
     resolvedRemainingPrizes.value === 0,
 );
 

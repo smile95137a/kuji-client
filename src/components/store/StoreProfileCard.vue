@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import type { StoreDetail, StoreBusinessHours } from '@/services/storeService';
 
 const props = defineProps<{
@@ -25,6 +25,32 @@ const storeDescription = computed(() => {
   const fallback = props.store.description || '';
   return fallback !== shortDescription.value ? fallback : '';
 });
+
+const storeInitial = computed(() => {
+  const first = String(props.store.name ?? '').trim().charAt(0);
+  return first || '店';
+});
+
+const logoLoaded = ref(false);
+const logoBroken = ref(false);
+
+watch(
+  () => props.store.logoUrl,
+  () => {
+    logoLoaded.value = false;
+    logoBroken.value = false;
+  },
+  { immediate: true },
+);
+
+const onLogoLoad = () => {
+  logoLoaded.value = true;
+};
+
+const onLogoError = () => {
+  logoBroken.value = true;
+  logoLoaded.value = false;
+};
 
 const businessHoursText = computed(() => {
   const hours = props.store.businessHours as StoreBusinessHours;
@@ -104,12 +130,18 @@ const socialLinks = computed<SocialLink[]>(() => {
     </div>
 
     <div class="storeProfileCard__hero">
-      <img
-        v-if="store.logoUrl"
-        :src="store.logoUrl"
-        :alt="store.name"
-        class="storeProfileCard__logo"
-      />
+      <div v-if="store.logoUrl && !logoBroken" class="storeProfileCard__logoWrap">
+        <img
+          :src="store.logoUrl"
+          :alt="store.name"
+          class="storeProfileCard__logo"
+          :class="{ 'storeProfileCard__logo--ready': logoLoaded }"
+          @load="onLogoLoad"
+          @error="onLogoError"
+        />
+        <div v-if="!logoLoaded" class="storeProfileCard__logoSkeleton"></div>
+      </div>
+      <div v-else class="storeProfileCard__logoFallback">{{ storeInitial }}</div>
 
       <div class="storeProfileCard__intro">
         <h1 class="storeProfileCard__name">{{ store.name }}</h1>
@@ -221,14 +253,49 @@ const socialLinks = computed<SocialLink[]>(() => {
   align-items: start;
 }
 
-.storeProfileCard__logo {
+.storeProfileCard__logoWrap {
+  position: relative;
   width: 5.5rem;
   height: 5.5rem;
+}
+
+.storeProfileCard__logo {
+  opacity: 0;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   border-radius: 1.25rem;
   border: 1px solid rgba(180, 68, 43, 0.15);
   box-shadow: 0 12px 28px rgba(80, 42, 20, 0.16);
   background: #fff;
+  transition: opacity 0.2s ease;
+}
+
+.storeProfileCard__logo--ready {
+  opacity: 1;
+}
+
+.storeProfileCard__logoSkeleton {
+  position: absolute;
+  inset: 0;
+  border-radius: 1.25rem;
+  background: linear-gradient(90deg, #f2ebe6 25%, #faf6f2 50%, #f2ebe6 75%);
+  background-size: 200% 100%;
+  animation: storeProfileShimmer 1.2s linear infinite;
+}
+
+.storeProfileCard__logoFallback {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 5.5rem;
+  height: 5.5rem;
+  border-radius: 1.25rem;
+  border: 1px solid rgba(180, 68, 43, 0.15);
+  background: linear-gradient(135deg, #b4442b, #e2a162);
+  color: #fff9f5;
+  font-size: 1.8rem;
+  font-weight: 800;
 }
 
 .storeProfileCard__intro {
@@ -336,6 +403,16 @@ const socialLinks = computed<SocialLink[]>(() => {
   word-break: break-word;
 }
 
+@keyframes storeProfileShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
 @media (max-width: 767px) {
   .storeProfileCard {
     padding: 1.25rem;
@@ -345,7 +422,8 @@ const socialLinks = computed<SocialLink[]>(() => {
     grid-template-columns: 1fr;
   }
 
-  .storeProfileCard__logo {
+  .storeProfileCard__logoWrap,
+  .storeProfileCard__logoFallback {
     width: 4.5rem;
     height: 4.5rem;
   }

@@ -97,10 +97,39 @@ const banners = ref<BannerRes[]>([]);
 
 const router = useRouter();
 
+const resolveStoreIdFromLink = (linkUrl?: string | null) => {
+  if (!linkUrl) return '';
+
+  try {
+    const parsed = new URL(linkUrl, window.location.origin);
+    const match = parsed.pathname.match(/^\/stores?\/([^/?#]+)/i);
+    return match?.[1] ?? '';
+  } catch {
+    return '';
+  }
+};
+
 const goToStore = (banner: BannerRes) => {
-  if (banner.storeId) {
-    router.push({ name: 'StoreDetail', params: { id: banner.storeId } });
-  } else if (banner.linkUrl) {
+  const storeId = banner.storeId || resolveStoreIdFromLink(banner.linkUrl);
+
+  if (storeId) {
+    router.push({ name: 'StoreDetail', params: { id: storeId } });
+    return;
+  }
+
+  if (!banner.linkUrl) return;
+
+  try {
+    const parsed = new URL(banner.linkUrl, window.location.origin);
+    const isSameOrigin = parsed.origin === window.location.origin;
+
+    if (isSameOrigin && banner.linkTarget !== '_blank') {
+      router.push(`${parsed.pathname}${parsed.search}${parsed.hash}`);
+      return;
+    }
+
+    window.open(parsed.toString(), banner.linkTarget ?? '_self');
+  } catch {
     window.open(banner.linkUrl, banner.linkTarget ?? '_self');
   }
 };

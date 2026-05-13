@@ -225,6 +225,7 @@ const primaryMenu: MenuItem[] = [
   { key: 'scratch', label: '刮刮樂' },
   { key: 'custom', label: '自製一番賞' },
   { key: 'card', label: '卡牌' },
+  { key: 'store', label: '店家' },
 ];
 const secondaryMenu: MenuItem[] = [];
 // const secondaryMenu: MenuItem[] = [
@@ -279,6 +280,7 @@ const primaryTo = (item: MenuItem): RouteLocationRaw => {
     scratch: { name: 'IchibanList', query: { type: 'scratch' } },
     custom: { name: 'IchibanList', query: { type: 'custom' } },
     card: { name: 'IchibanList', query: { type: 'card' } },
+    store: { name: 'StoreList' },
   };
   return map[item.key] ?? { name: 'IchibanList' };
 };

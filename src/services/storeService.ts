@@ -44,6 +44,9 @@ export interface StoreProduct {
   imageUrl?: string;
   bannerImageUrl?: string;
   category?: string;
+  subCategory?: string;
+  playMode?: string;
+  gameMode?: string;
   status?: string;
   pricePerDraw?: number;
   maxDraws?: number;
@@ -61,46 +64,49 @@ interface StoreProductApiResponse extends Partial<StoreProduct> {
   storeId?: string;
 }
 
+interface StoreListApiResponse {
+  data?: StoreApiResponse[];
+}
+
 const normalizeCoverImages = (raw: StoreApiResponse): string[] => {
-  const coverImages = Array.isArray(raw.coverImages)
-    ? raw.coverImages.filter(Boolean)
-    : [];
+  const imageCandidates = [
+    raw.coverImageUrl,
+    ...(Array.isArray(raw.coverImages) ? raw.coverImages : []),
+  ]
+    .map((item) => String(item ?? '').trim())
+    .filter(Boolean);
 
-  if (coverImages.length > 0) {
-    return coverImages;
-  }
-
-  if (raw.coverImageUrl) {
-    return [raw.coverImageUrl];
-  }
-
-  return [];
+  return Array.from(new Set(imageCandidates));
 };
 
-const normalizeStore = (raw: StoreApiResponse): StoreDetail => ({
-  id: String(raw.id ?? ''),
-  name: String(raw.name ?? raw.storeName ?? ''),
-  description: raw.description ?? raw.shortDescription ?? '',
-  shortDescription: raw.shortDescription ?? raw.description ?? '',
-  longDescription: raw.longDescription ?? '',
-  coverImages: normalizeCoverImages(raw),
-  coverImageUrl: raw.coverImageUrl ?? raw.coverImages?.[0] ?? '',
-  logoUrl: raw.logoUrl ?? '',
-  businessHours: raw.businessHours ?? null,
-  email: raw.email ?? '',
-  address: raw.address ?? '',
-  phone: raw.phone ?? '',
-  facebookUrl: raw.facebookUrl ?? '',
-  instagramUrl: raw.instagramUrl ?? '',
-  lineId: raw.lineId ?? '',
-  isActive:
-    typeof raw.isActive === 'boolean'
-      ? raw.isActive
-      : String(raw.status ?? '').toUpperCase() !== 'INACTIVE',
-  products: Array.isArray(raw.products)
-    ? raw.products.map((product) => normalizeProduct(product))
-    : [],
-});
+const normalizeStore = (raw: StoreApiResponse): StoreDetail => {
+  const normalizedCoverImages = normalizeCoverImages(raw);
+
+  return {
+    id: String(raw.id ?? ''),
+    name: String(raw.name ?? raw.storeName ?? ''),
+    description: raw.description ?? raw.shortDescription ?? '',
+    shortDescription: raw.shortDescription ?? raw.description ?? '',
+    longDescription: raw.longDescription ?? '',
+    coverImages: normalizedCoverImages,
+    coverImageUrl: normalizedCoverImages[0] ?? '',
+    logoUrl: raw.logoUrl ?? '',
+    businessHours: raw.businessHours ?? null,
+    email: raw.email ?? '',
+    address: raw.address ?? '',
+    phone: raw.phone ?? '',
+    facebookUrl: raw.facebookUrl ?? '',
+    instagramUrl: raw.instagramUrl ?? '',
+    lineId: raw.lineId ?? '',
+    isActive:
+      typeof raw.isActive === 'boolean'
+        ? raw.isActive
+        : String(raw.status ?? '').toUpperCase() !== 'INACTIVE',
+    products: Array.isArray(raw.products)
+      ? raw.products.map((product) => normalizeProduct(product))
+      : [],
+  };
+};
 
 const normalizeProduct = (raw: StoreProductApiResponse): StoreProduct => ({
   id: String(raw.id ?? ''),
@@ -108,6 +114,9 @@ const normalizeProduct = (raw: StoreProductApiResponse): StoreProduct => ({
   imageUrl: raw.imageUrl ?? '',
   bannerImageUrl: raw.bannerImageUrl ?? '',
   category: raw.category ?? '',
+  subCategory: raw.subCategory ?? '',
+  playMode: raw.playMode ?? '',
+  gameMode: raw.gameMode ?? '',
   status: raw.status ?? '',
   pricePerDraw: raw.pricePerDraw ?? 0,
   maxDraws: raw.maxDraws ?? 0,
@@ -115,10 +124,14 @@ const normalizeProduct = (raw: StoreProductApiResponse): StoreProduct => ({
 
 export const getStores = async (): Promise<ApiResponse<Store[]>> => {
   try {
-    const res = await api.get(`${basePath}/list`);
-    const data = Array.isArray(res.data?.data)
-      ? res.data.data.map((item: StoreApiResponse) => normalizeStore(item))
-      : [];
+    const res = await api.get(basePath, { params: { page: 1, size: 100 } });
+    const payload = res.data?.data as StoreListApiResponse | StoreApiResponse[] | null | undefined;
+    const rawItems = Array.isArray(payload)
+      ? payload
+      : Array.isArray(payload?.data)
+        ? payload.data
+        : [];
+    const data = rawItems.map((item: StoreApiResponse) => normalizeStore(item));
 
     return {
       ...res.data,

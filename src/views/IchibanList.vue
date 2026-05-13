@@ -26,10 +26,10 @@ const router = useRouter();
 const route = useRoute();
 
 const typeToTitle: Record<string, string> = {
-  kuji: '一番賞',
+  kuji: '官方一番賞',
   gacha: '扭蛋',
   scratch: '刮刮樂',
-  custom: '自製賞',
+  custom: '自製一番賞',
   card: '卡牌',
 };
 
@@ -70,12 +70,35 @@ const fetchList = async () => {
   loading.value = true;
   errorMsg.value = '';
 
-  const categoryMap: Record<string, string> = {
-    kuji: 'OFFICIAL_ICHIBAN',
-    gacha: 'GACHA',
-    scratch: 'SCRATCH',
-    custom: 'CUSTOM_GACHA',
-    card: 'TRADING_CARD',
+  const baseCondition: BrowseCondition = {
+    theme: currentTheme.value !== 'all' ? currentTheme.value : undefined,
+  };
+
+  const conditionByType: Record<string, BrowseCondition> = {
+    kuji: {
+      ...baseCondition,
+      category: 'OFFICIAL_ICHIBAN',
+    },
+    gacha: {
+      ...baseCondition,
+      category: 'GACHA',
+    },
+    card: {
+      ...baseCondition,
+      category: 'TRADING_CARD',
+    },
+    custom: {
+      ...baseCondition,
+      category: 'CUSTOM_GACHA',
+      subCategory: 'LOTTERY_MODE',
+      playMode: 'LOTTERY_MODE',
+    },
+    scratch: {
+      ...baseCondition,
+      category: 'CUSTOM_GACHA',
+      subCategory: 'SCRATCH_MODE',
+      playMode: 'SCRATCH_MODE',
+    },
   };
 
   const sortMap: Record<string, { sortBy: string; sortOrder: 'ASC' | 'DESC' }> = {
@@ -85,10 +108,8 @@ const fetchList = async () => {
     priceDesc: { sortBy: 'pricePerDraw', sortOrder: 'DESC' },
   };
 
-  const condition: BrowseCondition = {
-    category: categoryMap[currentType.value],
-    theme: currentTheme.value !== 'all' ? currentTheme.value : undefined,
-  };
+  const condition: BrowseCondition =
+    conditionByType[currentType.value] ?? conditionByType.kuji;
 
   try {
     await executeApi({
@@ -101,10 +122,11 @@ const fetchList = async () => {
         }),
       onSuccess: async (result) => {
         const list = result?.data ?? [];
-        kujiList.value = list.map((x: any) => ({
+        const mapped = list.map((x: any) => ({
           ...x.lottery,
           prizes: x.prizes,
         }));
+        kujiList.value = mapped;
         sync(result);
       },
       onFail: async (error: any) => {
