@@ -1,21 +1,50 @@
 // src/composables/useLogin.ts
-import { ref, computed } from 'vue';
-import { useRouter, useRoute } from 'vue-router';
+import { computed, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { login, resendVerification } from '@/services/AuthService';
 
-function getHttpStatus(err: unknown): number | null {
-  return (err as any)?.response?.status ?? null;
+type LoginErrorKind =
+  | ''
+  | 'EMAIL_NOT_VERIFIED'
+  | 'ACCOUNT_LOCKED'
+  | 'GOOGLE_PROVIDER_ONLY'
+  | 'ACCOUNT_DISABLED'
+  | 'INVALID_CREDENTIALS'
+  | 'GENERIC';
+
+function getErrorPayload(err: unknown): any {
+  return (err as any)?.response?.data ?? null;
 }
 
-function parseGenericLoginError(err: unknown): string {
-  const status = getHttpStatus(err);
-  if (status === 403) return '此帳號已停用，請聯繫客服';
-  if (status === 400) return '此帳號使用 Google 登入，請改用 Google 帳號登入';
-  const bodyMsg =
-    (err as any)?.response?.data?.error?.message ??
-    (err as any)?.response?.data?.message;
-  return bodyMsg || '登入失敗，請稍後再試';
+function getNestedErrorCode(payload: any): string {
+  return String(payload?.errorCode ?? payload?.error?.code ?? '').trim();
+}
+
+function getNestedErrorMessage(payload: any): string {
+  return String(payload?.message ?? payload?.error?.message ?? '').trim();
+}
+
+function normalizeLoginError(code: string, message: string): LoginErrorKind {
+  if (code === 'EMAIL_PROVIDER_CONFLICT') return 'GOOGLE_PROVIDER_ONLY';
+  if (code === 'AUTH_ACCOUNT_003') return 'ACCOUNT_LOCKED';
+  if (code === 'AUTH_ACCOUNT_001') return 'ACCOUNT_DISABLED';
+  if (code === 'AUTH_INVALID_001') return 'INVALID_CREDENTIALS';
+  if (code === 'COMMON_VALIDATION_001' && message.includes('Email 驗證')) {
+    return 'EMAIL_NOT_VERIFIED';
+  }
+  return 'GENERIC';
+}
+
+function buildFallbackErrorMessage(err: unknown): string {
+  const payload = getErrorPayload(err);
+  const bodyMessage = getNestedErrorMessage(payload);
+  if (bodyMessage) return bodyMessage;
+
+  const status = (err as any)?.response?.status ?? null;
+  if (status === 403) return '此帳號已停用或暫停使用，請聯繫客服';
+  if (status === 409) return '此帳號使用 Google 登入，請改用 Google 帳號登入';
+  return '登入失敗，請稍後再試';
 }
 
 export function useLogin() {
@@ -28,27 +57,24 @@ export function useLogin() {
   const isLoading = ref(false);
   const errorMessage = ref('');
 
-  // --- new error-code state ---
-  const loginErrorCode = ref('');
-  const remainingAttempts = ref<number | null>(null);
-  const lockedMinutes = ref<number | null>(null);
-  /** Temporary access token returned by backend for EMAIL_NOT_VERIFIED users */
-  const unverifiedToken = ref('');
-
-  const isEmailNotVerified = computed(() => loginErrorCode.value === 'EMAIL_NOT_VERIFIED');
-  const isAccountLocked = computed(() => loginErrorCode.value === 'ACCOUNT_LOCKED');
-
-  // --- resend cooldown ---
+  const loginErrorKind = ref<LoginErrorKind>('');
   const resendCooldown = ref(0);
   const resendLoading = ref(false);
   const resendMessage = ref('');
   let resendTimer: ReturnType<typeof setInterval> | null = null;
 
+  const isEmailNotVerified = computed(
+    () => loginErrorKind.value === 'EMAIL_NOT_VERIFIED',
+  );
+  const isAccountLocked = computed(
+    () => loginErrorKind.value === 'ACCOUNT_LOCKED',
+  );
+
   const startResendCooldown = () => {
     resendCooldown.value = 60;
     if (resendTimer) clearInterval(resendTimer);
     resendTimer = setInterval(() => {
-      resendCooldown.value--;
+      resendCooldown.value -= 1;
       if (resendCooldown.value <= 0) {
         resendCooldown.value = 0;
         if (resendTimer) clearInterval(resendTimer);
@@ -58,70 +84,85 @@ export function useLogin() {
 
   const sendVerificationEmail = async () => {
     if (resendCooldown.value > 0 || resendLoading.value) return;
+
+    const targetEmail = String(email.value ?? '').trim();
+    if (!targetEmail) {
+      resendMessage.value = '請先輸入註冊時使用的 Email';
+      return;
+    }
+
     resendLoading.value = true;
     resendMessage.value = '';
+
     try {
-      const res = await resendVerification(unverifiedToken.value || undefined);
+      const res = await resendVerification(
+        { email: targetEmail },
+        undefined,
+      );
+
       if (res?.success) {
-        resendMessage.value = '驗證信已發送，請檢查您的 Email';
+        resendMessage.value = '驗證信已重新寄出，請到信箱確認';
         startResendCooldown();
       } else {
-        resendMessage.value = res?.message || '發送失敗，請稍後再試';
+        resendMessage.value = res?.message || '重寄失敗，請稍後再試';
       }
     } catch (e: any) {
       if (e?.response?.status === 429) {
-        resendMessage.value = '發送太頻繁，請稍後再試';
+        resendMessage.value = '寄送太頻繁，請稍後再試';
         startResendCooldown();
       } else {
-        resendMessage.value = '發送失敗，請稍後再試';
+        resendMessage.value =
+          getNestedErrorMessage(getErrorPayload(e)) || '重寄失敗，請稍後再試';
       }
     } finally {
       resendLoading.value = false;
     }
   };
 
-  // --- error field extractor (handles both response body + thrown error) ---
-  function applyErrorFields(data: any) {
-    const code: string = data?.errorCode ?? data?.error?.code ?? '';
-    loginErrorCode.value = code;
-    remainingAttempts.value = data?.remainingAttempts ?? null;
-    lockedMinutes.value = data?.lockedMinutes ?? null;
-    // Backend may return a limited-scope access token for the unverified user
-    unverifiedToken.value = data?.data?.accessToken ?? data?.accessToken ?? '';
+  const applyLoginError = (payload: any) => {
+    const code = getNestedErrorCode(payload);
+    const message = getNestedErrorMessage(payload);
+    loginErrorKind.value = normalizeLoginError(code, message);
 
-    if (code === 'EMAIL_NOT_VERIFIED') {
-      errorMessage.value = '您的 Email 尚未驗證，請檢查收件匟或重新發送驗證信';
-    } else if (code === 'ACCOUNT_LOCKED') {
-      const mins = data?.lockedMinutes ?? null;
-      errorMessage.value = mins
-        ? `帳號已鎖定，請 ${mins} 分鐘後再試`
-        : '帳號已鎖定，請稍後再試';
-    } else if (code === 'INVALID_CREDENTIALS') {
-      const rem = data?.remainingAttempts ?? null;
-      errorMessage.value =
-        rem != null
-          ? `密碼錯誤，還剩 ${rem} 次機會，超過將鎖定帳號 15 分鐘`
-          : 'Email 或密碼錯誤';
-    } else {
-      errorMessage.value =
-        data?.message ?? data?.error?.message ?? '登入失敗，請稍後再試';
+    if (loginErrorKind.value === 'EMAIL_NOT_VERIFIED') {
+      errorMessage.value = '請先完成 Email 驗證，或重新寄送驗證信';
+      return;
     }
-  }
+
+    if (loginErrorKind.value === 'GOOGLE_PROVIDER_ONLY') {
+      errorMessage.value = '此帳號使用 Google 登入，請改用 Google 帳號登入';
+      return;
+    }
+
+    if (loginErrorKind.value === 'ACCOUNT_LOCKED') {
+      errorMessage.value = message || '帳號已被鎖定，請稍後再試';
+      return;
+    }
+
+    if (loginErrorKind.value === 'ACCOUNT_DISABLED') {
+      errorMessage.value = message || '此帳號已停用或暫停使用，請聯繫客服';
+      return;
+    }
+
+    if (loginErrorKind.value === 'INVALID_CREDENTIALS') {
+      errorMessage.value = message || '帳號或密碼錯誤';
+      return;
+    }
+
+    errorMessage.value = message || '登入失敗，請稍後再試';
+  };
 
   async function submitLogin() {
     isLoading.value = true;
     errorMessage.value = '';
-    loginErrorCode.value = '';
-    remainingAttempts.value = null;
-    lockedMinutes.value = null;
-    unverifiedToken.value = '';
+    loginErrorKind.value = '';
     resendMessage.value = '';
 
     try {
       const res = await login({ email: email.value, password: password.value });
 
       if (!res?.success) {
-        applyErrorFields(res);
+        applyLoginError(res);
         return;
       }
 
@@ -138,11 +179,12 @@ export function useLogin() {
           : '/member-center/profile';
       await router.replace(redirect);
     } catch (err) {
-      const errData = (err as any)?.response?.data;
-      if (errData?.errorCode) {
-        applyErrorFields(errData);
+      const payload = getErrorPayload(err);
+      if (payload) {
+        applyLoginError(payload);
       } else {
-        errorMessage.value = parseGenericLoginError(err);
+        loginErrorKind.value = 'GENERIC';
+        errorMessage.value = buildFallbackErrorMessage(err);
       }
     } finally {
       isLoading.value = false;
@@ -154,10 +196,7 @@ export function useLogin() {
     password,
     isLoading,
     errorMessage,
-    loginErrorCode,
-    remainingAttempts,
-    lockedMinutes,
-    unverifiedToken,
+    loginErrorKind,
     isEmailNotVerified,
     isAccountLocked,
     resendCooldown,

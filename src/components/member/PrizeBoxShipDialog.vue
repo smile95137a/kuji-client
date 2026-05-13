@@ -46,7 +46,7 @@
                     <span class="ship-dialog__item-name">{{ item.prizeName }}</span>
                     <span class="ship-dialog__item-meta">{{ item.lotteryTitle }}</span>
                   </div>
-                  <span class="ship-dialog__item-level">{{ item.prizeLevel }}</span>
+                  <span class="ship-dialog__item-level">{{ formatPrizeLevel(item.prizeLevel) }}</span>
                 </li>
               </ul>
             </div>
@@ -301,6 +301,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { usePrizeBoxShip, type PrizeBoxItem } from '@/composables/usePrizeBoxShip';
+import { formatPrizeLevel } from '@/utils/prizeLevel';
 
 const props = defineProps<{
   visible: boolean;

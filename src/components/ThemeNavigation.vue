@@ -95,7 +95,7 @@
             <!-- 獎品預覽 -->
             <div v-if="item.prizes && item.prizes.length > 0" class="prize-preview">
               <div v-for="prize in item.prizes.slice(0, 3)" :key="prize.id" class="prize-item">
-                <span class="prize-level">{{ prize.prizeLevel }}賞</span>
+                <span class="prize-level">{{ formatPrizeLevel(prize.prizeLevel) }}</span>
                 <span class="prize-name">{{ prize.prizeName }}</span>
               </div>
               <span v-if="item.prizes.length > 3" class="prize-more">
@@ -115,6 +115,7 @@ import { useRouter } from 'vue-router';
 import { queryThemes, type CategoryRes } from '@/services/categoryService';
 import { queryBrowseLotteries } from '@/services/lotteryBrowseService';
 import { executeApi } from '@/utils/executeApiUtils';
+import { formatPrizeLevel } from '@/utils/prizeLevel';
 
 const router = useRouter();
 

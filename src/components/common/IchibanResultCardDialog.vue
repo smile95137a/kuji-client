@@ -73,6 +73,7 @@ import {
   onBeforeUnmount,
 } from 'vue';
 import { gsap } from 'gsap';
+import { formatPrizeLevel } from '@/utils/prizeLevel';
 
 const props = defineProps<{
   remain: number;

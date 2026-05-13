@@ -144,7 +144,7 @@
                     <p class="prizeBox__prizeName">
                       {{ row.prizeName }}
                       <span v-if="row.prizeLevel" class="prizeBox__mini">
-                        （{{ row.prizeLevel }}賞）
+                        （{{ formatPrizeLevel(row.prizeLevel) }}）
                       </span>
                     </p>
 
@@ -214,7 +214,7 @@
               <p class="prizeBox__prizeName">
                 {{ row.prizeName }}
                 <span v-if="row.prizeLevel" class="prizeBox__mini">
-                  （{{ row.prizeLevel }}賞）
+                  （{{ formatPrizeLevel(row.prizeLevel) }}）
                 </span>
               </p>
 
@@ -289,7 +289,7 @@
               <p class="prizeBox__detailName">
                 {{ selected.prizeName }}
                 <span v-if="selected.prizeLevel" class="prizeBox__mini">
-                  （{{ selected.prizeLevel }}賞）
+                  （{{ formatPrizeLevel(selected.prizeLevel) }}）
                 </span>
               </p>
 
@@ -379,6 +379,7 @@ import {
 } from '@/services/prizeBoxService';
 
 import { executeApi } from '@/utils/executeApiUtils';
+import { formatPrizeLevel } from '@/utils/prizeLevel';
 import { useMemberWalletStore } from '@/stores/memberWallet';
 
 const walletStore = useMemberWalletStore();

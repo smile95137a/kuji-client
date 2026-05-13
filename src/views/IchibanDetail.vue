@@ -371,6 +371,7 @@ import { scratchCardDialog } from '@/utils/dialog/scratchCardDialog';
 import { ichibanResultCardDialog } from '@/utils/dialog/ichibanResultCardDialog';
 import { gotchaDialog } from '@/utils/dialog/gotchaDialog';
 import { getLotterySession } from '@/services/lotteryDrawService';
+import { formatPrizeLevel } from '@/utils/prizeLevel';
 
 const overlay = useOverlayStore();
 const authStore = useAuthStore();
@@ -719,7 +720,7 @@ const prizes = computed(() => {
 
     return {
       id: String(p?.id),
-      gradeLabel,
+      gradeLabel: formatPrizeLevel(level) || gradeLabel,
       gradeType,
       countText,
       sizeText: p?.sizeText ? String(p.sizeText) : '-',

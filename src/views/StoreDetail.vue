@@ -27,7 +27,9 @@ const {
   loadProducts,
 } = useStoreDetail(route);
 
-const productCountText = computed(() => `${total.value || products.value.length} 項上架商品`);
+const productCountText = computed(
+  () => `${total.value || products.value.length} 個在售商品`,
+);
 
 const goToProduct = (product: StoreProduct) => {
   router.push({ name: 'IchibanDetail', params: { id: product.id } });
@@ -46,14 +48,21 @@ const goToPage = () => {
       <div class="storeDetail__coverSkeleton"></div>
       <div class="storeDetail__panelSkeleton"></div>
       <div class="storeDetail__gridSkeleton">
-        <div v-for="n in 6" :key="n" class="storeDetail__productSkeleton"></div>
+        <div
+          v-for="n in 6"
+          :key="n"
+          class="storeDetail__productSkeleton"
+        ></div>
       </div>
     </div>
 
     <div v-else-if="error" class="storeDetail__error">
-      <p class="storeDetail__errorTitle">店家頁面暫時無法顯示</p>
+      <p class="storeDetail__errorTitle">店家資料載入失敗</p>
       <p class="storeDetail__errorText">{{ error }}</p>
-      <button class="storeDetail__button" @click="router.push({ name: 'StoreList' })">
+      <button
+        class="storeDetail__button"
+        @click="router.push({ name: 'StoreList' })"
+      >
         返回店家列表
       </button>
     </div>
@@ -68,20 +77,33 @@ const goToPage = () => {
         />
 
         <div class="storeDetail__heroOverlay">
-          <p class="storeDetail__heroKicker">店家精選商品</p>
-          <h2 class="storeDetail__heroTitle">
-            探索 {{ store.name }} 的上架商品與熱門玩法
-          </h2>
+          <p class="storeDetail__heroKicker">KUJI STORE</p>
+          <h2 class="storeDetail__heroTitle">{{ store.name }}</h2>
           <p class="storeDetail__heroMeta">
             {{ productCountText }}
             <span class="storeDetail__heroDot"></span>
-            {{ store.address || '線上商店資訊已完整公開' }}
+            {{ store.address || '店家地址待補充' }}
           </p>
+
+          <div class="storeDetail__heroBadges">
+            <span class="storeDetail__heroBadge">
+              {{ store.isActive ? '營運中' : '暫停營運' }}
+            </span>
+            <span v-if="store.phone" class="storeDetail__heroBadge">
+              {{ store.phone }}
+            </span>
+            <span
+              v-if="store.shortDescription || store.description"
+              class="storeDetail__heroBadge storeDetail__heroBadge--accent"
+            >
+              {{ store.shortDescription || store.description }}
+            </span>
+          </div>
         </div>
       </section>
 
       <div v-if="!store.isActive" class="storeDetail__inactiveBanner">
-        此店家目前暫停服務，部分商品資訊可能僅供瀏覽。
+        這間店家目前暫停營運，商品與活動可能會隨時調整。
       </div>
 
       <section class="storeDetail__content">
@@ -95,15 +117,19 @@ const goToPage = () => {
 
         <aside class="storeDetail__sidePanel">
           <div class="storeDetail__statCard">
-            <span class="storeDetail__statLabel">商品數量</span>
-            <strong class="storeDetail__statValue">{{ total || products.length }}</strong>
+            <span class="storeDetail__statLabel">在售商品</span>
+            <strong class="storeDetail__statValue">
+              {{ total || products.length }}
+            </strong>
           </div>
           <div class="storeDetail__statCard">
-            <span class="storeDetail__statLabel">目前頁數</span>
-            <strong class="storeDetail__statValue">{{ page }} / {{ totalPages }}</strong>
+            <span class="storeDetail__statLabel">目前頁次</span>
+            <strong class="storeDetail__statValue">
+              {{ page }} / {{ totalPages }}
+            </strong>
           </div>
           <div class="storeDetail__sideNote">
-            每張卡片都可以直接進入商品頁，繼續查看獎項、抽況與玩法詳情。
+            店家資訊、營業時間與聯絡方式都集中在這一頁，想抽的商品也能直接往下逛。
           </div>
         </aside>
       </section>
@@ -111,21 +137,27 @@ const goToPage = () => {
       <section class="storeDetail__products">
         <div class="storeDetail__sectionHeader">
           <div>
-            <p class="storeDetail__sectionEyebrow">店內商品</p>
+            <p class="storeDetail__sectionEyebrow">STORE PICKS</p>
             <h2 class="storeDetail__sectionTitle">店內商品一覽</h2>
           </div>
           <p class="storeDetail__sectionHint">
-            依後端分頁載入，每頁 {{ size }} 筆
+            每頁顯示 {{ size }} 筆，點商品可直接進入抽賞頁
           </p>
         </div>
 
         <div v-if="productsLoading" class="storeDetail__productsGrid">
-          <div v-for="n in 8" :key="n" class="storeDetail__productSkeleton"></div>
+          <div
+            v-for="n in 8"
+            :key="n"
+            class="storeDetail__productSkeleton"
+          ></div>
         </div>
 
         <div v-else-if="products.length === 0" class="storeDetail__empty">
-          <p class="storeDetail__emptyTitle">目前還沒有可展示的商品</p>
-          <p class="storeDetail__emptyText">等店家上架後，這裡會第一時間更新。</p>
+          <p class="storeDetail__emptyTitle">目前還沒有上架商品</p>
+          <p class="storeDetail__emptyText">
+            這間店家暫時沒有可瀏覽的商品，之後再回來看看吧。
+          </p>
         </div>
 
         <div v-else class="storeDetail__productsGrid">
@@ -158,7 +190,10 @@ const goToPage = () => {
     </template>
 
     <div class="storeDetail__backRow">
-      <button class="storeDetail__button storeDetail__button--ghost" @click="router.push({ name: 'StoreList' })">
+      <button
+        class="storeDetail__button storeDetail__button--ghost"
+        @click="router.push({ name: 'StoreList' })"
+      >
         返回店家列表
       </button>
     </div>
@@ -176,7 +211,7 @@ const goToPage = () => {
   --store-line: rgba(92, 57, 39, 0.12);
 
   position: relative;
-  max-width: 1240px;
+  max-width: 1320px;
   margin: 0 auto;
   padding: 1.5rem 1rem 4rem;
   color: var(--store-ink);
@@ -213,7 +248,12 @@ const goToPage = () => {
 .storeDetail__coverSkeleton,
 .storeDetail__panelSkeleton,
 .storeDetail__productSkeleton {
-  background: linear-gradient(90deg, rgba(239, 229, 222, 0.9) 25%, rgba(249, 243, 239, 1) 50%, rgba(239, 229, 222, 0.9) 75%);
+  background: linear-gradient(
+    90deg,
+    rgba(239, 229, 222, 0.9) 25%,
+    rgba(249, 243, 239, 1) 50%,
+    rgba(239, 229, 222, 0.9) 75%
+  );
   background-size: 200% 100%;
   animation: shimmer 1.45s infinite linear;
 }
@@ -231,7 +271,7 @@ const goToPage = () => {
 .storeDetail__gridSkeleton,
 .storeDetail__productsGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1rem;
 }
 
@@ -243,12 +283,12 @@ const goToPage = () => {
 .storeDetail__hero {
   position: relative;
   overflow: hidden;
-  border-radius: 1.8rem;
+  border-radius: 2rem;
   box-shadow: 0 30px 60px rgba(77, 39, 18, 0.18);
 }
 
 .storeDetail__cover {
-  min-height: 22rem;
+  min-height: 24rem;
 }
 
 .storeDetail__heroOverlay {
@@ -256,9 +296,9 @@ const goToPage = () => {
   inset: auto 0 0 0;
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
-  padding: 2rem 1.5rem 1.4rem;
-  background: linear-gradient(180deg, transparent, rgba(30, 19, 16, 0.78));
+  gap: 0.75rem;
+  padding: 2.2rem 1.6rem 1.5rem;
+  background: linear-gradient(180deg, transparent, rgba(30, 19, 16, 0.8));
 }
 
 .storeDetail__heroKicker,
@@ -274,9 +314,9 @@ const goToPage = () => {
   margin: 0;
   max-width: 42rem;
   color: #fff8f2;
-  font-size: clamp(1.75rem, 4vw, 3rem);
+  font-size: clamp(2rem, 4vw, 3.2rem);
   font-weight: 900;
-  line-height: 1.08;
+  line-height: 1.04;
 }
 
 .storeDetail__heroMeta {
@@ -294,6 +334,30 @@ const goToPage = () => {
   height: 0.35rem;
   border-radius: 999px;
   background: rgba(255, 239, 229, 0.7);
+}
+
+.storeDetail__heroBadges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.storeDetail__heroBadge {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  padding: 0.5rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(255, 248, 242, 0.18);
+  border: 1px solid rgba(255, 240, 229, 0.2);
+  color: #fff8f2;
+  font-size: 0.82rem;
+  font-weight: 700;
+  backdrop-filter: blur(10px);
+}
+
+.storeDetail__heroBadge--accent {
+  background: rgba(214, 110, 59, 0.22);
 }
 
 .storeDetail__inactiveBanner {
@@ -378,7 +442,7 @@ const goToPage = () => {
 
 .storeDetail__sectionTitle {
   margin: 0.35rem 0 0;
-  font-size: clamp(1.35rem, 3vw, 2.1rem);
+  font-size: clamp(1.45rem, 3vw, 2.2rem);
   font-weight: 900;
 }
 
@@ -446,6 +510,11 @@ const goToPage = () => {
 }
 
 @media (max-width: 1023px) {
+  .storeDetail__gridSkeleton,
+  .storeDetail__productsGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .storeDetail__content {
     grid-template-columns: 1fr;
   }

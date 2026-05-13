@@ -177,13 +177,20 @@ export const verifyEmail = async (token: string): Promise<ApiResponse<any>> => {
  * accessToken: 未驗證用戶的暫存 token（後端登入失敗時可能附帶），用於 Authorization header。
  * 若 authStore 已有 token，攔截器會自動附加，不需手動傳入。
  */
-export const resendVerification = async (accessToken?: string): Promise<ApiResponse<any>> => {
+export const resendVerification = async (
+  req?: { email?: string },
+  accessToken?: string,
+): Promise<ApiResponse<any>> => {
   try {
     const config =
       accessToken && !useAuthStore().token
         ? { headers: { Authorization: `Bearer ${accessToken}` } }
         : undefined;
-    const res = await api.post(`${basePath}/resend-verification`, undefined, config);
+    const res = await api.post(
+      `${basePath}/resend-verification`,
+      req ?? undefined,
+      config,
+    );
     return res.data;
   } catch (e) {
     console.error('Auth - resendVerification error:', e);

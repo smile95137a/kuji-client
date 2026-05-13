@@ -17,7 +17,7 @@
           />
           <div class="prize-details">
             <div class="prize-name">{{ currentPrize.prizeName }}</div>
-            <span class="prize-level">{{ currentPrize.prizeLevel }}</span>
+            <span class="prize-level">{{ formatPrizeLevel(currentPrize.prizeLevel) }}</span>
           </div>
         </div>
 
@@ -90,6 +90,7 @@
 </template>
 
 <script setup lang="ts">
+import { formatPrizeLevel } from '@/utils/prizeLevel';
 import { ref, computed } from 'vue';
 
 interface Prize {
