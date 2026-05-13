@@ -68,9 +68,9 @@ const goToPage = () => {
         />
 
         <div class="storeDetail__heroOverlay">
-          <p class="storeDetail__heroKicker">CURATED DRAW SPACE</p>
+          <p class="storeDetail__heroKicker">店家精選商品</p>
           <h2 class="storeDetail__heroTitle">
-            探索 {{ store.name }} 的精選抽選與人氣款式
+            探索 {{ store.name }} 的上架商品與熱門玩法
           </h2>
           <p class="storeDetail__heroMeta">
             {{ productCountText }}
@@ -103,7 +103,7 @@ const goToPage = () => {
             <strong class="storeDetail__statValue">{{ page }} / {{ totalPages }}</strong>
           </div>
           <div class="storeDetail__sideNote">
-            每張卡片都可以直接進入玩法頁，繼續查看獎項、抽數與詳情。
+            每張卡片都可以直接進入商品頁，繼續查看獎項、抽況與玩法詳情。
           </div>
         </aside>
       </section>
@@ -111,7 +111,7 @@ const goToPage = () => {
       <section class="storeDetail__products">
         <div class="storeDetail__sectionHeader">
           <div>
-            <p class="storeDetail__sectionEyebrow">STORE PICKS</p>
+            <p class="storeDetail__sectionEyebrow">店內商品</p>
             <h2 class="storeDetail__sectionTitle">店內商品一覽</h2>
           </div>
           <p class="storeDetail__sectionHint">

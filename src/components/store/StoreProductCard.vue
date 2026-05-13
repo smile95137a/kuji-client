@@ -1,30 +1,92 @@
 <script setup lang="ts">
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
 import type { StoreProduct } from '@/services/storeService';
 
 const props = defineProps<{
   product: StoreProduct;
 }>();
 
-const categoryLabelMap: Record<string, string> = {
-  OFFICIAL_ICHIBAN: '一番賞',
-  GACHA: '扭蛋',
-  TRADING_CARD: '卡牌',
-  CUSTOM_GACHA: '客製抽選',
-  SCRATCH: '刮刮樂',
-};
+const normalizedCategory = computed(() => String(props.product.category ?? '').toUpperCase());
 
-const categoryLabel = computed(
-  () => categoryLabelMap[String(props.product.category ?? '').toUpperCase()] ?? '商品',
+const normalizedSubCategory = computed(() =>
+  String(props.product.subCategory ?? '').toUpperCase(),
 );
+
+const normalizedPlayMode = computed(() =>
+  String(props.product.playMode ?? '').toUpperCase(),
+);
+
+const categoryLabel = computed(() => {
+  if (
+    normalizedPlayMode.value === 'SCRATCH_MODE' ||
+    normalizedSubCategory.value === 'SCRATCH_MODE'
+  ) {
+    return '刮刮樂';
+  }
+
+  if (normalizedCategory.value === 'CUSTOM_GACHA') {
+    return '自製一番賞';
+  }
+
+  if (normalizedCategory.value === 'OFFICIAL_ICHIBAN') {
+    return '一番賞';
+  }
+
+  if (normalizedCategory.value === 'GACHA') {
+    return '扭蛋';
+  }
+
+  if (normalizedCategory.value === 'TRADING_CARD') {
+    return '卡牌';
+  }
+
+  return '商品';
+});
 
 const displayPrice = computed(() =>
   Number(props.product.pricePerDraw ?? 0).toLocaleString('zh-TW'),
 );
 
-const displayImage = computed(
-  () => props.product.imageUrl || props.product.bannerImageUrl || 'https://via.placeholder.com/800x800?text=KUJI',
+const defaultProductImage = `data:image/svg+xml;utf8,${encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="800" height="800" viewBox="0 0 800 800"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#f8d7c0"/><stop offset="100%" stop-color="#f2b17d"/></linearGradient></defs><rect width="800" height="800" fill="url(#g)"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#8a3a27" font-family="Arial" font-size="96" font-weight="700">KUJI</text></svg>',
+)}`;
+
+const imageCandidates = computed(() => {
+  const candidates = [
+    props.product.imageUrl,
+    props.product.bannerImageUrl,
+    defaultProductImage,
+  ]
+    .map((item) => String(item ?? '').trim())
+    .filter(Boolean);
+
+  return Array.from(new Set(candidates));
+});
+
+const activeImageUrl = ref(defaultProductImage);
+const imageLoaded = ref(false);
+
+watch(
+  imageCandidates,
+  (candidates) => {
+    activeImageUrl.value = candidates[0] ?? defaultProductImage;
+    imageLoaded.value = false;
+  },
+  { immediate: true },
 );
+
+const onImageLoad = () => {
+  imageLoaded.value = true;
+};
+
+const onImageError = () => {
+  const candidates = imageCandidates.value;
+  const currentIndex = candidates.indexOf(activeImageUrl.value);
+  const nextUrl = currentIndex >= 0 ? candidates[currentIndex + 1] : '';
+
+  activeImageUrl.value = nextUrl || defaultProductImage;
+  imageLoaded.value = false;
+};
 
 const normalizedStatus = computed(() =>
   String(props.product.status ?? '').toUpperCase(),
@@ -46,10 +108,14 @@ const statusLabel = computed(() => {
   <article class="storeProductCard">
     <div class="storeProductCard__imageWrap">
       <img
-        :src="displayImage"
+        :src="activeImageUrl"
         :alt="product.title"
         class="storeProductCard__image"
+        :class="{ 'storeProductCard__image--ready': imageLoaded }"
+        @load="onImageLoad"
+        @error="onImageError"
       />
+      <div v-if="!imageLoaded" class="storeProductCard__imageSkeleton"></div>
 
       <div class="storeProductCard__topRow">
         <span class="storeProductCard__category">{{ categoryLabel }}</span>
@@ -108,10 +174,25 @@ const statusLabel = computed(() => {
 }
 
 .storeProductCard__image {
+  opacity: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    opacity 0.22s ease;
+}
+
+.storeProductCard__image--ready {
+  opacity: 1;
+}
+
+.storeProductCard__imageSkeleton {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #f4ece6 25%, #f9f2eb 50%, #f4ece6 75%);
+  background-size: 200% 100%;
+  animation: storeProductShimmer 1.25s linear infinite;
 }
 
 .storeProductCard:hover .storeProductCard__image {
@@ -196,6 +277,16 @@ const statusLabel = computed(() => {
   color: #221816;
   font-size: 0.92rem;
   font-weight: 800;
+}
+
+@keyframes storeProductShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
 }
 
 @media (max-width: 480px) {

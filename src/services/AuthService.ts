@@ -108,6 +108,10 @@ export const loginWithGoogle = async (
   }
 };
 
+/** Google OAuth2 標準入口（redirect/callback 主流程） */
+export const getGoogleOAuthAuthorizationUrl = (): string =>
+  `${import.meta.env.VITE_BASE_API_URL}/api/oauth2/authorization/google`;
+
 /** 刷新 Token（refresh token 本身不用 access token） */
 export const refreshToken = async (
   req?: RefreshTokenReq,

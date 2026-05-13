@@ -96,6 +96,8 @@ export interface SessionRes {
 export interface BrowseCondition {
   keyword?: string;         // 名稱模糊搜尋
   category?: string;        // 篩選分類
+  subCategory?: string;     // 子分類
+  playMode?: string;        // 遊戲模式
   storeId?: string;         // 篩選特定店家
   createdAtStart?: string;
   createdAtEnd?: string;

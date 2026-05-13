@@ -165,7 +165,10 @@ import { useRoute, useRouter } from 'vue-router';
 import * as yup from 'yup';
 
 import { executeApi } from '@/utils/executeApiUtils';
-import { forgotPassword } from '@/services/AuthService';
+import {
+  forgotPassword,
+  getGoogleOAuthAuthorizationUrl,
+} from '@/services/AuthService';
 import { useOverlayStore } from '@/stores/overlay';
 import { ichibanForgotPasswordDialog } from '@/utils/dialog/ichibanForgotPasswordDialog';
 import { ichibanInfoDialog } from '@/utils/dialog/ichibanInfoDialog';
@@ -218,8 +221,10 @@ const forwardRegistration = () => {
   router.push('/register');
 };
 
-const handleOauthLogin = async (provider: string) => {
-  console.log('oauth login provider:', provider);
+const handleOauthLogin = (provider: string) => {
+  if (provider !== 'google') return;
+
+  window.location.assign(getGoogleOAuthAuthorizationUrl());
 };
 
 const handleForgotPassword = async () => {
@@ -227,7 +232,7 @@ const handleForgotPassword = async () => {
   try {
     const inputEmail = await ichibanForgotPasswordDialog({
       title: '忘記密碼',
-      content: `請輸入你的 <b>Email</b><br/>我們會寄送重設密碼連結給你`,
+      content: `請輸入你的 <b>Email</b><br/>我們會寄送臨時密碼到你的信箱`,
       confirmText: '送出',
       cancelText: '取消',
       placeholder: '請輸入 Email',
@@ -255,7 +260,7 @@ const handleForgotPassword = async () => {
     await executeApi({
       fn: async () => forgotPassword({ email: targetEmail }),
       successTitle: '已送出重設申請',
-      successMessage: '若此 Email 存在，我們會寄送重設密碼連結給你（請留意垃圾郵件）。',
+      successMessage: '若此 Email 存在，我們會寄送臨時密碼給你（請留意垃圾郵件）。',
       errorTitle: '送出失敗',
       errorMessage: '目前無法送出重設申請，請稍後再試或聯繫客服。',
       showSuccessDialog: true,
