@@ -1,5 +1,4 @@
-// src/composables/useRegister.ts
-import { ref, computed } from 'vue';
+﻿import { ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { register } from '@/services/AuthService';
 
@@ -22,7 +21,7 @@ export function useRegister() {
 
   async function submitRegister(extra?: Record<string, any>) {
     if (isPasswordMismatch.value) {
-      errorMessage.value = '兩次輸入的密碼不一致';
+      errorMessage.value = '兩次密碼輸入不一致';
       return;
     }
 
@@ -48,18 +47,18 @@ export function useRegister() {
       }
 
       await router.push({
-        path: '/login',
+        name: 'VerifyEmail',
         query: {
-          registered: '1',
           email: email.value,
+          registered: '1',
         },
       });
     } catch (err: any) {
       const status = err?.response?.status;
       if (status === 409) {
-        errorMessage.value = '此 Email 已被註冊，請直接登入或使用其他 Email';
+        errorMessage.value = '此 Email 已經註冊過，請直接登入或改用其他 Email';
       } else if (status === 400) {
-        errorMessage.value = err?.response?.data?.error?.message || '輸入資料有誤，請檢查後再試';
+        errorMessage.value = err?.response?.data?.error?.message || '註冊資料有誤，請確認後再試';
       } else {
         errorMessage.value = err?.response?.data?.error?.message || '註冊失敗，請稍後再試';
       }

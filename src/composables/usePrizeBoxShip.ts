@@ -1,7 +1,7 @@
 // src/composables/usePrizeBoxShip.ts
 import { computed, reactive, ref, watch, type Ref } from 'vue';
 import { useAddressBook, type AddressItem } from './useAddressBook';
-import { shipPrizeBoxItems, type PrizeBoxShipReq } from '@/services/prizeBoxService';
+import { shipPrizeBoxItems, type PrizeBoxShipReq, type ShipOrderResult } from '@/services/prizeBoxService';
 import { getShippingMethods, type ShippingMethod } from '@/services/shippingMethodService';
 import type { PaymentMethodCode } from '@/services/rechargeService';
 
@@ -58,6 +58,7 @@ export function usePrizeBoxShip(items: Ref<PrizeBoxItem[]>) {
   const selectedShippingId = ref<string>('');
   const selectedPaymentMethod = ref<PaymentMethodCode>('CREDIT_CARD');
   const paymentUrl = ref<string | null>(null);
+  const gatewayPayload = ref<ShipOrderResult | null>(null);
 
   const selectedShipping = computed<ShippingMethod | null>(
     () => shippingMethods.value.find((m) => m.id === selectedShippingId.value) ?? null,
@@ -142,6 +143,7 @@ export function usePrizeBoxShip(items: Ref<PrizeBoxItem[]>) {
     selectedShippingId.value = '';
     selectedPaymentMethod.value = 'CREDIT_CARD';
     paymentUrl.value = null;
+    gatewayPayload.value = null;
     error.value = '';
   }
 
@@ -295,7 +297,8 @@ export function usePrizeBoxShip(items: Ref<PrizeBoxItem[]>) {
         isSubmitting.value = false;
         return false;
       }
-      paymentUrl.value = res?.data?.[0]?.paymentUrl ?? null;
+      gatewayPayload.value = res?.data?.[0] ?? null;
+      paymentUrl.value = gatewayPayload.value?.paymentUrl ?? null;
     } catch (e: any) {
       error.value = getSubmitErrorMessage(e?.response?.data, '出貨時發生錯誤');
       isSubmitting.value = false;
@@ -321,6 +324,7 @@ export function usePrizeBoxShip(items: Ref<PrizeBoxItem[]>) {
     selectedShipping,
     selectedPaymentMethod,
     paymentUrl,
+    gatewayPayload,
     isHomeDelivery,
     isConvenienceStorePickup,
     // 分組

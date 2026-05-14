@@ -4,6 +4,7 @@ import { getActiveRechargePlans } from '@/services/rechargePlanService';
 import {
   createWalletRechargeOrder,
   type PaymentMethodCode,
+  type RechargeOrderRes,
 } from '@/services/rechargeService';
 
 export interface RechargePlan {
@@ -36,6 +37,7 @@ export function useRechargePlans() {
   const isSubmitting = ref(false);
   const error = ref<string | null>(null);
   const paymentUrl = ref<string | null>(null);
+  const gatewayPayload = ref<RechargeOrderRes | null>(null);
   const rechargeOrderId = ref<string | null>(null);
   const lastSuccessful = ref(false);
 
@@ -65,6 +67,7 @@ export function useRechargePlans() {
     isSubmitting.value = true;
     lastSuccessful.value = false;
     paymentUrl.value = null;
+    gatewayPayload.value = null;
     rechargeOrderId.value = null;
     error.value = null;
 
@@ -74,6 +77,7 @@ export function useRechargePlans() {
       if (res?.success) {
         const data = res.data as any;
         paymentUrl.value = data?.payUrl ?? null;
+        gatewayPayload.value = data ?? null;
         rechargeOrderId.value = data?.rechargeOrderId ?? null;
         lastSuccessful.value = true;
 
@@ -98,6 +102,7 @@ export function useRechargePlans() {
     isSubmitting,
     error,
     paymentUrl,
+    gatewayPayload,
     rechargeOrderId,
     lastSuccessful,
     fetchPlans,

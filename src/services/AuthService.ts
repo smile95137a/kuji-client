@@ -1,11 +1,8 @@
-// services/authService.ts
-import { api } from './FrontAPI';
+﻿import { api } from './FrontAPI';
 import { loadState } from '@/utils/Localstorage';
 import { useAuthStore } from '@/stores/useAuthStore';
 
 const basePath = '/auth';
-
-// ── Response types ──────────────────────────────────────────────
 
 export interface AuthUserRes {
   id: string;
@@ -22,7 +19,6 @@ export interface AuthUserRes {
 }
 
 export interface AuthRes {
-  // 註冊成功後可能不回傳 token（需先完成 Email 驗證）
   accessToken?: string;
   refreshToken?: string;
   expiresIn?: number;
@@ -30,8 +26,6 @@ export interface AuthRes {
   forceChangePassword?: boolean;
   user?: AuthUserRes;
 }
-
-// ── Request types ────────────────────────────────────────────────
 
 export interface AuthRegisterReq {
   email: string;
@@ -64,16 +58,15 @@ export interface ResetPasswordReq {
   confirmPassword: string;
 }
 
-/**
- * Token Utils
- * getAuthToken reads from Pinia store (memory-only, XSS-safe).
- * getRefreshToken reads from localStorage (only refresh token is persisted).
- */
+export interface VerifyEmailCodeReq {
+  email: string;
+  code: string;
+}
+
 export const getAuthToken = () => useAuthStore().token;
 export const getRefreshToken = () => loadState<string>('refreshKujiToken') || '';
 export const getTokenType = () => useAuthStore().tokenType || 'Bearer';
 
-/** 註冊 */
 export const register = async (req: AuthRegisterReq): Promise<ApiResponse<AuthRes>> => {
   try {
     const res = await api.post(`${basePath}/register`, req ?? undefined);
@@ -84,7 +77,6 @@ export const register = async (req: AuthRegisterReq): Promise<ApiResponse<AuthRe
   }
 };
 
-/** 登入 */
 export const login = async (req: AuthLoginReq): Promise<ApiResponse<AuthRes>> => {
   try {
     const res = await api.post(`${basePath}/login`, req ?? undefined);
@@ -95,7 +87,6 @@ export const login = async (req: AuthLoginReq): Promise<ApiResponse<AuthRes>> =>
   }
 };
 
-/** Google OAuth 登入（前端拿到 Google ID Token 後送出） */
 export const loginWithGoogle = async (
   req: AuthGoogleReq,
 ): Promise<ApiResponse<AuthRes>> => {
@@ -108,11 +99,9 @@ export const loginWithGoogle = async (
   }
 };
 
-/** Google OAuth2 標準入口（redirect/callback 主流程） */
 export const getGoogleOAuthAuthorizationUrl = (): string =>
   `${import.meta.env.VITE_BASE_API_URL}/api/oauth2/authorization/google`;
 
-/** 刷新 Token（refresh token 本身不用 access token） */
 export const refreshToken = async (
   req?: RefreshTokenReq,
 ): Promise<ApiResponse<AuthRes>> => {
@@ -126,7 +115,6 @@ export const refreshToken = async (
   }
 };
 
-/** 忘記密碼（寄信） */
 export const forgotPassword = async (
   req: ForgotPasswordReq,
 ): Promise<ApiResponse<any>> => {
@@ -139,7 +127,6 @@ export const forgotPassword = async (
   }
 };
 
-/** 重設密碼（用 token） */
 export const resetPassword = async (
   req: ResetPasswordReq,
 ): Promise<ApiResponse<any>> => {
@@ -152,7 +139,6 @@ export const resetPassword = async (
   }
 };
 
-/** 登出（server-side token revoke）。失敗時靜默 — 永遠不會阻塞登出流程 */
 export const logoutApi = async (): Promise<void> => {
   try {
     await api.post(`${basePath}/logout`);
@@ -161,7 +147,6 @@ export const logoutApi = async (): Promise<void> => {
   }
 };
 
-/** Email 驗證（GET /auth/verify-email?token=xxx） */
 export const verifyEmail = async (token: string): Promise<ApiResponse<any>> => {
   try {
     const res = await api.get(`${basePath}/verify-email`, { params: { token } });
@@ -172,11 +157,18 @@ export const verifyEmail = async (token: string): Promise<ApiResponse<any>> => {
   }
 };
 
-/**
- * 重新發送驗證信（POST /auth/resend-verification）
- * accessToken: 未驗證用戶的暫存 token（後端登入失敗時可能附帶），用於 Authorization header。
- * 若 authStore 已有 token，攔截器會自動附加，不需手動傳入。
- */
+export const verifyEmailCode = async (
+  req: VerifyEmailCodeReq,
+): Promise<ApiResponse<any>> => {
+  try {
+    const res = await api.post(`${basePath}/verify-email/code`, req ?? undefined);
+    return res.data;
+  } catch (e) {
+    console.error('Auth - verifyEmailCode error:', e);
+    throw e;
+  }
+};
+
 export const resendVerification = async (
   req?: { email?: string },
   accessToken?: string,
@@ -198,11 +190,6 @@ export const resendVerification = async (
   }
 };
 
-/**
- * 驗證推薦碼是否有效。
- * 後端回傳 HTTP 200 + { isValid: boolean, ownerName?: string }。
- * 傳入 signal 可取消進行中的請求（AbortController）。
- */
 export const validateReferralCode = async (
   code: string,
   signal?: AbortSignal,

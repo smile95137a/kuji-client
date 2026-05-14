@@ -1,498 +1,446 @@
 <!-- src/views/member/MemberProfile.vue -->
 <template>
   <section class="memberProfile">
-    <!-- 加載狀態 -->
-    <div v-if="loading" class="memberProfile__loading">
-      <p>加載中...</p>
-    </div>
+    <header class="memberProfile__header">
+      <h1 class="memberProfile__title">會員資料</h1>
+      <p class="memberProfile__subtitle">查看與管理你的個人資訊</p>
+    </header>
 
-    <!-- 錯誤狀態 -->
-    <div v-else-if="error" class="memberProfile__error">
-      <p>❌ {{ error }}</p>
-    </div>
-
-    <!-- 成功顯示 -->
-    <div v-else-if="user">
-      <!-- 頂部卡片：頭像 + 基本資訊 -->
-      <div class="memberProfile__topCard">
-        <div class="memberProfile__avatarSection">
+    <!-- 主要資訊 -->
+    <div class="memberProfile__card">
+      <div class="memberProfile__top">
+        <div class="memberProfile__avatarWrap" @click="goEdit">
           <img
-            :src="user.avatar || fallbackAvatar"
-            :alt="user.nickname"
             class="memberProfile__avatar"
+            :src="user.avatarUrl || user.avatar || fallbackAvatar"
+            alt="avatar"
           />
+          <span class="memberProfile__avatarHint">點我編輯</span>
         </div>
 
-        <div class="memberProfile__infoSection">
-          <h2 class="memberProfile__nickname">{{ user.nickname }}</h2>
-          <p class="memberProfile__email">{{ user.email }}</p>
-          <p class="memberProfile__status" :class="statusClass">
-            {{ statusLabel }}
+        <div class="memberProfile__meta">
+          <p class="memberProfile__name">
+            {{ displayName || '-' }}
+            <span v-if="user.nickname" class="memberProfile__nickname">
+              （{{ user.nickname }}）
+            </span>
           </p>
+          <p class="memberProfile__line">Email：{{ user.email || '-' }}</p>
+          <p class="memberProfile__line">手機：{{ user.phone || '-' }}</p>
+          <p class="memberProfile__line">LINE ID：{{ user.lineId || '-' }}</p>
+        </div>
 
-          <router-link
-            :to="{ name: 'ProfileEdit' }"
-            class="memberProfile__editBtn"
-          >
+        <div class="memberProfile__actions">
+          <button class="memberProfile__btn" type="button" @click="goEdit">
             編輯資料
-          </router-link>
+          </button>
         </div>
       </div>
 
-      <!-- 詳細資訊卡片 -->
-      <div class="memberProfile__detailCard">
-        <h3 class="memberProfile__sectionTitle">基本資訊</h3>
+      <div class="memberProfile__divider"></div>
 
-        <div class="memberProfile__grid">
-          <!-- Email -->
-          <div class="memberProfile__row">
-            <label class="memberProfile__label">電子信箱</label>
-            <span class="memberProfile__value">{{ user.email }}</span>
-          </div>
-
-          <!-- 暱稱 -->
-          <div class="memberProfile__row">
-            <label class="memberProfile__label">暱稱</label>
-            <span class="memberProfile__value">{{ user.nickname }}</span>
-          </div>
-
-          <!-- 手機號碼 -->
-          <div class="memberProfile__row">
-            <label class="memberProfile__label">手機號碼</label>
-            <span class="memberProfile__value">{{
-              user.phoneNumber || '未設定'
-            }}</span>
-          </div>
-
-          <!-- LINE ID -->
-          <div class="memberProfile__row">
-            <label class="memberProfile__label">LINE ID</label>
-            <span class="memberProfile__value">{{ user.lineId || '未設定' }}</span>
-          </div>
+      <!-- 其他資訊 -->
+      <div class="memberProfile__grid">
+        <div class="memberProfile__info">
+          <p class="memberProfile__k">會員等級</p>
+          <p class="memberProfile__v">{{ user.level || '-' }}</p>
         </div>
 
-        <div class="memberProfile__divider"></div>
-
-        <!-- 收件資訊 -->
-        <h3 class="memberProfile__sectionTitle">收件資訊</h3>
-
-        <div class="memberProfile__grid">
-          <!-- 收件人姓名 -->
-          <div class="memberProfile__row">
-            <label class="memberProfile__label">收件人姓名</label>
-            <span class="memberProfile__value">{{
-              user.recipientName || '未設定'
-            }}</span>
-          </div>
-
-          <!-- 收件人電話 -->
-          <div class="memberProfile__row">
-            <label class="memberProfile__label">收件人電話</label>
-            <span class="memberProfile__value">{{
-              user.recipientPhone || '未設定'
-            }}</span>
-          </div>
-
-          <!-- 城市 -->
-          <div class="memberProfile__row">
-            <label class="memberProfile__label">城市</label>
-            <span class="memberProfile__value">{{ user.city || '未設定' }}</span>
-          </div>
-
-          <!-- 行政區 -->
-          <div class="memberProfile__row">
-            <label class="memberProfile__label">行政區</label>
-            <span class="memberProfile__value">{{
-              user.district || '未設定'
-            }}</span>
-          </div>
-
-          <!-- 詳細地址 -->
-          <div class="memberProfile__row memberProfile__row--fullwidth">
-            <label class="memberProfile__label">詳細地址</label>
-            <span class="memberProfile__value">{{
-              user.addressDetail || '未設定'
-            }}</span>
-          </div>
+        <div class="memberProfile__info">
+          <p class="memberProfile__k">金幣</p>
+          <p class="memberProfile__v">{{ user.goldCoins.toLocaleString() }}</p>
         </div>
 
-        <div class="memberProfile__divider"></div>
-
-        <!-- 發票資訊 -->
-        <h3 class="memberProfile__sectionTitle">發票資訊</h3>
-
-        <div class="memberProfile__grid">
-          <!-- 發票類型 -->
-          <div class="memberProfile__row">
-            <label class="memberProfile__label">發票類型</label>
-            <span class="memberProfile__value">{{ invoiceTypeLabel }}</span>
-          </div>
-
-          <!-- Email（如果是 EMAIL） -->
-          <div v-if="user.invoiceType === 'EMAIL'" class="memberProfile__row">
-            <label class="memberProfile__label">發票 Email</label>
-            <span class="memberProfile__value">{{
-              user.invoiceEmail || '未設定'
-            }}</span>
-          </div>
-
-          <!-- 載具號碼（如果是 CARRIER） -->
-          <div
-            v-if="user.invoiceType === 'CARRIER'"
-            class="memberProfile__row"
-          >
-            <label class="memberProfile__label">載具號碼</label>
-            <span class="memberProfile__value">{{
-              user.carrierCode || '未設定'
-            }}</span>
-          </div>
+        <div class="memberProfile__info">
+          <p class="memberProfile__k">紅利</p>
+          <p class="memberProfile__v">{{ user.bonusCoins.toLocaleString() }}</p>
         </div>
 
-        <div class="memberProfile__divider"></div>
+        <div class="memberProfile__info">
+          <p class="memberProfile__k">註冊日期</p>
+          <p class="memberProfile__v">
+            <DateFormatter
+              v-if="user.createdAt"
+              :date="user.createdAt"
+              format="YYYY-MM-DD HH:mm:ss"
+            />
+          </p>
+        </div>
 
-        <!-- 賬戶資訊 -->
-        <h3 class="memberProfile__sectionTitle">賬戶資訊</h3>
-
-        <div class="memberProfile__grid">
-          <!-- 帳號來源 -->
-          <div class="memberProfile__row">
-            <label class="memberProfile__label">帳號來源</label>
-            <span class="memberProfile__value">{{ providerLabel }}</span>
-          </div>
-
-          <!-- Email 驗證狀態 -->
-          <div class="memberProfile__row">
-            <label class="memberProfile__label">Email 驗證</label>
-            <span class="memberProfile__value" :class="emailVerifiedClass">
-              {{ emailVerifiedLabel }}
-            </span>
-          </div>
-
-          <!-- 加入日期 -->
-          <div class="memberProfile__row">
-            <label class="memberProfile__label">加入日期</label>
-            <span class="memberProfile__value">{{ formatDate(user.createdAt) }}</span>
-          </div>
-
-          <!-- 最後登入時間 -->
-          <div class="memberProfile__row">
-            <label class="memberProfile__label">最後登入</label>
-            <span class="memberProfile__value">{{
-              formatDate(user.lastLoginAt)
-            }}</span>
-          </div>
-
-          <!-- 總儲值 -->
-          <div class="memberProfile__row">
-            <label class="memberProfile__label">總儲值金額</label>
-            <span class="memberProfile__value">
-              NT${{ formatNumber(user.totalRecharged) }}
-            </span>
-          </div>
+        <div class="memberProfile__info">
+          <p class="memberProfile__k">最近登入</p>
+          <p class="memberProfile__v">
+            <DateFormatter
+              v-if="user.lastLoginAt"
+              :date="user.lastLoginAt"
+              format="YYYY-MM-DD HH:mm:ss"
+            />
+          </p>
         </div>
       </div>
     </div>
 
-    <!-- 空狀態 -->
-    <div v-else class="memberProfile__empty">
-      <p>無法加載使用者資訊</p>
+    <!-- 快捷入口 -->
+    <div class="memberProfile__card">
+      <p class="memberProfile__sectionTitle">快捷功能</p>
+
+      <div class="memberProfile__shortcutGrid">
+        <button
+          class="memberProfile__shortcut"
+          type="button"
+          @click="goName('Deposit')"
+        >
+          儲值
+        </button>
+
+        <button
+          class="memberProfile__shortcut"
+          type="button"
+          @click="goName('DepositHistory')"
+        >
+          儲值紀錄
+        </button>
+
+        <button
+          class="memberProfile__shortcut"
+          type="button"
+          @click="goName('TransactionHistory')"
+        >
+          消費紀錄
+        </button>
+
+        <button
+          class="memberProfile__shortcut"
+          type="button"
+          @click="goName('MemberNotifications')"
+        >
+          通知訊息
+        </button>
+
+        <button
+          class="memberProfile__shortcut"
+          type="button"
+          @click="goName('OrderHistory')"
+        >
+          訂單記錄
+        </button>
+
+        <button
+          class="memberProfile__shortcut"
+          type="button"
+          @click="goName('PrizeBox')"
+        >
+          賞品盒
+        </button>
+      </div>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, inject } from 'vue';
-import { useMemberWalletStore } from '@/stores/memberWallet';
+import DateFormatter from '@/components/common/DateFormatter.vue';
 
-interface User {
-  id: string;
-  email: string;
-  nickname: string;
-  avatar?: string;
-  provider: string;
+import { computed, onMounted, reactive } from 'vue';
+import { useRouter } from 'vue-router';
+
+import { getMe } from '@/services/userService';
+import { executeApi } from '@/utils/executeApiUtils';
+
+const router = useRouter();
+
+const fallbackAvatar =
+  'data:image/svg+xml;charset=UTF-8,' +
+  encodeURIComponent(`
+  <svg xmlns="http://www.w3.org/2000/svg" width="200" height="200">
+    <rect width="100%" height="100%" fill="#eee"/>
+    <circle cx="100" cy="80" r="38" fill="#bbb"/>
+    <rect x="38" y="128" width="124" height="56" rx="28" fill="#bbb"/>
+  </svg>
+`);
+
+const user = reactive({
+  name: '',
+  nickname: '',
+  email: '',
+  phone: '',
+  lineId: '',
+  recipientName: '',
+  avatar: '',
+  avatarUrl: '',
+  level: '一般會員',
+  goldCoins: 0,
+  bonusCoins: 0,
+  createdAt: '',
+  lastLoginAt: '',
+});
+
+const displayName = computed(
+  () => user.nickname || user.recipientName || user.name || user.email || '',
+);
+
+const normalizeDate = (val: any) => {
+  if (!val) return '';
+  const d = typeof val === 'number' ? new Date(val) : new Date(String(val));
+  if (Number.isNaN(d.getTime())) return String(val);
+
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const hh = String(d.getHours()).padStart(2, '0');
+  const mi = String(d.getMinutes()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd} ${hh}:${mi}`;
+};
+
+type MeDto = {
+  id?: string;
+  email?: string;
+  nickname?: string;
   phoneNumber?: string;
   lineId?: string;
   recipientName?: string;
-  recipientPhone?: string;
-  city?: string;
-  district?: string;
-  addressDetail?: string;
-  invoiceType: string;
-  invoiceEmail?: string;
-  carrierCode?: string;
-  status: string;
-  emailVerified: number;
-  lastLoginAt?: string;
+  goldCoins?: number;
+  bonusCoins?: number;
+  avatar?: string;
+  avatarUrl?: string;
   createdAt?: string;
-  totalRecharged: number;
-  goldCoins: number;
-  bonusCoins: number;
-}
+  lastLoginAt?: string;
+};
 
-const loading = ref(true);
-const error = ref('');
-const user = ref<User | null>(null);
+const applyMeToUser = (data: MeDto) => {
+  // 你的回傳沒有 name，我這裡用 recipientName 當作顯示名稱（你要改成 nickname/別的也可）
+  user.name = data?.recipientName ?? '';
+  user.nickname = data?.nickname ?? '';
+  user.email = data?.email ?? '';
+  user.phone = data?.phoneNumber ?? '';
+  user.lineId = data?.lineId ?? '';
+  user.recipientName = data?.recipientName ?? '';
 
-const fallbackAvatar =
-  'https://via.placeholder.com/150?text=Avatar';
+  user.avatar = data?.avatar ?? '';
+  user.avatarUrl = data?.avatarUrl ?? data?.avatar ?? '';
 
-const store = useMemberWalletStore();
+  user.goldCoins = Number(data?.goldCoins ?? 0);
+  user.bonusCoins = Number(data?.bonusCoins ?? 0);
 
-const statusClass = computed(() => {
-  return user.value?.status === 'ACTIVE'
-    ? 'memberProfile__status--active'
-    : 'memberProfile__status--inactive';
-});
+  user.createdAt = data?.createdAt;
+  user.lastLoginAt = data?.lastLoginAt;
+};
 
-const statusLabel = computed(() => {
-  return user.value?.status === 'ACTIVE' ? '✓ 啟用中' : '⊘ 已停用';
-});
-
-const invoiceTypeLabel = computed(() => {
-  const type = user.value?.invoiceType;
-  return type === 'CARRIER'
-    ? '行動載具'
-    : type === 'EMAIL'
-      ? '電子發票'
-      : type || '未設定';
-});
-
-const providerLabel = computed(() => {
-  const provider = user.value?.provider;
-  return provider === 'GOOGLE'
-    ? 'Google'
-    : provider === 'LINE'
-      ? 'LINE'
-      : provider === 'EMAIL'
-        ? '信箱註冊'
-        : provider || '未知';
-});
-
-const emailVerifiedClass = computed(() => {
-  return user.value?.emailVerified
-    ? 'memberProfile__value--verified'
-    : 'memberProfile__value--unverified';
-});
-
-const emailVerifiedLabel = computed(() => {
-  return user.value?.emailVerified ? '✓ 已驗證' : '⊘ 未驗證';
-});
-
-const formatDate = (dateStr: string | undefined) => {
-  if (!dateStr) return '未設定';
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('zh-TW', {
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
+const loadMe = async () => {
+  await executeApi<MeDto>({
+    fn: () => getMe(),
+    showCatchDialog: true,
+    showFailDialog: true,
+    showSuccessDialog: false,
+    errorTitle: '讀取失敗',
+    errorMessage: '無法取得會員資料，請稍後再試。',
+    onSuccess: (data) => {
+      applyMeToUser(data || {});
+    },
   });
 };
 
-const formatNumber = (num: number) => {
-  return new Intl.NumberFormat('zh-TW').format(num);
+onMounted(loadMe);
+
+const goEdit = () => {
+  router.push({ name: 'ProfileEdit' });
 };
 
-onMounted(async () => {
-  try {
-    loading.value = true;
-    error.value = '';
-
-    // 嘗試從 inject 取得 me 資訊（MemberCenter 提供）
-    const injectedMe = inject<User>('memberMe', null);
-    if (injectedMe) {
-      user.value = injectedMe;
-    } else {
-      // 如果沒有 inject，從 store 取得
-      await store.loadMe();
-      user.value = store.me;
-    }
-
-    if (!user.value) {
-      error.value = '無法載入使用者資訊，請稍後重試';
-    }
-  } catch (err) {
-    error.value = `載入失敗: ${err instanceof Error ? err.message : '未知錯誤'}`;
-    console.error('❌ 載入會員資訊失敗:', err);
-  } finally {
-    loading.value = false;
-  }
-});
+const goName = (name: string) => {
+  router.push({ name });
+};
 </script>
 
 <style scoped lang="scss">
 .memberProfile {
-  width: 100%;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 24px 16px;
 
-  &__loading,
-  &__error,
-  &__empty {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 400px;
-    font-size: 18px;
-    color: #888;
+  &__header {
+    margin-bottom: 16px;
+  }
+  &__title {
+    font-size: 24px;
+    font-weight: 800;
+    margin: 0 0 6px;
+  }
+  &__subtitle {
+    margin: 0;
+    opacity: 0.7;
   }
 
-  &__error {
-    color: #d32f2f;
-    background: #ffebee;
-    border-radius: 8px;
-    padding: 32px;
+  &__card {
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 14px;
+    padding: 16px;
+    background: #fff;
+    margin-top: 12px;
   }
 
-  /* 頂部卡片 */
-  &__topCard {
+  &__top {
     display: grid;
-    grid-template-columns: 120px 1fr;
-    gap: 24px;
-    padding: 24px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    border-radius: 12px;
-    color: white;
-    margin-bottom: 24px;
+    grid-template-columns: 110px 1fr auto;
+    gap: 14px;
+    align-items: center;
+
+    @media (max-width: 720px) {
+      grid-template-columns: 96px 1fr;
+      grid-template-areas:
+        'avatar meta'
+        'actions actions';
+    }
   }
 
-  &__avatarSection {
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
+  &__avatarWrap {
+    width: 96px;
+    height: 96px;
+    border-radius: 999px;
+    overflow: hidden;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    cursor: pointer;
+    position: relative;
+
+    @media (max-width: 720px) {
+      grid-area: avatar;
+    }
   }
 
   &__avatar {
-    width: 120px;
-    height: 120px;
-    border-radius: 50%;
+    width: 100%;
+    height: 100%;
     object-fit: cover;
-    border: 4px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    display: block;
   }
 
-  &__infoSection {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    padding: 8px 0;
+  &__avatarHint {
+    position: absolute;
+    left: 50%;
+    bottom: 6px;
+    transform: translateX(-50%);
+    font-size: 12px;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.55);
+    color: #fff;
+    white-space: nowrap;
+  }
+
+  &__meta {
+    @media (max-width: 720px) {
+      grid-area: meta;
+    }
+  }
+
+  &__name {
+    margin: 0 0 6px;
+    font-size: 18px;
+    font-weight: 900;
   }
 
   &__nickname {
-    font-size: 24px;
-    font-weight: 700;
-    margin: 0 0 8px 0;
-  }
-
-  &__email {
+    font-weight: 800;
+    opacity: 0.75;
+    margin-left: 6px;
     font-size: 14px;
-    margin: 0 0 8px 0;
-    opacity: 0.9;
   }
 
-  &__status {
-    font-size: 14px;
-    margin: 0 0 16px 0;
-    display: inline-block;
-    padding: 4px 12px;
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 20px;
-    width: fit-content;
-
-    &--active {
-      background: rgba(76, 175, 80, 0.3);
-    }
-
-    &--inactive {
-      background: rgba(244, 67, 54, 0.3);
-    }
+  &__line {
+    margin: 2px 0;
+    opacity: 0.8;
   }
 
-  &__editBtn {
-    display: inline-block;
-    padding: 10px 20px;
-    background: rgba(255, 255, 255, 0.25);
-    color: white;
-    text-decoration: none;
-    border-radius: 6px;
-    font-weight: 600;
-    font-size: 14px;
-    transition: all 0.3s ease;
-    width: fit-content;
-
-    &:hover {
-      background: rgba(255, 255, 255, 0.35);
-      transform: translateY(-2px);
-    }
-  }
-
-  /* 詳細資訊卡片 */
-  &__detailCard {
-    background: white;
-    border-radius: 12px;
-    padding: 24px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  }
-
-  &__sectionTitle {
-    font-size: 18px;
-    font-weight: 700;
-    margin: 0 0 16px 0;
-    color: #333;
-    padding-bottom: 8px;
-    border-bottom: 2px solid #667eea;
-    display: inline-block;
-  }
-
-  &__grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 20px;
-    margin-bottom: 20px;
-
-    @media (max-width: 768px) {
-      grid-template-columns: 1fr;
-    }
-  }
-
-  &__row {
+  &__actions {
     display: flex;
-    flex-direction: column;
-    gap: 8px;
+    justify-content: flex-end;
 
-    &--fullwidth {
-      grid-column: 1 / -1;
+    @media (max-width: 720px) {
+      grid-area: actions;
+      justify-content: stretch;
     }
   }
 
-  &__label {
-    font-size: 14px;
-    font-weight: 600;
-    color: #666;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
+  &__btn {
+    border: 0;
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-weight: 900;
+    cursor: pointer;
+    background: #111;
+    color: #fff;
 
-  &__value {
-    font-size: 16px;
-    color: #333;
-    line-height: 1.5;
-    word-break: break-word;
-
-    &--verified {
-      color: #4caf50;
-      font-weight: 600;
-    }
-
-    &--unverified {
-      color: #f44336;
-      font-weight: 600;
+    @media (max-width: 720px) {
+      width: 100%;
     }
   }
 
   &__divider {
     height: 1px;
-    background: #e0e0e0;
-    margin: 24px 0;
+    background: rgba(0, 0, 0, 0.06);
+    margin: 14px 0;
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+
+    @media (max-width: 820px) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    @media (max-width: 520px) {
+      grid-template-columns: repeat(1, minmax(0, 1fr));
+    }
+  }
+
+  &__info {
+    border: 1px solid rgba(0, 0, 0, 0.06);
+    border-radius: 12px;
+    padding: 12px;
+  }
+
+  &__k {
+    margin: 0 0 6px;
+    font-size: 12px;
+    opacity: 0.7;
+  }
+
+  &__v {
+    margin: 0;
+    font-weight: 900;
+  }
+
+  &__sectionTitle {
+    margin: 0 0 10px;
+    font-weight: 900;
+  }
+
+  &__shortcutGrid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+
+    @media (max-width: 820px) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    @media (max-width: 520px) {
+      grid-template-columns: repeat(1, minmax(0, 1fr));
+    }
+  }
+
+  &__shortcut {
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 12px;
+    padding: 12px 10px;
+    background: #fff;
+    cursor: pointer;
+    font-weight: 900;
+  }
+
+  &__tip {
+    margin: 10px 0 0;
+    font-size: 12px;
+    opacity: 0.7;
+    text-align: center;
   }
 }
 </style>

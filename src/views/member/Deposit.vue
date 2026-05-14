@@ -71,6 +71,7 @@ import RechargeConfirmDialog from '@/components/wallet/RechargeConfirmDialog.vue
 
 import { useRechargePlans } from '@/composables/useRechargePlans';
 import { useWallet } from '@/composables/useWallet';
+import { submitGatewayForm } from '@/utils/payment/submitGatewayForm';
 import { ichibanInfoDialog } from '@/utils/dialog/ichibanInfoDialog';
 import { useOverlayStore } from '@/stores/overlay';
 import type { PaymentMethodCode } from '@/services/rechargeService';
@@ -85,6 +86,7 @@ const {
   isSubmitting,
   error,
   paymentUrl,
+  gatewayPayload,
   fetchPlans,
   createRecharge,
 } = useRechargePlans();
@@ -120,9 +122,11 @@ async function onConfirm() {
   const result = await createRecharge(selectedPlanId.value, selectedPaymentMethod.value);
 
   if (result.success) {
-    if (paymentUrl.value) {
-      window.location.href = paymentUrl.value;
-    } else {
+    if (gatewayPayload.value && submitGatewayForm(gatewayPayload.value)) {
+      return;
+    }
+
+    {
       overlay.open();
       await ichibanInfoDialog({
         title: '建立付款失敗',

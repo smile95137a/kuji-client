@@ -302,6 +302,7 @@
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
 import { usePrizeBoxShip, type PrizeBoxItem } from '@/composables/usePrizeBoxShip';
 import { formatPrizeLevel } from '@/utils/prizeLevel';
+import { submitGatewayForm } from '@/utils/payment/submitGatewayForm';
 
 const props = defineProps<{
   visible: boolean;
@@ -334,6 +335,7 @@ const {
   selectedShipping,
   selectedPaymentMethod,
   paymentUrl,
+  gatewayPayload,
   isHomeDelivery,
   isConvenienceStorePickup,
 } = usePrizeBoxShip(itemsRef);
@@ -396,8 +398,10 @@ function tryClose() {
 async function onSubmit() {
   const ok = await submit();
   if (ok) {
-    if (paymentUrl.value) {
-      window.location.href = paymentUrl.value;
+    if (gatewayPayload.value && submitGatewayForm({
+        ...gatewayPayload.value,
+        payUrl: paymentUrl.value,
+      })) {
       return;
     }
     emit('success');

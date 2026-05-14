@@ -256,6 +256,7 @@ import { useRoute, useRouter } from 'vue-router';
 import { useOrderDetail } from '@/composables/useOrderDetail';
 import ShippingInfoForm from '@/components/order/ShippingInfoForm.vue';
 import ShippingInfoDisplay from '@/components/order/ShippingInfoDisplay.vue';
+import { submitGatewayForm } from '@/utils/payment/submitGatewayForm';
 import type { PaymentMethodCode } from '@/services/rechargeService';
 
 const route = useRoute();
@@ -310,9 +311,15 @@ async function onShippingSubmit(form: {
 }
 
 async function onRepay() {
-  const paymentUrl = await repay(selectedPaymentMethod.value);
-  if (paymentUrl) {
-    window.location.href = paymentUrl;
+  const gatewayPayload = await repay(selectedPaymentMethod.value);
+  if (gatewayPayload) {
+    const submitted = submitGatewayForm({
+      ...gatewayPayload,
+      payUrl: gatewayPayload.paymentUrl,
+    });
+    if (!submitted) {
+      repayError.value = '金流表單資料不完整，請稍後再試';
+    }
   }
 }
 

@@ -26,6 +26,9 @@ export interface OrderPaymentInitRes {
   paymentStatus: string;
   paymentMethod?: PaymentMethodCode | string;
   paymentUrl: string | null;
+  submitMethod?: string | null;
+  actionUrl?: string | null;
+  formFields?: Record<string, string> | null;
   gatewayTradeNo: string | null;
 }
 

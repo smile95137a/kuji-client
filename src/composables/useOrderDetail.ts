@@ -4,6 +4,7 @@ import {
   getOrderDetail,
   repayShipping,
   submitShippingInfo,
+  type OrderPaymentInitRes,
   type ShippingInfoReq,
 } from '@/services/orderService';
 import type { PaymentMethodCode } from '@/services/rechargeService';
@@ -75,12 +76,12 @@ export function useOrderDetail(orderId: string) {
     }
   }
 
-  async function repay(paymentMethod: PaymentMethodCode): Promise<string | null> {
+  async function repay(paymentMethod: PaymentMethodCode): Promise<OrderPaymentInitRes | null> {
     if (!orderId) return null;
     repayError.value = null;
     try {
       const res = await repayShipping(orderId, paymentMethod);
-      return res?.data?.paymentUrl ?? null;
+      return res?.data ?? null;
     } catch (e: any) {
       repayError.value = e?.response?.data?.error?.message ?? '重新付款失敗';
       return null;

@@ -1,80 +1,227 @@
-<!-- src/views/VerifyEmail.vue -->
-<template>
+﻿<template>
   <div class="verifyEmail">
     <div class="verifyEmail__card">
-      <!-- Loading -->
-      <template v-if="status === 'loading'">
-        <div class="verifyEmail__icon">⏳</div>
-        <h1 class="verifyEmail__title">驗證中...</h1>
-        <p class="verifyEmail__desc">正在驗證您的 Email，請稍候</p>
-      </template>
+      <div class="verifyEmail__badge">Email 驗證</div>
+      <h1 class="verifyEmail__title">完成信箱驗證</h1>
+      <p class="verifyEmail__desc">
+        我們已將 6 位數驗證碼寄到您的信箱，請輸入後完成註冊。
+      </p>
 
-      <!-- Success -->
-      <template v-else-if="status === 'success'">
-        <div class="verifyEmail__icon">✅</div>
-        <h1 class="verifyEmail__title">Email 驗證成功！</h1>
-        <p class="verifyEmail__desc">您的 Email 已驗證完成，現在可以登入了。</p>
+      <p v-if="pageMessage" class="verifyEmail__message verifyEmail__message--info">
+        {{ pageMessage }}
+      </p>
+      <p v-if="successMessage" class="verifyEmail__message verifyEmail__message--success">
+        {{ successMessage }}
+      </p>
+      <p v-if="errorMessage" class="verifyEmail__message verifyEmail__message--error">
+        {{ errorMessage }}
+      </p>
+
+      <div v-if="status === 'loading'" class="verifyEmail__status">
+        正在驗證中，請稍候...
+      </div>
+
+      <div v-else-if="status === 'success'" class="verifyEmail__successPanel">
+        <p class="verifyEmail__successTitle">Email 驗證成功</p>
+        <p class="verifyEmail__successDesc">現在可以回到登入頁登入。</p>
         <button class="verifyEmail__btn verifyEmail__btn--primary" @click="goLogin">
           前往登入
         </button>
-      </template>
+      </div>
 
-      <!-- Error -->
-      <template v-else>
-        <div class="verifyEmail__icon">⚠️</div>
-        <h1 class="verifyEmail__title">驗證連結已失效</h1>
-        <p class="verifyEmail__desc">
-          此驗證連結已失效或已被使用，請重新登入後申請新的驗證信。
-        </p>
-        <button class="verifyEmail__btn verifyEmail__btn--primary" @click="goResend">
-          重新發送驗證信
+      <form v-else class="verifyEmail__form" @submit.prevent="submitCode">
+        <label class="verifyEmail__label" for="verify-email">Email</label>
+        <input
+          id="verify-email"
+          v-model.trim="email"
+          class="verifyEmail__input"
+          type="email"
+          placeholder="請輸入註冊信箱"
+          autocomplete="email"
+        />
+
+        <label class="verifyEmail__label" for="verify-code">驗證碼</label>
+        <input
+          id="verify-code"
+          v-model.trim="code"
+          class="verifyEmail__input verifyEmail__input--code"
+          type="text"
+          inputmode="numeric"
+          maxlength="6"
+          placeholder="請輸入 6 位數驗證碼"
+          autocomplete="one-time-code"
+        />
+
+        <button class="verifyEmail__btn verifyEmail__btn--primary" type="submit" :disabled="submitting">
+          {{ submitting ? '驗證中...' : '送出驗證碼' }}
         </button>
-        <button class="verifyEmail__btn verifyEmail__btn--secondary" @click="goLogin">
-          前往登入頁
+
+        <button
+          class="verifyEmail__btn verifyEmail__btn--secondary"
+          type="button"
+          :disabled="resending || resendCooldown > 0"
+          @click="resendCode"
+        >
+          {{
+            resending
+              ? '寄送中...'
+              : resendCooldown > 0
+              ? `重新寄送 (${resendCooldown}s)`
+              : '重新寄送驗證碼'
+          }}
         </button>
-      </template>
+
+        <button class="verifyEmail__btn verifyEmail__btn--ghost" type="button" @click="goLogin">
+          回登入頁
+        </button>
+      </form>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/useAuthStore';
-import { verifyEmail } from '@/services/AuthService';
+import { resendVerification, verifyEmail, verifyEmailCode } from '@/services/AuthService';
 
 const route = useRoute();
 const router = useRouter();
-const authStore = useAuthStore();
 
-const status = ref<'loading' | 'success' | 'error'>('loading');
+const status = ref<'idle' | 'loading' | 'success'>('idle');
+const email = ref('');
+const code = ref('');
+const errorMessage = ref('');
+const successMessage = ref('');
+const submitting = ref(false);
+const resending = ref(false);
+const resendCooldown = ref(0);
+let resendTimer: ReturnType<typeof setInterval> | null = null;
 
-onMounted(async () => {
-  const token = route.query.token as string;
-  if (!token) {
-    status.value = 'error';
+const pageMessage = computed(() => {
+  if (route.query.registered === '1') {
+    return '註冊成功，請先完成 Email 驗證。';
+  }
+  return '';
+});
+
+const normalizeCode = (value: string) => value.replace(/\D/g, '').slice(0, 6);
+
+const startCooldown = () => {
+  resendCooldown.value = 60;
+  if (resendTimer) clearInterval(resendTimer);
+  resendTimer = setInterval(() => {
+    resendCooldown.value -= 1;
+    if (resendCooldown.value <= 0) {
+      resendCooldown.value = 0;
+      if (resendTimer) {
+        clearInterval(resendTimer);
+        resendTimer = null;
+      }
+    }
+  }, 1000);
+};
+
+const clearMessages = () => {
+  errorMessage.value = '';
+  successMessage.value = '';
+};
+
+const goLogin = () => {
+  router.push({ name: 'Login', query: email.value ? { email: email.value } : undefined });
+};
+
+const submitCode = async () => {
+  clearMessages();
+  code.value = normalizeCode(code.value);
+
+  if (!email.value) {
+    errorMessage.value = '請先輸入註冊 Email';
     return;
   }
 
+  if (code.value.length !== 6) {
+    errorMessage.value = '請輸入 6 位數驗證碼';
+    return;
+  }
+
+  submitting.value = true;
+  try {
+    const res = await verifyEmailCode({ email: email.value, code: code.value });
+    if (res?.success) {
+      status.value = 'success';
+      successMessage.value = 'Email 驗證成功，現在可以登入。';
+      return;
+    }
+    errorMessage.value = res?.message || '驗證失敗，請確認驗證碼後再試';
+  } catch (err: any) {
+    errorMessage.value = err?.response?.data?.error?.message || err?.response?.data?.message || '驗證失敗，請確認驗證碼後再試';
+  } finally {
+    submitting.value = false;
+  }
+};
+
+const resendCode = async () => {
+  clearMessages();
+
+  if (!email.value) {
+    errorMessage.value = '請先輸入註冊 Email';
+    return;
+  }
+
+  if (resendCooldown.value > 0 || resending.value) {
+    return;
+  }
+
+  resending.value = true;
+  try {
+    const res = await resendVerification({ email: email.value });
+    if (res?.success) {
+      successMessage.value = '驗證碼已重新寄出，請到信箱查看。';
+      startCooldown();
+      return;
+    }
+    errorMessage.value = res?.message || '重寄失敗，請稍後再試';
+  } catch (err: any) {
+    errorMessage.value = err?.response?.data?.error?.message || err?.response?.data?.message || '重寄失敗，請稍後再試';
+  } finally {
+    resending.value = false;
+  }
+};
+
+onMounted(async () => {
+  const queryEmail = typeof route.query.email === 'string' ? route.query.email.trim() : '';
+  if (queryEmail) {
+    email.value = queryEmail;
+  }
+
+  const token = typeof route.query.token === 'string' ? route.query.token.trim() : '';
+  if (!token) {
+    return;
+  }
+
+  status.value = 'loading';
+  clearMessages();
   try {
     const res = await verifyEmail(token);
-    status.value = res?.success ? 'success' : 'error';
+    if (res?.success) {
+      status.value = 'success';
+      successMessage.value = 'Email 驗證成功，現在可以登入。';
+    } else {
+      status.value = 'idle';
+      errorMessage.value = '驗證連結已失效，請改用驗證碼或重新寄送。';
+    }
   } catch {
-    status.value = 'error';
+    status.value = 'idle';
+    errorMessage.value = '驗證連結已失效，請改用驗證碼或重新寄送。';
   }
 });
 
-const goLogin = () => {
-  if (authStore.isLogin) {
-    router.push({ name: 'MemberProfile' });
-  } else {
-    router.push({ name: 'Login' });
+onBeforeUnmount(() => {
+  if (resendTimer) {
+    clearInterval(resendTimer);
+    resendTimer = null;
   }
-};
-
-const goResend = () => {
-  router.push({ name: 'Login', query: { action: 'resend' } });
-};
+});
 </script>
 
 <style scoped lang="scss">
@@ -83,56 +230,124 @@ const goResend = () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 48px 20px;
-  background: #1a1a1a;
+  padding: 32px 16px;
+  background: #121212;
 }
 
 .verifyEmail__card {
   width: 100%;
-  max-width: 480px;
+  max-width: 460px;
+  padding: 32px 28px;
   background: #fff;
-  border-radius: 24px;
-  padding: 56px 48px;
-  text-align: center;
-  box-shadow: 0 8px 40px rgba(0, 0, 0, 0.25);
+  border-radius: 20px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.24);
 }
 
-.verifyEmail__icon {
-  font-size: 56px;
-  line-height: 1;
-  margin-bottom: 20px;
+.verifyEmail__badge {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: #f6e5cf;
+  color: #8a4b16;
+  font-size: 12px;
+  font-weight: 700;
 }
 
 .verifyEmail__title {
-  font-size: 24px;
+  margin: 16px 0 8px;
+  font-size: 28px;
   font-weight: 800;
   color: #1b1b1b;
-  margin: 0 0 12px;
 }
 
 .verifyEmail__desc {
-  font-size: 15px;
-  color: #555;
+  margin: 0 0 20px;
+  color: #5f5f5f;
   line-height: 1.6;
-  margin: 0 0 32px;
+}
+
+.verifyEmail__message {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.verifyEmail__message--info {
+  background: #f4f4f4;
+  color: #444;
+}
+
+.verifyEmail__message--success {
+  background: #e8f7ea;
+  color: #1b6b2a;
+}
+
+.verifyEmail__message--error {
+  background: #fdecec;
+  color: #b42318;
+}
+
+.verifyEmail__status,
+.verifyEmail__successPanel {
+  display: grid;
+  gap: 12px;
+}
+
+.verifyEmail__successTitle {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: #1b1b1b;
+}
+
+.verifyEmail__successDesc {
+  margin: 0;
+  color: #5f5f5f;
+}
+
+.verifyEmail__form {
+  display: grid;
+  gap: 12px;
+}
+
+.verifyEmail__label {
+  font-size: 14px;
+  font-weight: 700;
+  color: #333;
+}
+
+.verifyEmail__input {
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  border: 1px solid #d8d8d8;
+  border-radius: 12px;
+  font-size: 15px;
+  box-sizing: border-box;
+}
+
+.verifyEmail__input--code {
+  letter-spacing: 6px;
+  text-align: center;
 }
 
 .verifyEmail__btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  height: 52px;
-  padding: 0 36px;
-  border-radius: 999px;
+  width: 100%;
+  height: 48px;
   border: none;
-  font-size: 16px;
+  border-radius: 12px;
+  font-size: 15px;
   font-weight: 700;
   cursor: pointer;
-  transition: opacity 0.15s;
+}
 
-  &:hover {
-    opacity: 0.85;
-  }
+.verifyEmail__btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
 }
 
 .verifyEmail__btn--primary {
@@ -141,13 +356,22 @@ const goResend = () => {
 }
 
 .verifyEmail__btn--secondary {
-  background: #444;
+  background: #2d2d2d;
   color: #fff;
+}
+
+.verifyEmail__btn--ghost {
+  background: #f4f4f4;
+  color: #333;
 }
 
 @media (max-width: 540px) {
   .verifyEmail__card {
-    padding: 40px 24px;
+    padding: 24px 20px;
+  }
+
+  .verifyEmail__title {
+    font-size: 24px;
   }
 }
 </style>

@@ -30,6 +30,9 @@ export interface RechargeRes {
 export interface RechargeOrderRes {
   rechargeOrderId: string;
   payUrl: string | null;
+  submitMethod?: string | null;
+  actionUrl?: string | null;
+  formFields?: Record<string, string> | null;
   goldAmount: number;
   bonusAmount: number;
   priceTwd: number;

@@ -31,6 +31,9 @@ export interface ShipOrderResult {
   paymentStatus: string;
   paymentMethod?: string | null;
   paymentUrl: string | null;
+  submitMethod?: string | null;
+  actionUrl?: string | null;
+  formFields?: Record<string, string> | null;
   gatewayTradeNo: string | null;
 }
 
