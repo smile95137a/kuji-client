@@ -1,6 +1,10 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, ref, watch } from 'vue';
-import type { StoreDetail, StoreBusinessHours } from '@/services/storeService';
+import type { StoreDetail } from '@/services/storeService';
+import {
+  formatBusinessHoursSummary,
+  getTodayBusinessHoursRow,
+} from '@/utils/businessHours';
 
 const props = defineProps<{
   store: StoreDetail;
@@ -52,31 +56,20 @@ const onLogoError = () => {
   logoLoaded.value = false;
 };
 
-const businessHoursText = computed(() => {
-  const hours = props.store.businessHours as StoreBusinessHours;
+const businessHoursText = computed(() =>
+  formatBusinessHoursSummary(props.store.businessHours ?? null),
+);
 
-  if (!hours) {
-    return '';
-  }
+const todayHoursText = computed(() => {
+  const row = getTodayBusinessHoursRow(props.store.businessHours ?? null);
+  if (!row) return '';
+  return row.isClosed ? '今日公休' : `今日 ${row.open} - ${row.close}`;
+});
 
-  if (typeof hours === 'string') {
-    return hours;
-  }
-
-  const openDays = Object.values(hours).filter((day) => !day.isClosed);
-  if (openDays.length === 0) {
-    return '目前無固定營業時間';
-  }
-
-  const sameHours = openDays.every(
-    (day) => day.open === openDays[0].open && day.close === openDays[0].close,
-  );
-
-  if (openDays.length === 7 && sameHours) {
-    return `每日 ${openDays[0].open} - ${openDays[0].close}`;
-  }
-
-  return '請見下方營業時間表';
+const mapHref = computed(() => {
+  const address = String(props.store.address ?? '').trim();
+  if (!address) return '';
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
 });
 
 const socialLinks = computed<SocialLink[]>(() => {
@@ -125,7 +118,7 @@ const socialLinks = computed<SocialLink[]>(() => {
         class="storeProfileCard__status"
         :class="{ 'storeProfileCard__status--inactive': !store.isActive }"
       >
-        {{ store.isActive ? '營運中' : '暫停服務' }}
+        {{ store.isActive ? '營業中' : '未營業' }}
       </span>
     </div>
 
@@ -155,9 +148,25 @@ const socialLinks = computed<SocialLink[]>(() => {
     </div>
 
     <div class="storeProfileCard__metaGrid">
+      <div v-if="todayHoursText" class="storeProfileCard__metaItem">
+        <span class="storeProfileCard__metaLabel">今日營業</span>
+        <p class="storeProfileCard__metaValue">{{ todayHoursText }}</p>
+      </div>
+
       <div v-if="store.address" class="storeProfileCard__metaItem">
         <span class="storeProfileCard__metaLabel">地址</span>
-        <p class="storeProfileCard__metaValue">{{ store.address }}</p>
+        <div class="storeProfileCard__metaStack">
+          <p class="storeProfileCard__metaValue">{{ store.address }}</p>
+          <a
+            v-if="mapHref"
+            class="storeProfileCard__metaLink storeProfileCard__metaLink--inline"
+            :href="mapHref"
+            target="_blank"
+            rel="noreferrer noopener"
+          >
+            在地圖開啟
+          </a>
+        </div>
       </div>
 
       <div v-if="store.phone" class="storeProfileCard__metaItem">
@@ -171,7 +180,7 @@ const socialLinks = computed<SocialLink[]>(() => {
       </div>
 
       <div v-if="businessHoursText" class="storeProfileCard__metaItem">
-        <span class="storeProfileCard__metaLabel">營業時間</span>
+        <span class="storeProfileCard__metaLabel">營業摘要</span>
         <p class="storeProfileCard__metaValue">{{ businessHoursText }}</p>
       </div>
     </div>
@@ -259,176 +268,128 @@ const socialLinks = computed<SocialLink[]>(() => {
   height: 5.5rem;
 }
 
-.storeProfileCard__logo {
-  opacity: 0;
+.storeProfileCard__logo,
+.storeProfileCard__logoFallback,
+.storeProfileCard__logoSkeleton {
   width: 100%;
   height: 100%;
-  object-fit: cover;
   border-radius: 1.25rem;
-  border: 1px solid rgba(180, 68, 43, 0.15);
-  box-shadow: 0 12px 28px rgba(80, 42, 20, 0.16);
-  background: #fff;
-  transition: opacity 0.2s ease;
+}
+
+.storeProfileCard__logo {
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 0.18s ease;
 }
 
 .storeProfileCard__logo--ready {
   opacity: 1;
 }
 
+.storeProfileCard__logoSkeleton,
+.storeProfileCard__logoFallback {
+  display: grid;
+  place-items: center;
+  background: rgba(180, 68, 43, 0.12);
+  color: var(--store-accent);
+  font-size: 1.9rem;
+  font-weight: 800;
+}
+
 .storeProfileCard__logoSkeleton {
   position: absolute;
   inset: 0;
-  border-radius: 1.25rem;
-  background: linear-gradient(90deg, #f2ebe6 25%, #faf6f2 50%, #f2ebe6 75%);
-  background-size: 200% 100%;
-  animation: storeProfileShimmer 1.2s linear infinite;
-}
-
-.storeProfileCard__logoFallback {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 5.5rem;
-  height: 5.5rem;
-  border-radius: 1.25rem;
-  border: 1px solid rgba(180, 68, 43, 0.15);
-  background: linear-gradient(135deg, #b4442b, #e2a162);
-  color: #fff9f5;
-  font-size: 1.8rem;
-  font-weight: 800;
+  animation: pulse 1.4s ease infinite;
 }
 
 .storeProfileCard__intro {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.6rem;
 }
 
 .storeProfileCard__name {
   margin: 0;
+  font-size: clamp(1.8rem, 2.6vw, 2.4rem);
+  line-height: 1.1;
   color: var(--store-ink);
-  font-size: clamp(1.9rem, 3vw, 2.8rem);
-  font-weight: 900;
-  line-height: 1.05;
 }
 
-.storeProfileCard__short {
-  margin: 0;
-  color: var(--store-accent);
-  font-size: 1rem;
-  font-weight: 700;
-}
-
-.storeProfileCard__long {
+.storeProfileCard__short,
+.storeProfileCard__long,
+.storeProfileCard__metaValue,
+.storeProfileCard__metaLink,
+.storeProfileCard__socialValue {
   margin: 0;
   color: var(--store-muted);
-  line-height: 1.8;
-  font-size: 0.96rem;
+  line-height: 1.7;
 }
 
 .storeProfileCard__metaGrid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1rem;
 }
 
-.storeProfileCard__metaItem {
-  min-height: 6.25rem;
-  padding: 1rem;
-  border-radius: 1.1rem;
-  border: 1px solid var(--store-line);
-  background: rgba(255, 255, 255, 0.82);
-}
-
-.storeProfileCard__metaLabel {
-  display: block;
-  margin-bottom: 0.4rem;
-  color: var(--store-muted);
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-
-.storeProfileCard__metaValue,
-.storeProfileCard__metaLink {
-  margin: 0;
-  color: var(--store-ink);
-  font-size: 0.95rem;
-  line-height: 1.7;
-  text-decoration: none;
-  word-break: break-word;
-}
-
-.storeProfileCard__metaLink:hover {
-  color: var(--store-accent);
-}
-
-.storeProfileCard__socials {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 0.8rem;
-}
-
+.storeProfileCard__metaItem,
 .storeProfileCard__social {
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  padding: 0.95rem 1rem;
+  padding: 1rem;
+  border: 1px solid rgba(93, 58, 40, 0.1);
   border-radius: 1rem;
-  border: 1px dashed rgba(180, 68, 43, 0.28);
-  background: rgba(255, 248, 243, 0.85);
-  text-decoration: none;
-  transition:
-    transform 0.18s ease,
-    border-color 0.18s ease,
-    background-color 0.18s ease;
+  background: rgba(255, 255, 255, 0.72);
 }
 
-.storeProfileCard__social:hover {
-  transform: translateY(-2px);
-  border-color: rgba(180, 68, 43, 0.46);
-  background: rgba(255, 243, 235, 0.96);
-}
-
+.storeProfileCard__metaLabel,
 .storeProfileCard__socialLabel {
-  color: var(--store-accent);
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.08em;
+  color: var(--store-accent);
 }
 
-.storeProfileCard__socialValue {
-  color: var(--store-ink);
-  font-size: 0.9rem;
-  word-break: break-word;
+.storeProfileCard__metaStack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
 }
 
-@keyframes storeProfileShimmer {
-  0% {
-    background-position: 200% 0;
+.storeProfileCard__metaLink,
+.storeProfileCard__social {
+  text-decoration: none;
+}
+
+.storeProfileCard__metaLink--inline {
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.storeProfileCard__socials {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.85rem;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.5;
   }
 
-  100% {
-    background-position: -200% 0;
+  50% {
+    opacity: 1;
   }
 }
 
 @media (max-width: 767px) {
   .storeProfileCard {
-    padding: 1.25rem;
+    padding: 1.1rem;
   }
 
   .storeProfileCard__hero {
-    grid-template-columns: 1fr;
-  }
-
-  .storeProfileCard__logoWrap,
-  .storeProfileCard__logoFallback {
-    width: 4.5rem;
-    height: 4.5rem;
-  }
-
-  .storeProfileCard__metaGrid {
     grid-template-columns: 1fr;
   }
 }

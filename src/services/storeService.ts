@@ -10,8 +10,27 @@ export interface StoreBusinessHoursDay {
   isClosed: boolean;
 }
 
+export interface StoreBusinessHoursStructuredSchedule {
+  day: 'MON' | 'TUE' | 'WED' | 'THU' | 'FRI' | 'SAT' | 'SUN';
+  open?: string;
+  close?: string;
+  closed?: boolean;
+}
+
+export interface StoreBusinessHoursStructured {
+  schedules: StoreBusinessHoursStructuredSchedule[];
+  exceptions?: Array<{
+    date: string;
+    closed?: boolean;
+    open?: string;
+    close?: string;
+  }>;
+  tz?: string;
+}
+
 export type StoreBusinessHours =
   | Record<string, StoreBusinessHoursDay>
+  | StoreBusinessHoursStructured
   | string
   | null;
 
@@ -58,6 +77,7 @@ interface StoreApiResponse extends Partial<StoreDetail> {
   longDescription?: string;
   coverImageUrl?: string;
   status?: string;
+  businessHoursStructured?: StoreBusinessHoursStructured | null;
 }
 
 interface StoreProductApiResponse extends Partial<StoreProduct> {
@@ -91,7 +111,7 @@ const normalizeStore = (raw: StoreApiResponse): StoreDetail => {
     coverImages: normalizedCoverImages,
     coverImageUrl: normalizedCoverImages[0] ?? '',
     logoUrl: raw.logoUrl ?? '',
-    businessHours: raw.businessHours ?? null,
+    businessHours: raw.businessHoursStructured ?? raw.businessHours ?? null,
     email: raw.email ?? '',
     address: raw.address ?? '',
     phone: raw.phone ?? '',

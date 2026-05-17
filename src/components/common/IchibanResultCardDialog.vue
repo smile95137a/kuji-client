@@ -1,7 +1,7 @@
-<!-- src/components/common/IchibanResultCardDialog.vue -->
+﻿<!-- src/components/common/IchibanResultCardDialog.vue -->
 <template>
   <div class="draw-container" ref="containerRef">
-    <!-- 背景粒子 -->
+    <!-- ?蝎? -->
     <div class="bg-particles">
       <span
         v-for="(_, i) in particleCount"
@@ -11,12 +11,12 @@
       />
     </div>
 
-    <!--  置中舞台 -->
+    <!--  蝵桐葉? -->
     <div class="draw-stage">
-      <!-- 中央爆光 -->
+      <!-- 銝剖亢?? -->
       <div class="flash" ref="flashRef"></div>
 
-      <!-- 卡片區 -->
+      <!-- ?∠?? -->
       <div class="card-grid" ref="gridRef">
         <div
           v-for="(c, i) in cards"
@@ -54,7 +54,7 @@
       </p> -->
     </div>
 
-    <!-- 底部操作 -->
+    <!-- 摨?? -->
     <div class="actions" ref="actionsRef">
       <button class="btn btn--primary" @click="confirm">再抽一次</button>
       <button class="btn btn--ghost" @click="cancel">關閉</button>
@@ -87,7 +87,7 @@ const emit = defineEmits<{
   (e: 'cancel'): void;
 }>();
 
-/* ===== 卡片顯示結構 ===== */
+/* ===== ?∠?憿舐內蝯? ===== */
 interface PrizeCard {
   id: string | number;
   type: 'big' | 'small';
@@ -98,11 +98,12 @@ interface PrizeCard {
 
 const cards = computed<PrizeCard[]>(() =>
   props.items.map((item, index) => ({
-    id: item.prizeId,
-    type: item.prizeLevel === 'A' ? 'big' : 'small',
-    tag: `${item.prizeLevel}賞`,
-    name: item.prizeName,
-    image: item.prizeImageUrl,
+    id: item.ticketId ?? ((item.prizeId ?? 'prize') + '-' + index),
+    type:
+      item.prizeLevel === 'A' || item.prizeLevel === 'GRAND' ? 'big' : 'small',
+    tag: formatPrizeLevel(item.prizeLevel ?? ''),
+    name: item.prizeName ?? '未命名獎項',
+    image: item.prizeImageUrl ?? weblogo,
   })),
 );
 
@@ -118,10 +119,10 @@ const particleCount = 35;
 const containerRef = ref<HTMLElement | null>(null);
 const gridRef = ref<HTMLElement | null>(null);
 
-/*  actions ref：算 bottomPad 用（固定底部按鈕高度） */
+/*  actions ref嚗? bottomPad ?剁??箏?摨??擃漲嚗?*/
 const actionsRef = ref<HTMLElement | null>(null);
 
-/*  可選：排數 / 每排張數 */
+/*  ?舫嚗???/ 瘥?撘菜 */
 const rowCount = ref(0);
 const perRow = ref(0);
 
@@ -149,8 +150,8 @@ async function calcRows() {
 }
 
 /* =========================
-    Row mapping（關鍵修正）
-   - 用 offsetTop 建 row，不受 scrollTop 影響
+    Row mapping嚗??萎耨甇??
+   - ??offsetTop 撱?row嚗???scrollTop 敶梢
 ========================= */
 const rowTops = ref<number[]>([]);
 const rowIndexMap = new Map<HTMLElement, number>();
@@ -187,7 +188,7 @@ function buildRowIndexMap() {
   });
 }
 
-/*  取得視窗上/下安全 padding（避免被 actions 蓋住） */
+/*  ??閬?銝?銝???padding嚗?◤ actions ??嚗?*/
 function getViewportPads() {
   const topPad = 16;
   const actionsH = actionsRef.value?.getBoundingClientRect().height ?? 92;
@@ -201,14 +202,14 @@ function isFullyVisible(
   topPad: number,
   bottomPad: number,
 ) {
-  const epsilon = 2; // 避免 1px 抖動
+  const epsilon = 2; // ?踹? 1px ??
   return (
     elRect.top >= scRect.top + topPad - epsilon &&
     elRect.bottom <= scRect.bottom - bottomPad + epsilon
   );
 }
 
-/*  讓某張卡在可視範圍內（看得到就不要捲） */
+/*  霈?撘萄?典閬??嚗?敺撠曹?閬嚗?*/
 function ensureVisible(el: HTMLElement) {
   const scroller = containerRef.value;
   if (!scroller) return;
@@ -217,7 +218,7 @@ function ensureVisible(el: HTMLElement) {
   const elRect = el.getBoundingClientRect();
   const { topPad, bottomPad } = getViewportPads();
 
-  //  已經看得到：不捲
+  //  撌脩????堆?銝
   if (isFullyVisible(elRect, scRect, topPad, bottomPad)) return;
 
   const visibleTop = scRect.top + topPad;
@@ -243,7 +244,7 @@ function ensureVisible(el: HTMLElement) {
   });
 }
 
-/*  只在「那一列不完整可見」時才捲動 */
+/*  ?芸?銝??摰?航??????*/
 function scrollToRow(rowIndex: number) {
   const scroller = containerRef.value;
   const grid = gridRef.value;
@@ -252,7 +253,7 @@ function scrollToRow(rowIndex: number) {
   const safeRow = Math.max(0, Math.min(rowIndex, rowTops.value.length - 1));
   const rowTop = rowTops.value[safeRow];
 
-  // rowBottom：用下一列 top 當底，最後一列用 grid.scrollHeight
+  // rowBottom嚗銝???top ?嗅?嚗?敺?? grid.scrollHeight
   const nextTop = rowTops.value[safeRow + 1];
   const rowBottom = nextTop != null ? nextTop : grid.scrollHeight;
 
@@ -260,7 +261,7 @@ function scrollToRow(rowIndex: number) {
   const gridRect = grid.getBoundingClientRect();
   const { topPad, bottomPad } = getViewportPads();
 
-  // rowTop/Bottom（grid內座標） -> scroller viewport 內的 Y
+  // rowTop/Bottom嚗rid?批漣璅? -> scroller viewport ?抒? Y
   const rowTopV = gridRect.top - scRect.top + rowTop;
   const rowBottomV = gridRect.top - scRect.top + rowBottom;
 
@@ -269,13 +270,13 @@ function scrollToRow(rowIndex: number) {
   const visibleBottom = viewportH - bottomPad;
 
   const epsilon = 2;
-  //  這列完整可見：不捲
+  //  ??摰?航?嚗???
   if (rowTopV >= visibleTop - epsilon && rowBottomV <= visibleBottom + epsilon)
     return;
 
   let targetScrollTop = scroller.scrollTop;
 
-  // 只修正需要的方向
+  // ?芯耨甇??閬??孵?
   if (rowTopV < visibleTop) {
     targetScrollTop += rowTopV - visibleTop;
   } else if (rowBottomV > visibleBottom) {
@@ -306,7 +307,7 @@ function scrollBackToTop(duration = 1.6, delay = 0.35) {
   });
 }
 
-/*  resize / observer（修正 removeEventListener bug） */
+/*  resize / observer嚗耨甇?removeEventListener bug嚗?*/
 let ro: ResizeObserver | null = null;
 let onResize: (() => void) | null = null;
 
@@ -326,19 +327,19 @@ watch(
 );
 
 /* =========================
-   lifecycle（動畫只做一次）
+   lifecycle嚗??怠??甈∴?
 ========================= */
 onMounted(async () => {
   await nextTick();
 
-  // refs 清一下洞
+  // refs 皜?銝?
   cardRefs.value = cardRefs.value.filter(Boolean);
   innerRefs.value = innerRefs.value.filter(Boolean);
   particleRefs.value = particleRefs.value.filter(Boolean);
 
   syncLayoutMetrics();
 
-  // 監測 grid 尺寸變化
+  // ??葫 grid 撠箏站霈?
   ro = new ResizeObserver(() => {
     nextTick().then(() => syncLayoutMetrics());
   });
@@ -351,7 +352,7 @@ onMounted(async () => {
   const winH = window.innerHeight;
   const totalFlightTime = (cardRefs.value.length - 1) * 0.15 + 0.8;
 
-  /* 粒子動畫 */
+  /* 蝎?? */
   particleRefs.value.forEach((el) => {
     const size = gsap.utils.random(4, 10);
     const startX = gsap.utils.random(-winW / 2, winW / 2);
@@ -385,7 +386,7 @@ onMounted(async () => {
     });
   });
 
-  /* 初始卡片狀態 */
+  /* ???∠????*/
   gsap.set(cardRefs.value, {
     opacity: 0,
     x: -winW - 500,
@@ -404,7 +405,7 @@ onMounted(async () => {
     // onComplete: () => scrollBackToTop(1.8, 0.4),
   });
 
-  // 飛進來（ 看得到才捲）
+  // 憌脖?嚗????唳??莎?
   cardRefs.value.forEach((el, index) => {
     tl.to(
       el,
@@ -423,11 +424,11 @@ onMounted(async () => {
   });
   const scroller = containerRef.value;
 
-  //  只有「真的有往下捲」才需要捲回頂部
+  //  ?芣?????敺銝???閬????
   const needScrollTop = !!scroller && scroller.scrollTop > 2;
 
-  //  捲動時間改成短 + 依距離縮放（避免固定等 2 秒）
-  // 你也可以把 0.55 / 0.75 調成你想要的節奏
+  //  ?脣????寞???+ 靘??Ｙ葬?橘??踹??箏?蝑?2 蝘?
+  // 雿??臭誑??0.55 / 0.75 隤踵?雿閬?蝭憟?
   const scrollTime = needScrollTop
     ? Math.min(0.75, Math.max(0.25, scroller!.scrollTop / 1400))
     : 0;
@@ -444,13 +445,13 @@ onMounted(async () => {
     );
   }
 
-  //  翻牌前再建一次 row map（確保 offsetTop 穩）
+  //  蝧餌???撱箔?甈?row map嚗Ⅱ靽?offsetTop 蝛抬?
   tl.add(() => buildRowIndexMap(), totalFlightTime + scrollTime + 0.01);
 
-  // 翻牌（ 修正：stagger.onStart 參數是 (index, target)）
+  // 蝧餌?嚗?靽格迤嚗tagger.onStart ???(index, target)嚗?
   const flipTargets = innerRefs.value.filter((el): el is HTMLElement => !!el);
 
-  // 再保險建一次
+  // ???芸遣銝甈?
   buildRowIndexMap();
 
   let lastRow = -1;
@@ -476,7 +477,7 @@ onMounted(async () => {
 
           if (row !== lastRow) {
             lastRow = row;
-            //  這列看得到就不捲
+            //  ?????啣停銝
             scrollToRow(row);
             // console.log('[flip] index:', index, 'row:', row + 1);
           }
@@ -570,7 +571,7 @@ $back-glow: rgba($brand, 0.55);
   align-items: center;
 }
 
-/* 背景粒子層 */
+/* ?蝎?撅?*/
 .bg-particles {
   position: absolute;
   inset: 0;
@@ -590,7 +591,7 @@ $back-glow: rgba($brand, 0.55);
   }
 }
 
-/* 中央爆光 */
+/* 銝剖亢?? */
 .flash {
   position: absolute;
   z-index: 2;
@@ -616,7 +617,7 @@ $back-glow: rgba($brand, 0.55);
   animation: flashPop 0.5s ease-out both;
 }
 
-/* 卡片區 */
+/* ?∠?? */
 .card-grid {
   width: 100%;
   margin: auto 0;
@@ -629,7 +630,7 @@ $back-glow: rgba($brand, 0.55);
   gap: clamp(12px, 3vw, 24px);
 }
 
-/* 按鈕固定底部 */
+/* ???箏?摨 */
 .actions {
   position: fixed;
   z-index: 4;
@@ -640,7 +641,7 @@ $back-glow: rgba($brand, 0.55);
   gap: 10px;
 }
 
-/* 基本卡片尺寸 */
+/* ?箸?∠?撠箏站 */
 .card {
   width: 160px;
   height: 200px;
@@ -673,7 +674,7 @@ $back-glow: rgba($brand, 0.55);
     transform: translateZ(0.1px);
   }
 
-  /* 卡背 */
+  /* ?∟? */
   .card-back {
     transform: rotateY(180deg);
 
@@ -734,7 +735,7 @@ $back-glow: rgba($brand, 0.55);
     }
   }
 
-  /* 正面 base */
+  /* 甇? base */
   .card-front {
     transform: rotateY(0deg);
     background: #ffffff;
@@ -820,7 +821,7 @@ $back-glow: rgba($brand, 0.55);
     }
   }
 
-  /* 大賞 */
+  /* 憭扯? */
   &--big {
     .card-front {
       background: radial-gradient(
@@ -846,7 +847,7 @@ $back-glow: rgba($brand, 0.55);
     }
   }
 
-  /* 小賞 */
+  /* 撠? */
   &--small {
     .card-front {
       background: #ffffff;
@@ -961,3 +962,9 @@ $back-glow: rgba($brand, 0.55);
   }
 }
 </style>
+
+
+
+
+
+

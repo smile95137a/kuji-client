@@ -402,6 +402,8 @@ const [companyName] = defineField('companyName');
 const fileInputRef = ref<HTMLInputElement | null>(null);
 const avatarPreview = ref('');
 const avatarFile = ref<File | null>(null);
+const MAX_AVATAR_SIZE_MB = 20;
+const MAX_AVATAR_SIZE_BYTES = MAX_AVATAR_SIZE_MB * 1024 * 1024;
 
 const openFilePicker = () => fileInputRef.value?.click();
 
@@ -409,6 +411,22 @@ const onPickFile = async (e: Event) => {
   const input = e.target as HTMLInputElement;
   const file = input.files?.[0] || null;
   if (!file) return;
+
+  if (file.size > MAX_AVATAR_SIZE_BYTES) {
+    avatarPreview.value = '';
+    avatarFile.value = null;
+    if (fileInputRef.value) fileInputRef.value.value = '';
+    await executeApi({
+      fn: async () => true,
+      showSuccessDialog: false,
+      showFailDialog: true,
+      showCatchDialog: false,
+      errorTitle: '圖片過大',
+      errorMessage: `請選擇 ${MAX_AVATAR_SIZE_MB}MB 以內的圖片。`,
+      onSuccess: async () => {},
+    });
+    return;
+  }
 
   avatarFile.value = file;
   avatarPreview.value = URL.createObjectURL(file);
@@ -606,7 +624,15 @@ const onSubmit = handleSubmit(async (form) => {
     fn: async () => {
       // 1) 有選新頭像：先上傳
       if (avatarFile.value) {
-        const uploadRes = await uploadAvatar(avatarFile.value);
+        let uploadRes: any;
+        try {
+          uploadRes = await uploadAvatar(avatarFile.value);
+        } catch (error: any) {
+          if (error?.response?.status === 413) {
+            throw new Error(`上傳失敗，請選擇 ${MAX_AVATAR_SIZE_MB}MB 以內的圖片`);
+          }
+          throw error;
+        }
         const imageUrl =
           (uploadRes as any)?.data?.imageUrl || (uploadRes as any)?.imageUrl;
 

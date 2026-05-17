@@ -38,6 +38,7 @@ export interface AuthRes {
  */
 const LS_REFRESH = 'refreshKujiToken';
 const LS_USER = 'kujiUser';
+const LS_FORCE_CHANGE = 'kujiForceChangePassword';
 
 export const useAuthStore = defineStore('auth', () => {
   // ======================
@@ -49,6 +50,10 @@ export const useAuthStore = defineStore('auth', () => {
   const refreshToken = ref<string>(loadState<string>(LS_REFRESH) || '');
   const tokenType = ref<string>('Bearer');
   const user = ref<AuthUser | null>(loadState<AuthUser>(LS_USER) || null);
+  const forceChangePassword = ref<boolean>(
+    Boolean(loadState<boolean>(LS_FORCE_CHANGE)) ||
+      Boolean(loadState<AuthUser>(LS_USER)?.forceChangePassword),
+  );
 
   /** True while initAuth's silentRefresh is in progress (prevents false router guard rejections) */
   const isInitializing = ref<boolean>(false);
@@ -84,6 +89,12 @@ export const useAuthStore = defineStore('auth', () => {
       user.value = res.user;
       saveState(LS_USER, res.user);
     }
+
+    const nextForceChangePassword = Boolean(
+      res.forceChangePassword ?? res.user?.forceChangePassword,
+    );
+    forceChangePassword.value = nextForceChangePassword;
+    saveState(LS_FORCE_CHANGE, nextForceChangePassword);
   };
 
   /**
@@ -122,6 +133,9 @@ export const useAuthStore = defineStore('auth', () => {
   const initAuth = async (): Promise<void> => {
     isInitializing.value = true;
     user.value = loadState<AuthUser>(LS_USER) || null;
+    forceChangePassword.value =
+      Boolean(loadState<boolean>(LS_FORCE_CHANGE)) ||
+      Boolean(user.value?.forceChangePassword);
     await silentRefresh();
     isInitializing.value = false;
   };
@@ -132,9 +146,21 @@ export const useAuthStore = defineStore('auth', () => {
     refreshToken.value = '';
     tokenType.value = 'Bearer';
     user.value = null;
+    forceChangePassword.value = false;
 
     localStorage.removeItem(LS_REFRESH);
     localStorage.removeItem(LS_USER);
+    localStorage.removeItem(LS_FORCE_CHANGE);
+  };
+
+  const setForceChangePassword = (value: boolean) => {
+    forceChangePassword.value = value;
+    saveState(LS_FORCE_CHANGE, value);
+
+    if (user.value) {
+      user.value = { ...user.value, forceChangePassword: value };
+      saveState(LS_USER, user.value);
+    }
   };
 
   const getAuthHeader = () => authHeader.value;
@@ -145,6 +171,7 @@ export const useAuthStore = defineStore('auth', () => {
     refreshToken,
     tokenType,
     user,
+    forceChangePassword,
     isInitializing,
 
     // getters
@@ -154,6 +181,7 @@ export const useAuthStore = defineStore('auth', () => {
     // actions
     initAuth,
     setAuth,
+    setForceChangePassword,
     silentRefresh,
     logout,
     getAuthHeader,

@@ -1,31 +1,21 @@
-<!-- src/views/member/TransactionHistory.vue -->
 <template>
   <section class="transactionHistory">
     <header class="transactionHistory__header">
-      <h1 class="transactionHistory__title">交易紀錄</h1>
-      <p class="transactionHistory__subtitle">查詢錢包金幣與紅利的交易明細</p>
+      <h1 class="transactionHistory__title">交易流水</h1>
+      <p class="transactionHistory__subtitle">查看儲值、抽獎扣款、免單退款與其他金幣／紅利異動</p>
     </header>
 
-    <!-- 查詢條件 -->
     <div class="transactionHistory__card">
       <form class="transactionHistory__form" @submit.prevent="onSearch">
         <div class="transactionHistory__grid">
           <div class="transactionHistory__field">
-            <label class="transactionHistory__label">起始日期</label>
-            <input
-              class="transactionHistory__input"
-              type="date"
-              v-model="dateStart"
-            />
+            <label class="transactionHistory__label">開始日期</label>
+            <input class="transactionHistory__input" type="date" v-model="dateStart" />
           </div>
 
           <div class="transactionHistory__field">
             <label class="transactionHistory__label">結束日期</label>
-            <input
-              class="transactionHistory__input"
-              type="date"
-              v-model="dateEnd"
-            />
+            <input class="transactionHistory__input" type="date" v-model="dateEnd" />
           </div>
 
           <div class="transactionHistory__field">
@@ -33,12 +23,13 @@
             <select class="transactionHistory__input" v-model="typeFilter">
               <option value="">全部</option>
               <option value="RECHARGE">儲值</option>
-              <option value="DRAW_GOLD">抽獎（金幣）</option>
-              <option value="DRAW_BONUS">抽獎（紅利）</option>
-              <option value="RECYCLE_BONUS">回收獎品</option>
+              <option value="DRAW_GOLD">抽獎扣款（金幣）</option>
+              <option value="DRAW_BONUS">抽獎扣款（紅利）</option>
+              <option value="FREE_DRAW_REFUND">開套免單退款</option>
+              <option value="RECYCLE_BONUS">回收回饋</option>
               <option value="REFERRAL_BONUS">推薦獎勵</option>
-              <option value="ADMIN_ADJUST">管理員調整</option>
-              <option value="EXPIRE">紅利到期</option>
+              <option value="ADMIN_ADJUST">後台調整</option>
+              <option value="EXPIRE">到期失效</option>
             </select>
           </div>
         </div>
@@ -52,36 +43,29 @@
           >
             重設
           </button>
-          <button
-            class="transactionHistory__btn"
-            type="submit"
-            :disabled="isLoading"
-          >
-            <template v-if="isLoading">查詢中…</template>
+          <button class="transactionHistory__btn" type="submit" :disabled="isLoading">
+            <template v-if="isLoading">查詢中</template>
             <template v-else>查詢</template>
           </button>
         </div>
       </form>
     </div>
 
-    <!-- 結果 -->
     <div class="transactionHistory__card">
       <div class="transactionHistory__resultHeader">
-        <p class="transactionHistory__count">
-          共 <b>{{ totalItems }}</b> 筆
-        </p>
+        <p class="transactionHistory__count">共 <b>{{ totalItems }}</b> 筆</p>
+        <p v-if="error" class="transactionHistory__error">{{ error }}</p>
       </div>
 
-      <!-- Desktop Table -->
       <div class="transactionHistory__tableWrap">
         <table class="transactionHistory__table">
           <thead>
             <tr>
-              <th>日期</th>
+              <th>時間</th>
               <th>類型</th>
-              <th>賞品主題</th>
-              <th>金幣消費</th>
-              <th>紅利消費</th>
+              <th>商品</th>
+              <th>金幣</th>
+              <th>紅利</th>
               <th>說明</th>
             </tr>
           </thead>
@@ -91,51 +75,45 @@
               <td>{{ row.typeName || row.type }}</td>
               <td class="transactionHistory__lottery">{{ row.lotteryTitle || '-' }}</td>
               <td>
-                <span v-if="row.goldAmount > 0" class="transactionHistory__money--neg">
-                  -{{ row.goldAmount.toLocaleString() }}
+                <span v-if="row.goldAmount > 0" :class="moneyClass(row.direction)">
+                  {{ signedText(row.goldAmount, row.direction) }}
                 </span>
-                <span v-else-if="row.isIncome && row.goldAmount === 0 && row.bonusAmount === 0" class="transactionHistory__money--pos">
-                  +{{ row.amount.toLocaleString() }}
+                <span v-else-if="row.goldAmount === 0 && row.bonusAmount === 0 && row.coinType === 'GOLD' && row.amount > 0" :class="moneyClass(row.direction)">
+                  {{ signedText(row.amount, row.direction) }}
                 </span>
                 <span v-else>-</span>
               </td>
               <td>
-                <span v-if="row.bonusAmount > 0" class="transactionHistory__money--neg">
-                  -{{ row.bonusAmount.toLocaleString() }}
+                <span v-if="row.bonusAmount > 0" :class="moneyClass(row.direction)">
+                  {{ signedText(row.bonusAmount, row.direction) }}
+                </span>
+                <span v-else-if="row.goldAmount === 0 && row.bonusAmount === 0 && row.coinType === 'BONUS' && row.amount > 0" :class="moneyClass(row.direction)">
+                  {{ signedText(row.amount, row.direction) }}
                 </span>
                 <span v-else>-</span>
               </td>
-              <td class="transactionHistory__desc">{{ row.description || '-' }}</td>
+              <td class="transactionHistory__desc">
+                <p class="transactionHistory__descMain">{{ row.description || '-' }}</p>
+                <p v-if="metaText(row)" class="transactionHistory__descMeta">{{ metaText(row) }}</p>
+              </td>
             </tr>
 
             <tr v-if="!isLoading && items.length === 0">
-              <td class="transactionHistory__empty" colspan="6">查無資料</td>
+              <td class="transactionHistory__empty" colspan="6">目前沒有資料</td>
             </tr>
             <tr v-if="isLoading">
-              <td class="transactionHistory__empty" colspan="6">載入中…</td>
+              <td class="transactionHistory__empty" colspan="6">資料載入中</td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <!-- Mobile Cards -->
       <div class="transactionHistory__cards">
-        <TransactionItem
-          v-for="row in items"
-          :key="row.id"
-          :item="row"
-        />
-
-        <div
-          v-if="!isLoading && items.length === 0"
-          class="transactionHistory__emptyCard"
-        >
-          查無資料
-        </div>
-        <div v-if="isLoading" class="transactionHistory__emptyCard">載入中…</div>
+        <TransactionItem v-for="row in items" :key="row.id" :item="row" />
+        <div v-if="!isLoading && items.length === 0" class="transactionHistory__emptyCard">目前沒有資料</div>
+        <div v-if="isLoading" class="transactionHistory__emptyCard">資料載入中</div>
       </div>
 
-      <!-- 分頁 -->
       <div class="transactionHistory__pagination">
         <BasePagination
           v-model:page="page"
@@ -156,11 +134,12 @@
 import { onMounted } from 'vue';
 import BasePagination from '@/components/common/BasePagination.vue';
 import TransactionItem from '@/components/wallet/TransactionItem.vue';
-import { useTransactionHistory } from '@/composables/useTransactionHistory';
+import { useTransactionHistory, type WalletTransactionRow } from '@/composables/useTransactionHistory';
 
 const {
   items,
   isLoading,
+  error,
   totalItems,
   hasNext,
   hasPrevious,
@@ -176,6 +155,31 @@ const {
   goToPage,
 } = useTransactionHistory();
 
+const signedText = (amount: number, direction: 'INCOME' | 'EXPENSE') => {
+  const sign = direction === 'INCOME' ? '+' : '-';
+  return `${sign}${amount.toLocaleString()}`;
+};
+
+const moneyClass = (direction: 'INCOME' | 'EXPENSE') => {
+  return direction === 'INCOME'
+    ? 'transactionHistory__money--pos'
+    : 'transactionHistory__money--neg';
+};
+
+const metaText = (row: WalletTransactionRow) => {
+  const parts: string[] = [];
+  if (row.drawIndex != null) {
+    parts.push(`第 ${row.drawIndex} 抽`);
+  }
+  if (row.ticketNumber != null) {
+    parts.push(`票號 ${row.ticketNumber}`);
+  }
+  if (row.refundAmount > 0) {
+    parts.push(`退還 ${row.refundAmount.toLocaleString()}`);
+  }
+  return parts.join(' | ');
+};
+
 const onSearch = () => search();
 const onReset = () => reset();
 
@@ -184,7 +188,7 @@ onMounted(() => fetch());
 
 <style scoped lang="scss">
 .transactionHistory {
-  max-width: 920px;
+  max-width: 980px;
   margin: 0 auto;
   padding: 24px 16px;
 
@@ -200,7 +204,7 @@ onMounted(() => fetch());
 
   &__subtitle {
     margin: 0;
-    opacity: 0.7;
+    opacity: 0.72;
   }
 
   &__card {
@@ -284,6 +288,12 @@ onMounted(() => fetch());
     opacity: 0.85;
   }
 
+  &__error {
+    margin: 0;
+    color: #c0392b;
+    font-size: 13px;
+  }
+
   &__tableWrap {
     overflow-x: auto;
 
@@ -303,6 +313,7 @@ onMounted(() => fetch());
       padding: 12px 10px;
       border-bottom: 1px solid rgba(0, 0, 0, 0.06);
       white-space: nowrap;
+      vertical-align: top;
     }
 
     th {
@@ -321,10 +332,27 @@ onMounted(() => fetch());
     font-weight: 700;
   }
 
-  &__desc {
-    max-width: 240px;
+  &__lottery {
+    max-width: 180px;
     white-space: normal;
     word-break: break-word;
+  }
+
+  &__desc {
+    max-width: 300px;
+    white-space: normal;
+    word-break: break-word;
+  }
+
+  &__descMain,
+  &__descMeta {
+    margin: 0;
+  }
+
+  &__descMeta {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #666;
   }
 
   &__empty {

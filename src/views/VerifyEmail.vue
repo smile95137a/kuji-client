@@ -4,7 +4,7 @@
       <div class="verifyEmail__badge">Email 驗證</div>
       <h1 class="verifyEmail__title">完成信箱驗證</h1>
       <p class="verifyEmail__desc">
-        我們已將 6 位數驗證碼寄到您的信箱，請輸入後完成註冊。
+        我們已將 6 位數驗證碼寄到您的信箱。你也可以直接點擊驗證信中的連結完成驗證。
       </p>
 
       <p v-if="pageMessage" class="verifyEmail__message verifyEmail__message--info">
@@ -99,7 +99,10 @@ let resendTimer: ReturnType<typeof setInterval> | null = null;
 
 const pageMessage = computed(() => {
   if (route.query.registered === '1') {
-    return '註冊成功，請先完成 Email 驗證。';
+    return '註冊成功。即使你先離開這個頁面，之後仍可從登入頁回來完成驗證。';
+  }
+  if (route.query.source === 'login') {
+    return '此帳號尚未完成 Email 驗證，請輸入驗證碼，或重新寄送驗證信。';
   }
   return '';
 });
@@ -208,11 +211,11 @@ onMounted(async () => {
       successMessage.value = 'Email 驗證成功，現在可以登入。';
     } else {
       status.value = 'idle';
-      errorMessage.value = '驗證連結已失效，請改用驗證碼或重新寄送。';
+      errorMessage.value = '驗證連結已失效，請改用驗證碼或重新寄送驗證信。';
     }
   } catch {
     status.value = 'idle';
-    errorMessage.value = '驗證連結已失效，請改用驗證碼或重新寄送。';
+    errorMessage.value = '驗證連結已失效，請改用驗證碼或重新寄送驗證信。';
   }
 });
 

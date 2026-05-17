@@ -1,12 +1,13 @@
-<!-- src/views/member/PrizeBox.vue -->
+﻿<!-- src/views/member/PrizeBox.vue -->
 <template>
   <section class="prizeBox">
     <header class="prizeBox__header">
       <h1 class="prizeBox__title">賞品盒</h1>
-      <p class="prizeBox__subtitle">管理你抽到的獎品：查看、出貨、兌換或轉贈</p>
+      <p class="prizeBox__subtitle">
+        查看您抽到的賞品，支援篩選、配送申請與可回收獎品處理。
+      </p>
     </header>
 
-    <!-- 篩選 -->
     <div class="prizeBox__card">
       <form class="prizeBox__form" @submit.prevent="onSearch">
         <div class="prizeBox__grid">
@@ -14,15 +15,15 @@
             <label class="prizeBox__label">狀態</label>
             <select class="prizeBox__input" v-model="status">
               <option value="">全部</option>
-              <option value="IN_BOX">在賞品盒中</option>
-              <option value="SHIPPING">出貨中</option>
+              <option value="IN_BOX">在賞品盒</option>
+              <option value="SHIPPING">配送中</option>
               <option value="DELIVERED">已送達</option>
-              <option value="REDEEMED">已兌換</option>
+              <option value="REDEEMED">已回收</option>
             </select>
           </div>
 
           <div class="prizeBox__field">
-            <label class="prizeBox__label">系列 / 抽獎</label>
+            <label class="prizeBox__label">賞品池 / 商品</label>
             <select class="prizeBox__input" v-model="lotteryTitle">
               <option value="">全部</option>
               <option v-for="t in lotteryTitleOptions" :key="t" :value="t">
@@ -36,7 +37,7 @@
             <input
               class="prizeBox__input"
               type="text"
-              placeholder="搜尋獎品名稱/門市/活動名稱"
+              placeholder="搜尋賞品名稱、商品名稱或店家"
               v-model.trim="keyword"
             />
           </div>
@@ -44,7 +45,7 @@
           <div class="prizeBox__field prizeBox__field--check">
             <label class="prizeBox__check">
               <input type="checkbox" v-model="onlyUnshipped" />
-              <span>只看未出貨（在盒中）</span>
+              <span>只看可申請配送的賞品</span>
             </label>
           </div>
         </div>
@@ -59,17 +60,16 @@
             重設
           </button>
           <button class="prizeBox__btn" type="submit" :disabled="loading">
-            {{ loading ? '查詢中…' : '查詢' }}
+            {{ loading ? '查詢中...' : '查詢' }}
           </button>
         </div>
       </form>
     </div>
 
-    <!-- 列表 -->
     <div class="prizeBox__card">
       <div class="prizeBox__resultHeader">
         <p class="prizeBox__count">
-          共 <b>{{ filteredRows.length }}</b> 件
+          共 <b>{{ displayCount }}</b> 筆
         </p>
 
         <div class="prizeBox__batch">
@@ -79,7 +79,7 @@
             :disabled="loading || checkedIds.size === 0"
             @click="batchShip"
           >
-            批次出貨
+            批次申請配送
           </button>
 
           <button
@@ -93,7 +93,6 @@
         </div>
       </div>
 
-      <!-- Desktop -->
       <div class="prizeBox__tableWrap">
         <table class="prizeBox__table">
           <thead>
@@ -102,15 +101,13 @@
                 <input
                   type="checkbox"
                   :checked="allChecked"
-                  @change="
-                    toggleAll(($event.target as HTMLInputElement).checked)
-                  "
+                  @change="toggleAll(($event.target as HTMLInputElement).checked)"
                 />
               </th>
-              <th>獎品</th>
+              <th>賞品</th>
               <th>商品</th>
-              <th>門市</th>
-              <th>取得時間</th>
+              <th>店家</th>
+              <th>入盒時間</th>
               <th>狀態</th>
               <th style="text-align: right">操作</th>
             </tr>
@@ -123,23 +120,13 @@
                   type="checkbox"
                   :checked="checkedIds.has(row.id)"
                   :disabled="row.status !== 'IN_BOX'"
-                  @change="
-                    toggleOne(
-                      row.id,
-                      ($event.target as HTMLInputElement).checked,
-                    )
-                  "
+                  @change="toggleOne(row.id, ($event.target as HTMLInputElement).checked)"
                 />
               </td>
 
-              <!-- prize -->
               <td>
                 <div class="prizeBox__prizeCell">
-                  <img
-                    class="prizeBox__thumb"
-                    :src="row.prizeImageUrl"
-                    alt="thumb"
-                  />
+                  <img class="prizeBox__thumb" :src="row.prizeImageUrl" alt="thumb" />
                   <div class="prizeBox__prizeMeta">
                     <p class="prizeBox__prizeName">
                       {{ row.prizeName }}
@@ -149,7 +136,7 @@
                     </p>
 
                     <p v-if="row.isRecyclable" class="prizeBox__mini">
-                      可回收：+{{ row.recycleBonus }} 紅利
+                      可回收，回饋 +{{ row.recycleBonus }} 蝦幣
                     </p>
                   </div>
                 </div>
@@ -166,27 +153,22 @@
               </td>
 
               <td class="prizeBox__right">
-                <button
-                  class="prizeBox__link"
-                  type="button"
-                  @click="openDetail(row)"
-                >
+                <button class="prizeBox__link" type="button" @click="openDetail(row)">
                   查看
                 </button>
               </td>
             </tr>
 
             <tr v-if="!loading && pageRows.length === 0">
-              <td class="prizeBox__empty" colspan="7">查無資料</td>
+              <td class="prizeBox__empty" colspan="7">目前沒有符合條件的賞品</td>
             </tr>
             <tr v-if="loading">
-              <td class="prizeBox__empty" colspan="7">載入中…</td>
+              <td class="prizeBox__empty" colspan="7">載入中...</td>
             </tr>
           </tbody>
         </table>
       </div>
 
-      <!-- Mobile cards -->
       <div class="prizeBox__cards">
         <div v-for="row in pageRows" :key="row.id" class="prizeBox__item">
           <div class="prizeBox__itemTop">
@@ -195,9 +177,7 @@
                 type="checkbox"
                 :checked="checkedIds.has(row.id)"
                 :disabled="row.status !== 'IN_BOX'"
-                @change="
-                  toggleOne(row.id, ($event.target as HTMLInputElement).checked)
-                "
+                @change="toggleOne(row.id, ($event.target as HTMLInputElement).checked)"
               />
               <span>選取</span>
             </label>
@@ -219,15 +199,12 @@
               </p>
 
               <p class="prizeBox__prizeId">{{ row.id }}</p>
-
-              <p class="prizeBox__mini">活動：{{ row.lotteryTitle || '-' }}</p>
-              <p class="prizeBox__mini">門市：{{ row.storeName || '-' }}</p>
-              <p class="prizeBox__mini">
-                取得：{{ formatDate(row.createdAt) }}
-              </p>
+              <p class="prizeBox__mini">商品：{{ row.lotteryTitle || '-' }}</p>
+              <p class="prizeBox__mini">店家：{{ row.storeName || '-' }}</p>
+              <p class="prizeBox__mini">入盒：{{ formatDate(row.createdAt) }}</p>
 
               <p v-if="row.isRecyclable" class="prizeBox__mini">
-                可回收：+{{ row.recycleBonus }} 紅利
+                可回收，回饋 +{{ row.recycleBonus }} 蝦幣
               </p>
             </div>
           </div>
@@ -241,16 +218,12 @@
           </button>
         </div>
 
-        <div
-          v-if="!loading && pageRows.length === 0"
-          class="prizeBox__emptyCard"
-        >
-          查無資料
+        <div v-if="!loading && pageRows.length === 0" class="prizeBox__emptyCard">
+          目前沒有符合條件的賞品
         </div>
-        <div v-if="loading" class="prizeBox__emptyCard">載入中…</div>
+        <div v-if="loading" class="prizeBox__emptyCard">載入中...</div>
       </div>
 
-      <!-- 分頁 -->
       <div class="prizeBox__pagination">
         <BasePagination
           v-model:page="page"
@@ -260,7 +233,6 @@
       </div>
     </div>
 
-    <!-- Detail dialog -->
     <div
       v-if="detailOpen"
       class="prizeBox__overlay"
@@ -268,23 +240,19 @@
     >
       <div class="prizeBox__dialog">
         <div class="prizeBox__dialogHeader">
-          <p class="prizeBox__dialogTitle">獎品詳情</p>
+          <p class="prizeBox__dialogTitle">賞品詳情</p>
           <button
             class="prizeBox__dialogClose"
             type="button"
             @click="detailOpen = false"
           >
-            ✕
+            關閉
           </button>
         </div>
 
         <div v-if="selected" class="prizeBox__dialogBody">
           <div class="prizeBox__detailTop">
-            <img
-              class="prizeBox__detailImg"
-              :src="selected.prizeImageUrl"
-              alt="img"
-            />
+            <img class="prizeBox__detailImg" :src="selected.prizeImageUrl" alt="img" />
             <div class="prizeBox__detailMeta">
               <p class="prizeBox__detailName">
                 {{ selected.prizeName }}
@@ -294,29 +262,19 @@
               </p>
 
               <p class="prizeBox__detailId">{{ selected.id }}</p>
-
-              <p class="prizeBox__mini">
-                活動：{{ selected.lotteryTitle || '-' }}
-              </p>
-              <p class="prizeBox__mini">
-                門市：{{ selected.storeName || '-' }}
-              </p>
-              <p class="prizeBox__mini">
-                取得時間：{{ formatDate(selected.createdAt) }}
-              </p>
+              <p class="prizeBox__mini">商品：{{ selected.lotteryTitle || '-' }}</p>
+              <p class="prizeBox__mini">店家：{{ selected.storeName || '-' }}</p>
+              <p class="prizeBox__mini">入盒時間：{{ formatDate(selected.createdAt) }}</p>
 
               <p class="prizeBox__mini">
                 狀態：
-                <span
-                  class="prizeBox__badge"
-                  :class="badgeClass(selected.status)"
-                >
+                <span class="prizeBox__badge" :class="badgeClass(selected.status)">
                   {{ selected.statusName || statusLabel(selected.status) }}
                 </span>
               </p>
 
               <p v-if="selected.isRecyclable" class="prizeBox__mini">
-                可回收：+{{ selected.recycleBonus }} 紅利
+                可回收，回饋 +{{ selected.recycleBonus }} 蝦幣
               </p>
             </div>
           </div>
@@ -330,20 +288,16 @@
               :disabled="loading || selected.status !== 'IN_BOX'"
               @click="shipOne(selected)"
             >
-              申請出貨
+              申請配送
             </button>
 
             <button
               class="prizeBox__btn prizeBox__btn--ghost"
               type="button"
-              :disabled="
-                loading ||
-                !selected.isRecyclable ||
-                selected.status !== 'IN_BOX'
-              "
+              :disabled="loading || !selected.isRecyclable || selected.status !== 'IN_BOX'"
               @click="recycleOne(selected)"
             >
-              回收換紅利
+              回收領回饋
             </button>
 
             <button
@@ -351,14 +305,13 @@
               type="button"
               @click="detailOpen = false"
             >
-              關閉
+              取消
             </button>
           </div>
         </div>
       </div>
     </div>
 
-    <!-- 出貨確認 Dialog -->
     <PrizeBoxShipDialog
       :visible="shipDialogOpen"
       :items="shipDialogItems"
@@ -374,7 +327,7 @@ import BasePagination from '@/components/common/BasePagination.vue';
 import PrizeBoxShipDialog from '@/components/member/PrizeBoxShipDialog.vue';
 
 import {
-  getMyPrizeBox,
+  getPrizeBoxHistory,
   recyclePrizeBoxItems,
 } from '@/services/prizeBoxService';
 
@@ -389,7 +342,7 @@ type PrizeStatus = 'IN_BOX' | 'SHIPPING' | 'DELIVERED' | 'REDEEMED';
 const pageSize = 10;
 const page = ref(1);
 
-// 篩選條件（UI）
+// 蝭拚璇辣嚗I嚗?
 const status = ref<PrizeStatus | ''>('');
 const lotteryTitle = ref('');
 const keyword = ref('');
@@ -397,8 +350,10 @@ const onlyUnshipped = ref(false);
 
 const rows = ref<any[]>([]);
 const loading = ref(false);
+const serverTotal = ref(0);
+const serverTotalPages = ref(1);
 
-/** 動態 options（從 API 反推） */
+/** ?? options嚗? API ?嚗?*/
 const lotteryTitleOptions = computed(() => {
   const set = new Set<string>();
   rows.value.forEach((r) => {
@@ -407,12 +362,17 @@ const lotteryTitleOptions = computed(() => {
   return Array.from(set);
 });
 
-/** 你 API 回來就是完整 list，前端再做篩選 */
+const useServerPaging = computed(() =>
+  !lotteryTitle.value.trim() && !keyword.value.trim() && !onlyUnshipped.value,
+);
+
+/** 雿?API ??撠望摰 list嚗?蝡臬??祟??*/
 const filteredRows = computed(() => {
   const kw = keyword.value.trim().toLowerCase();
 
-  return rows.value
-    .filter((r) => {
+  const baseRows = useServerPaging.value
+    ? rows.value
+    : rows.value.filter((r) => {
       const okStatus = status.value ? r.status === status.value : true;
       const okLottery = lotteryTitle.value
         ? r.lotteryTitle === lotteryTitle.value
@@ -427,28 +387,46 @@ const filteredRows = computed(() => {
       const okUnshipped = onlyUnshipped.value ? r.status === 'IN_BOX' : true;
 
       return okStatus && okLottery && okKw && okUnshipped;
-    })
+    });
+
+  return baseRows
     .slice()
     .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 });
 
 const totalPages = computed(() =>
-  Math.max(1, Math.ceil(filteredRows.value.length / pageSize)),
+  useServerPaging.value
+    ? Math.max(1, serverTotalPages.value)
+    : Math.max(1, Math.ceil(filteredRows.value.length / pageSize)),
+);
+
+const displayCount = computed(() =>
+  useServerPaging.value ? serverTotal.value : filteredRows.value.length,
 );
 
 const pageRows = computed(() => {
+  if (useServerPaging.value) return filteredRows.value;
   const start = (page.value - 1) * pageSize;
   return filteredRows.value.slice(start, start + pageSize);
 });
 
-watch([status, lotteryTitle, keyword, onlyUnshipped], () => {
+watch([status, lotteryTitle, keyword, onlyUnshipped], async () => {
   page.value = 1;
   checkedIds.value = new Set();
+  await loadPrizeBox();
 });
 
 watch(totalPages, (tp) => {
   if (page.value > tp) page.value = tp;
   if (page.value < 1) page.value = 1;
+});
+
+watch(page, async (next, prev) => {
+  if (next === prev) return;
+  checkedIds.value = new Set();
+  if (useServerPaging.value) {
+    await loadPrizeBox();
+  }
 });
 
 /** ========== API ========== */
@@ -476,16 +454,64 @@ const mapRow = (p: any) => ({
   createdAt: String(p.createdAt ?? ''),
 });
 
+const extractPageItems = (raw: any) => {
+  const payload = raw?.data ?? raw;
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.items)) return payload.items;
+  if (Array.isArray(payload?.list)) return payload.list;
+  if (Array.isArray(payload?.data)) return payload.data;
+  if (Array.isArray(raw?.data)) return raw.data;
+  if (Array.isArray(raw?.items)) return raw.items;
+  if (Array.isArray(raw?.list)) return raw.list;
+  if (Array.isArray(raw)) return raw;
+  return [];
+};
+
+const extractPageTotal = (raw: any, fallback: number) => {
+  const payload = raw?.data ?? raw;
+  return Number(
+    payload?.totalItems ??
+      payload?.total ??
+      payload?.count ??
+      fallback,
+  ) || fallback;
+};
+
+const extractPageTotalPages = (raw: any, fallbackTotal: number) => {
+  const payload = raw?.data ?? raw;
+  return Number(
+    payload?.totalPages ??
+      Math.max(1, Math.ceil(fallbackTotal / pageSize)),
+  ) || 1;
+};
+
 const loadPrizeBox = async () => {
   loading.value = true;
 
+  const effectiveStatus = onlyUnshipped.value
+    ? 'IN_BOX'
+    : status.value || undefined;
+
   await executeApi<any>({
-    fn: () => getMyPrizeBox(),
+    fn: () =>
+      useServerPaging.value
+        ? getPrizeBoxHistory({
+            status: effectiveStatus,
+            page: page.value,
+            size: pageSize,
+          })
+        : getPrizeBoxHistory({
+            status: effectiveStatus,
+            page: 1,
+            size: 500,
+          }),
     onSuccess: (raw) => {
-      const data = raw?.data?.data ?? raw?.data ?? raw;
-      const list = Array.isArray(data) ? data : [];
+      const list = extractPageItems(raw);
+      const total = extractPageTotal(raw, list.length);
 
       rows.value = list.map(mapRow);
+      serverTotal.value = total;
+      serverTotalPages.value = extractPageTotalPages(raw, total);
     },
     onFinal: () => {
       loading.value = false;
@@ -493,7 +519,7 @@ const loadPrizeBox = async () => {
   });
 };
 
-/** ========== 出貨 Dialog ========== */
+/** ========== ?箄疏 Dialog ========== */
 const shipDialogOpen = ref(false);
 const shipDialogItems = ref<any[]>([]);
 
@@ -520,9 +546,9 @@ const recycleByIds = async (ids: string[]) => {
     showSuccessDialog: true,
     showFailDialog: true,
     successTitle: '回收成功',
-    successMessage: '已將獎品回收並轉換為紅利，錢包已更新。',
+    successMessage: '賞品已回收，回饋獎勵已發送至您的錢包。',
     errorTitle: '回收失敗',
-    errorMessage: '回收未完成，請稍後再試。',
+    errorMessage: '回收作業失敗，請稍後再試。',
     onSuccess: async () => {
       await walletStore.loadMe();
 
@@ -538,7 +564,7 @@ const recycleByIds = async (ids: string[]) => {
 
 const onSearch = async () => {
   page.value = 1;
-  // 後端目前沒有 query/filter endpoint，所以這裡就刷新一次最新資料
+  // 敺垢?桀?瘝? query/filter endpoint嚗?隞仿ㄐ撠勗?唬?甈⊥??啗???
   await loadPrizeBox();
 };
 
@@ -566,10 +592,10 @@ const formatDate = (iso: string) => {
 };
 
 const statusLabel = (s: PrizeStatus) => {
-  if (s === 'IN_BOX') return '在賞品盒中';
-  if (s === 'SHIPPING') return '出貨中';
+  if (s === 'IN_BOX') return '在賞品盒';
+  if (s === 'SHIPPING') return '配送中';
   if (s === 'DELIVERED') return '已送達';
-  return '已兌換';
+  return '已回收';
 };
 
 const badgeClass = (s: PrizeStatus) => ({
@@ -579,7 +605,7 @@ const badgeClass = (s: PrizeStatus) => ({
   'is-redeemed': s === 'REDEEMED',
 });
 
-/** 勾選 */
+/** ?暸 */
 const checkedIds = ref<Set<string>>(new Set());
 
 const toggleOne = (id: string, checked: boolean) => {
@@ -648,7 +674,7 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="scss">
-/* 你原本的 SCSS 完全保留 */
+/* 雿??祉? SCSS 摰靽? */
 .prizeBox {
   max-width: 920px;
   margin: 0 auto;
@@ -1027,3 +1053,10 @@ onMounted(async () => {
   }
 }
 </style>
+
+
+
+
+
+
+

@@ -1,5 +1,6 @@
-// services/prizeBoxService.ts
+﻿// services/prizeBoxService.ts
 import { api } from './FrontAPI';
+import type { ApiResponse, PaginatedApiResponse } from '@/types/api';
 
 const basePath = '/prize-box';
 
@@ -7,7 +8,7 @@ interface RequestData {
   [key: string]: any;
 }
 
-/** 出貨請求（同一家店的獎品） */
+/** ?箄疏隢?嚗?銝摰嗅????? */
 export interface PrizeBoxShipReq {
   prizeBoxIds: string[];
   shippingMethod: string;
@@ -37,7 +38,7 @@ export interface ShipOrderResult {
   gatewayTradeNo: string | null;
 }
 
-/** 賞品盒單筆獎品 */
+/** 鞈??蝑???*/
 export interface PrizeBoxItemRes {
   id: string;
   userId: string;
@@ -56,7 +57,7 @@ export interface PrizeBoxItemRes {
   createdAt: string;
 }
 
-/** 前台 - 查詢我的賞品盒 GET /api/prize-box */
+/** ? - ?亥岷??鞈???GET /api/prize-box */
 export const getMyPrizeBox = async (): Promise<ApiResponse<any>> => {
   try {
     const res = await api.get(`${basePath}`);
@@ -67,7 +68,7 @@ export const getMyPrizeBox = async (): Promise<ApiResponse<any>> => {
   }
 };
 
-/** 前台 - 按店家分組查詢賞品盒 GET /api/prize-box/summary */
+/** ? - ??摰嗅?蝯閰Ｚ??? GET /api/prize-box/summary */
 export const getPrizeBoxSummaryByStore = async (): Promise<
   ApiResponse<any>
 > => {
@@ -81,9 +82,9 @@ export const getPrizeBoxSummaryByStore = async (): Promise<
 };
 
 /**
- * 前台 - 出貨（將選定的獎品產生訂單）
+ * ? - ?箄疏嚗??詨???????殷?
  * POST /api/prize-box/ship
- * req: { prizeBoxIds: string[], ...其他欄位依 PrizeBoxShipReq }
+ * req: { prizeBoxIds: string[], ...?嗡?甈?靘?PrizeBoxShipReq }
  */
 export const shipPrizeBoxItems = async (
   req: PrizeBoxShipReq,
@@ -98,7 +99,7 @@ export const shipPrizeBoxItems = async (
 };
 
 /**
- * 前台 - 回收獎品（轉換為紅利）
+ * ? - ???嚗??蝝嚗?
  * POST /api/prize-box/recycle
  * req: { prizeBoxIds: string[] }
  */
@@ -115,7 +116,7 @@ export const recyclePrizeBoxItems = async (
 };
 
 /**
- * 前台 - 查詢賞品盒操作紀錄 GET /prize-box/history
+ * ? - ?亥岷鞈???雿???GET /prize-box/history
  */
 export const getPrizeBoxHistory = async (
   req?: RequestData,
@@ -128,3 +129,4 @@ export const getPrizeBoxHistory = async (
     throw e;
   }
 };
+

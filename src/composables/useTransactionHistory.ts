@@ -1,4 +1,3 @@
-// src/composables/useTransactionHistory.ts
 import { ref } from 'vue';
 import { getWalletTransactions } from '@/services/consumptionRecordService';
 import { useServerPagination } from '@/composables/useServerPagination';
@@ -6,21 +5,25 @@ import type { PageResult } from '@/types/api';
 
 export type WalletTransactionType =
   | 'RECHARGE'
+  | 'DRAW'
   | 'DRAW_GOLD'
   | 'DRAW_BONUS'
+  | 'FREE_DRAW_REFUND'
   | 'RECYCLE_BONUS'
   | 'REFERRAL_BONUS'
   | 'ADMIN_ADJUST'
   | 'EXPIRE';
 
-const TYPE_LABELS: Record<string, string> = {
+export const TYPE_LABELS: Record<string, string> = {
   RECHARGE: '儲值',
-  DRAW_GOLD: '抽獎（金幣）',
-  DRAW_BONUS: '抽獎（紅利）',
-  RECYCLE_BONUS: '回收獎品',
+  DRAW: '抽獎扣款',
+  DRAW_GOLD: '抽獎扣款（金幣）',
+  DRAW_BONUS: '抽獎扣款（紅利）',
+  FREE_DRAW_REFUND: '免單退款',
+  RECYCLE_BONUS: '回收紅利',
   REFERRAL_BONUS: '推薦獎勵',
   ADMIN_ADJUST: '管理員調整',
-  EXPIRE: '紅利到期',
+  EXPIRE: '點數過期',
 };
 
 export interface WalletTransactionRow {
@@ -35,42 +38,65 @@ export interface WalletTransactionRow {
   description: string;
   lotteryId: string | null;
   lotteryTitle: string | null;
-  referenceId: string | null;
+  drawIndex: number | null;
+  ticketNumber: number | null;
+  refundAmount: number;
+  direction: 'INCOME' | 'EXPENSE';
   createdAt: string;
   createdAtText: string;
-  isIncome: boolean;
+  signedGoldAmount: number;
+  signedBonusAmount: number;
+  signedAmount: number;
 }
 
 const pad2 = (n: number) => String(n).padStart(2, '0');
 
-function formatDateTime(value: any): string {
+function formatDateTime(value: unknown): string {
   if (!value) return '';
-  const d = new Date(value);
+  const d = new Date(value as string);
   if (Number.isNaN(d.getTime())) return String(value);
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
 }
 
+function normalizeDirection(value: unknown): 'INCOME' | 'EXPENSE' {
+  return String(value ?? '').toUpperCase() === 'INCOME' ? 'INCOME' : 'EXPENSE';
+}
+
+function isBrokenLabel(value: unknown): boolean {
+  const text = String(value ?? '').trim();
+  return !text || text.includes('?');
+}
+
 function mapRow(x: any): WalletTransactionRow {
-  const goldAmount = Number(x.goldAmount ?? 0);
-  const bonusAmount = Number(x.bonusAmount ?? 0);
-  // fallback: 若後端直接給 amount 也能用
-  const amount = goldAmount || bonusAmount || Number(x.amount ?? 0);
+  const direction = normalizeDirection(x.direction);
+  const amount = Math.abs(Number(x.amount ?? 0));
+  const goldAmount = Math.abs(Number(x.goldAmount ?? 0));
+  const bonusAmount = Math.abs(Number(x.bonusAmount ?? 0));
+  const sign = direction === 'INCOME' ? 1 : -1;
+  const rawType = String(x.type ?? x.transactionType ?? '');
+  const rawLabel = String(x.typeName ?? x.transactionTypeName ?? '');
+
   return {
     id: String(x.id ?? ''),
-    type: x.type ?? '',
-    typeName: x.typeName || (TYPE_LABELS[x.type] ?? x.type ?? ''),
-    coinType: x.coinType ?? (bonusAmount > 0 && goldAmount === 0 ? 'BONUS' : 'GOLD'),
+    type: rawType,
+    typeName: isBrokenLabel(rawLabel) ? TYPE_LABELS[rawType] || rawType : rawLabel,
+    coinType: String(x.coinType ?? 'GOLD').toUpperCase() === 'BONUS' ? 'BONUS' : 'GOLD',
     amount,
     goldAmount,
     bonusAmount,
     balanceAfter: Number(x.balanceAfter ?? 0),
-    description: x.description ?? '',
+    description: String(x.description ?? ''),
     lotteryId: x.lotteryId ?? null,
     lotteryTitle: x.lotteryTitle ?? null,
-    referenceId: x.referenceId ?? null,
+    drawIndex: x.drawIndex != null ? Number(x.drawIndex) : null,
+    ticketNumber: x.ticketNumber != null ? Number(x.ticketNumber) : null,
+    refundAmount: Math.abs(Number(x.refundAmount ?? 0)),
+    direction,
     createdAt: String(x.createdAt ?? ''),
     createdAtText: formatDateTime(x.createdAt),
-    isIncome: amount >= 0,
+    signedGoldAmount: goldAmount > 0 ? sign * goldAmount : 0,
+    signedBonusAmount: bonusAmount > 0 ? sign * bonusAmount : 0,
+    signedAmount: sign * amount,
   };
 }
 
@@ -108,20 +134,18 @@ export function useTransactionHistory() {
       };
 
       const res = await getWalletTransactions(req);
-
       if (res?.success) {
-        const data = res.data as PageResult<any> | null;
-        const list: any[] = data?.data ?? [];
-
+        const data = (res.data as PageResult<any> | null) ?? null;
+        const list: any[] = Array.isArray(data?.data) ? data!.data : [];
         items.value = list.map(mapRow);
         sync(data);
       } else {
-        error.value = res?.message || '查詢失敗';
+        error.value = res?.message || '讀取交易流水失敗';
         items.value = [];
         sync(null);
       }
     } catch (e: any) {
-      error.value = e?.message ?? '查詢失敗，請稍後再試';
+      error.value = e?.message ?? '讀取交易流水失敗，請稍後再試';
       items.value = [];
       sync(null);
     } finally {

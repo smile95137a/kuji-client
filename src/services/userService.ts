@@ -118,7 +118,11 @@ export interface ChangePasswordReq {
  */
 export const changePassword = async (req: ChangePasswordReq): Promise<void> => {
   try {
-    await api.post(`${basePath}/me/change-password`, req);
+    await api.post(`${basePath}/me/change-password`, {
+      oldPassword: req.currentPassword,
+      newPassword: req.newPassword,
+      confirmPassword: req.confirmNewPassword,
+    });
   } catch (e) {
     console.error('User - changePassword error:', e);
     throw e;

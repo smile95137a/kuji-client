@@ -1,4 +1,3 @@
-// src/composables/useLogin.ts
 import { computed, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/useAuthStore';
@@ -11,6 +10,7 @@ type LoginErrorKind =
   | 'GOOGLE_PROVIDER_ONLY'
   | 'ACCOUNT_DISABLED'
   | 'INVALID_CREDENTIALS'
+  | 'FORCE_CHANGE_PASSWORD'
   | 'GENERIC';
 
 function getErrorPayload(err: unknown): any {
@@ -30,7 +30,8 @@ function normalizeLoginError(code: string, message: string): LoginErrorKind {
   if (code === 'AUTH_ACCOUNT_003') return 'ACCOUNT_LOCKED';
   if (code === 'AUTH_ACCOUNT_001') return 'ACCOUNT_DISABLED';
   if (code === 'AUTH_INVALID_001') return 'INVALID_CREDENTIALS';
-  if (code === 'COMMON_VALIDATION_001' && message.includes('Email 驗證')) {
+  if (code === 'AUTH_FORCE_CHANGE_PASSWORD') return 'FORCE_CHANGE_PASSWORD';
+  if (code === 'COMMON_VALIDATION_001' && message.includes('Email')) {
     return 'EMAIL_NOT_VERIFIED';
   }
   return 'GENERIC';
@@ -42,9 +43,9 @@ function buildFallbackErrorMessage(err: unknown): string {
   if (bodyMessage) return bodyMessage;
 
   const status = (err as any)?.response?.status ?? null;
-  if (status === 403) return '此帳號已停用或暫停使用，請聯繫客服';
-  if (status === 409) return '此帳號使用 Google 登入，請改用 Google 帳號登入';
-  return '登入失敗，請稍後再試';
+  if (status === 403) return '您的帳號目前無法登入，請稍後再試或聯繫客服。';
+  if (status === 409) return '此帳號需使用 Google 登入。';
+  return '登入失敗，請稍後再試。';
 }
 
 export function useLogin() {
@@ -87,7 +88,7 @@ export function useLogin() {
 
     const targetEmail = String(email.value ?? '').trim();
     if (!targetEmail) {
-      resendMessage.value = '請先輸入註冊時使用的 Email';
+      resendMessage.value = '請先輸入 Email。';
       return;
     }
 
@@ -95,28 +96,51 @@ export function useLogin() {
     resendMessage.value = '';
 
     try {
-      const res = await resendVerification(
-        { email: targetEmail },
-        undefined,
-      );
+      const res = await resendVerification({ email: targetEmail }, undefined);
 
       if (res?.success) {
-        resendMessage.value = '驗證信已重新寄出，請到信箱確認';
+        resendMessage.value = '驗證信已重新發送，請留意您的信箱。';
         startResendCooldown();
       } else {
-        resendMessage.value = res?.message || '重寄失敗，請稍後再試';
+        resendMessage.value = res?.message || '重新發送失敗，請稍後再試。';
       }
     } catch (e: any) {
       if (e?.response?.status === 429) {
-        resendMessage.value = '寄送太頻繁，請稍後再試';
+        resendMessage.value = '寄送過於頻繁，請稍後再試。';
         startResendCooldown();
       } else {
         resendMessage.value =
-          getNestedErrorMessage(getErrorPayload(e)) || '重寄失敗，請稍後再試';
+          getNestedErrorMessage(getErrorPayload(e)) ||
+          '重新發送失敗，請稍後再試。';
       }
     } finally {
       resendLoading.value = false;
     }
+  };
+
+  const goToVerifyEmail = async () => {
+    const query: Record<string, string> = { source: 'login' };
+    const targetEmail = String(email.value ?? '').trim();
+    if (targetEmail) {
+      query.email = targetEmail;
+    }
+    await router.push({ name: 'VerifyEmail', query });
+  };
+
+  const resolvePostLoginRedirect = () => {
+    const redirect =
+      typeof route.query.redirect === 'string'
+        ? route.query.redirect
+        : '/member-center/profile';
+    return redirect || '/member-center/profile';
+  };
+
+  const goToForceChangePassword = async () => {
+    const redirect = resolvePostLoginRedirect();
+    await router.replace({
+      name: 'ResetPassword',
+      query: redirect ? { redirect } : undefined,
+    });
   };
 
   const applyLoginError = (payload: any) => {
@@ -125,31 +149,36 @@ export function useLogin() {
     loginErrorKind.value = normalizeLoginError(code, message);
 
     if (loginErrorKind.value === 'EMAIL_NOT_VERIFIED') {
-      errorMessage.value = '請先完成 Email 驗證，或重新寄送驗證信';
+      errorMessage.value = '此帳號尚未完成 Email 驗證，請先完成驗證。';
       return;
     }
 
     if (loginErrorKind.value === 'GOOGLE_PROVIDER_ONLY') {
-      errorMessage.value = '此帳號使用 Google 登入，請改用 Google 帳號登入';
+      errorMessage.value = '此帳號需使用 Google 登入。';
       return;
     }
 
     if (loginErrorKind.value === 'ACCOUNT_LOCKED') {
-      errorMessage.value = message || '帳號已被鎖定，請稍後再試';
+      errorMessage.value = message || '帳號暫時被鎖定，請稍後再試。';
       return;
     }
 
     if (loginErrorKind.value === 'ACCOUNT_DISABLED') {
-      errorMessage.value = message || '此帳號已停用或暫停使用，請聯繫客服';
+      errorMessage.value = message || '帳號目前無法使用，請聯繫客服。';
       return;
     }
 
     if (loginErrorKind.value === 'INVALID_CREDENTIALS') {
-      errorMessage.value = message || '帳號或密碼錯誤';
+      errorMessage.value = message || 'Email 或密碼錯誤。';
       return;
     }
 
-    errorMessage.value = message || '登入失敗，請稍後再試';
+    if (loginErrorKind.value === 'FORCE_CHANGE_PASSWORD') {
+      errorMessage.value = message || '請先修改密碼後再繼續。';
+      return;
+    }
+
+    errorMessage.value = message || '登入失敗，請稍後再試。';
   };
 
   async function submitLogin() {
@@ -170,14 +199,16 @@ export function useLogin() {
         accessToken: res.data?.accessToken ?? '',
         refreshToken: res.data?.refreshToken,
         tokenType: res.data?.tokenType ?? 'Bearer',
+        forceChangePassword: Boolean(res.data?.forceChangePassword),
         user: res.data?.user,
       });
 
-      const redirect =
-        typeof route.query.redirect === 'string'
-          ? route.query.redirect
-          : '/member-center/profile';
-      await router.replace(redirect);
+      if (res.data?.forceChangePassword) {
+        await goToForceChangePassword();
+        return;
+      }
+
+      await router.replace(resolvePostLoginRedirect());
     } catch (err) {
       const payload = getErrorPayload(err);
       if (payload) {
@@ -203,6 +234,7 @@ export function useLogin() {
     resendLoading,
     resendMessage,
     sendVerificationEmail,
+    goToVerifyEmail,
     submitLogin,
   };
 }

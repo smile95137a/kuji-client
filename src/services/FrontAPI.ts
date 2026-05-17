@@ -40,12 +40,29 @@ api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError<any>) => {
     const originalRequest: any = error.config;
+    const errorCode =
+      error.response?.data?.errorCode ?? error.response?.data?.error?.code;
+    const requestUrl = originalRequest?.url || '';
+
+    if (error.response?.status === 403 && errorCode === 'AUTH_FORCE_CHANGE_PASSWORD') {
+      const { useAuthStore } = await import('@/stores/useAuthStore');
+      const authStore = useAuthStore();
+      authStore.setForceChangePassword(true);
+
+      if (!requestUrl.includes('/user/me/change-password')) {
+        const currentPath = `${window.location.pathname}${window.location.search}`;
+        const resetUrl = `${import.meta.env.BASE_URL}reset-password?redirect=${encodeURIComponent(currentPath)}`;
+        if (!window.location.pathname.endsWith('/reset-password')) {
+          window.location.href = resetUrl;
+        }
+      }
+    }
 
     if (!error.response || error.response.status !== 401) {
       return Promise.reject(error);
     }
 
-    const url = originalRequest?.url || '';
+    const url = requestUrl;
     if (url.includes('/auth/refresh')) {
       removeAllState();
       window.location.href = `${import.meta.env.BASE_URL}login`;

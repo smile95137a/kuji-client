@@ -117,6 +117,13 @@
                       : '重新發送驗證信'
                   }}
                 </button>
+                <button
+                  type="button"
+                  class="login__resendBtn"
+                  @click="goToVerifyEmail"
+                >
+                  前往驗證頁
+                </button>
               </div>
               <p
                 v-if="resendMessage"
@@ -179,7 +186,20 @@ const route = useRoute();
 const overlay = useOverlayStore();
 const infoMessage = ref('');
 
-const { email, password, isLoading, errorMessage, isEmailNotVerified, isAccountLocked, resendCooldown, resendLoading, resendMessage, sendVerificationEmail, submitLogin } = useLogin();
+const {
+  email,
+  password,
+  isLoading,
+  errorMessage,
+  isEmailNotVerified,
+  isAccountLocked,
+  resendCooldown,
+  resendLoading,
+  resendMessage,
+  sendVerificationEmail,
+  goToVerifyEmail,
+  submitLogin,
+} = useLogin();
 
 const submitted = ref(false);
 const showPassword = ref(false);

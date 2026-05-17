@@ -1,4 +1,3 @@
-<!-- src/components/wallet/TransactionItem.vue -->
 <template>
   <div class="transactionItem">
     <div class="transactionItem__top">
@@ -7,29 +6,47 @@
     </div>
 
     <div v-if="item.lotteryTitle" class="transactionItem__lottery">
-      🎯 {{ item.lotteryTitle }}
+      {{ item.lotteryTitle }}
     </div>
 
     <div class="transactionItem__body">
       <div class="transactionItem__amounts">
         <p v-if="item.goldAmount > 0" class="transactionItem__amountRow">
           <span class="transactionItem__amountLabel">金幣</span>
-          <span class="transactionItem__amountVal transactionItem__amount--expense">-{{ item.goldAmount.toLocaleString() }}</span>
+          <span
+            class="transactionItem__amountVal"
+            :class="item.direction === 'INCOME' ? 'transactionItem__amount--income' : 'transactionItem__amount--expense'"
+          >
+            {{ item.direction === 'INCOME' ? '+' : '-' }}{{ item.goldAmount.toLocaleString() }}
+          </span>
         </p>
+
         <p v-if="item.bonusAmount > 0" class="transactionItem__amountRow">
           <span class="transactionItem__amountLabel">紅利</span>
-          <span class="transactionItem__amountVal transactionItem__amount--expense">-{{ item.bonusAmount.toLocaleString() }}</span>
+          <span
+            class="transactionItem__amountVal"
+            :class="item.direction === 'INCOME' ? 'transactionItem__amount--income' : 'transactionItem__amount--expense'"
+          >
+            {{ item.direction === 'INCOME' ? '+' : '-' }}{{ item.bonusAmount.toLocaleString() }}
+          </span>
         </p>
-        <p v-if="item.goldAmount === 0 && item.bonusAmount === 0 && item.amount !== 0" class="transactionItem__amountRow">
+
+        <p
+          v-if="item.goldAmount === 0 && item.bonusAmount === 0 && item.amount !== 0"
+          class="transactionItem__amountRow"
+        >
           <span class="transactionItem__amountLabel">金額</span>
           <span
             class="transactionItem__amountVal"
-            :class="item.isIncome ? 'transactionItem__amount--income' : 'transactionItem__amount--expense'"
-          >{{ item.isIncome ? '+' : '' }}{{ item.amount.toLocaleString() }}</span>
+            :class="item.direction === 'INCOME' ? 'transactionItem__amount--income' : 'transactionItem__amount--expense'"
+          >
+            {{ item.direction === 'INCOME' ? '+' : '-' }}{{ item.amount.toLocaleString() }}
+          </span>
         </p>
       </div>
 
       <div class="transactionItem__details">
+        <p v-if="metaText" class="transactionItem__meta">{{ metaText }}</p>
         <p v-if="item.description" class="transactionItem__desc">{{ item.description }}</p>
       </div>
     </div>
@@ -37,9 +54,24 @@
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue';
 import type { WalletTransactionRow } from '@/composables/useTransactionHistory';
 
-defineProps<{ item: WalletTransactionRow }>();
+const props = defineProps<{ item: WalletTransactionRow }>();
+
+const metaText = computed(() => {
+  const parts: string[] = [];
+  if (props.item.drawIndex != null) {
+    parts.push(`第 ${props.item.drawIndex} 抽`);
+  }
+  if (props.item.ticketNumber != null) {
+    parts.push(`票號 ${props.item.ticketNumber}`);
+  }
+  if (props.item.refundAmount > 0) {
+    parts.push(`退還 ${props.item.refundAmount.toLocaleString()}`);
+  }
+  return parts.join(' | ');
+});
 </script>
 
 <style scoped lang="scss">
@@ -108,18 +140,29 @@ defineProps<{ item: WalletTransactionRow }>();
     font-weight: 800;
   }
 
-  &__amount--income { color: #27ae60; }
-  &__amount--expense { color: #c0392b; }
+  &__amount--income {
+    color: #27ae60;
+  }
+
+  &__amount--expense {
+    color: #c0392b;
+  }
 
   &__details {
     flex: 1;
     text-align: right;
   }
 
+  &__meta {
+    margin: 0 0 4px;
+    font-size: 12px;
+    color: #666;
+  }
+
   &__desc {
     margin: 0;
     font-size: 13px;
-    opacity: 0.65;
+    opacity: 0.7;
     line-height: 1.4;
   }
 }

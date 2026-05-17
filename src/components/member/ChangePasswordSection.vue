@@ -1,20 +1,18 @@
 <template>
   <div v-if="isEmailUser" class="changePwd">
-    <!-- Header -->
     <div class="changePwd__header">
       <span class="changePwd__icon" aria-hidden="true">
         <font-awesome-icon :icon="['fas', 'lock']" />
       </span>
       <div>
         <h3 class="changePwd__title">修改密碼</h3>
-        <p class="changePwd__subtitle">定期更換密碼可保護帳號安全</p>
+        <p class="changePwd__subtitle">建議定期更新密碼，讓帳號更安全。</p>
       </div>
     </div>
 
     <div class="changePwd__divider"></div>
 
     <div class="changePwd__form">
-      <!-- Current Password -->
       <div class="changePwd__field">
         <label class="changePwd__label" for="cp-current">目前密碼</label>
         <div class="changePwd__inputWrap">
@@ -37,7 +35,6 @@
         </div>
       </div>
 
-      <!-- New Password -->
       <div class="changePwd__field">
         <label class="changePwd__label" for="cp-new">新密碼</label>
         <div class="changePwd__inputWrap">
@@ -46,7 +43,7 @@
             v-model="form.newPassword"
             class="changePwd__input"
             :type="show.newPass ? 'text' : 'password'"
-            placeholder="至少 8 個字元"
+            placeholder="至少 8 碼"
             autocomplete="new-password"
           />
           <button
@@ -60,7 +57,6 @@
         </div>
       </div>
 
-      <!-- Confirm New Password -->
       <div class="changePwd__field">
         <label class="changePwd__label" for="cp-confirm">確認新密碼</label>
         <div class="changePwd__inputWrap" :class="{ 'changePwd__inputWrap--err': confirmMismatch }">
@@ -69,7 +65,7 @@
             v-model="form.confirmNewPassword"
             class="changePwd__input"
             :type="show.confirm ? 'text' : 'password'"
-            placeholder="再次輸入新密碼"
+            placeholder="請再次輸入新密碼"
             autocomplete="new-password"
           />
           <button
@@ -83,11 +79,10 @@
         </div>
         <p v-if="confirmMismatch" class="changePwd__msg changePwd__msg--err">
           <font-awesome-icon :icon="['fas', 'circle-exclamation']" />
-          兩次密碼輸入不一致
+          新密碼與確認密碼不一致。
         </p>
       </div>
 
-      <!-- Feedback -->
       <p v-if="successMsg" class="changePwd__msg changePwd__msg--ok">
         <font-awesome-icon :icon="['fas', 'circle-check']" />
         {{ successMsg }}
@@ -97,7 +92,6 @@
         {{ errorMsg }}
       </p>
 
-      <!-- Submit -->
       <div class="changePwd__footer">
         <button
           class="changePwd__btn"
@@ -125,7 +119,6 @@ const authStore = useAuthStore();
 const { form, isLoading, successMsg, errorMsg, submit } = useChangePassword();
 
 const isEmailUser = computed(() => authStore.user?.provider === 'EMAIL');
-
 const show = reactive({ current: false, newPass: false, confirm: false });
 
 const confirmMismatch = computed(
@@ -140,14 +133,11 @@ async function onSubmit() {
 </script>
 
 <style scoped lang="scss">
-// 品牌色變數（對齊會員中心主題）
-$kuji-red:   #b03829;
-$kuji-red-d: #8a2b20;
-$kuji-gold:  #e5a657;
+$kuji-red: #b03829;
+$kuji-gold: #e5a657;
 $kuji-cream: #fdf6ef;
 
 .changePwd {
-  // 整體卡片：暖色漸層左側邊線 + 陰影
   position: relative;
   overflow: hidden;
   background: #fff;
@@ -155,7 +145,6 @@ $kuji-cream: #fdf6ef;
   border-radius: 16px;
   box-shadow: 0 4px 20px rgba($kuji-red, 0.06);
 
-  // 左側裝飾色條
   &::before {
     content: '';
     position: absolute;
@@ -165,7 +154,6 @@ $kuji-cream: #fdf6ef;
     border-radius: 16px 0 0 16px;
   }
 
-  // ── Header ───────────────────────────────────────────────────
   &__header {
     display: flex;
     align-items: center;
@@ -184,31 +172,27 @@ $kuji-cream: #fdf6ef;
     display: flex;
     align-items: center;
     justify-content: center;
-    box-shadow: 0 4px 10px rgba($kuji-red, 0.35);
   }
 
   &__title {
+    margin: 0 0 3px;
     font-size: 16px;
     font-weight: 900;
-    margin: 0 0 3px;
     color: #1a0e0a;
-    letter-spacing: 0.02em;
   }
 
   &__subtitle {
-    font-size: 12px;
-    color: rgba($kuji-red, 0.6);
     margin: 0;
+    font-size: 12px;
+    color: rgba($kuji-red, 0.65);
   }
 
-  // ── Divider ──────────────────────────────────────────────────
   &__divider {
     height: 1px;
     background: linear-gradient(90deg, rgba($kuji-gold, 0.45) 0%, transparent 100%);
     margin: 16px 20px 16px 22px;
   }
 
-  // ── Form ─────────────────────────────────────────────────────
   &__form {
     display: flex;
     flex-direction: column;
@@ -223,12 +207,9 @@ $kuji-cream: #fdf6ef;
   }
 
   &__label {
-    display: block;
     font-size: 12px;
     font-weight: 700;
-    letter-spacing: 0.04em;
-    color: rgba(#1a0e0a, 0.6);
-    text-transform: uppercase;
+    color: rgba(#1a0e0a, 0.65);
   }
 
   &__inputWrap {
@@ -238,7 +219,6 @@ $kuji-cream: #fdf6ef;
     border-radius: 10px;
     background: $kuji-cream;
     overflow: hidden;
-    transition: border-color 0.2s, box-shadow 0.2s;
 
     &:focus-within {
       border-color: $kuji-red;
@@ -260,11 +240,6 @@ $kuji-cream: #fdf6ef;
     font-size: 14px;
     color: #1a0e0a;
     outline: none;
-    min-width: 0;
-
-    &::placeholder {
-      color: rgba(#1a0e0a, 0.3);
-    }
   }
 
   &__eye {
@@ -273,26 +248,19 @@ $kuji-cream: #fdf6ef;
     border: none;
     background: transparent;
     cursor: pointer;
-    color: rgba(#1a0e0a, 0.3);
+    color: rgba(#1a0e0a, 0.4);
     font-size: 14px;
-    line-height: 1;
-    transition: color 0.15s;
-
-    &:hover {
-      color: $kuji-red;
-    }
   }
 
-  // ── Feedback messages ─────────────────────────────────────────
   &__msg {
     display: flex;
     align-items: center;
     gap: 6px;
-    font-size: 13px;
-    font-weight: 600;
     margin: 0;
     padding: 8px 12px;
     border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
 
     &--ok {
       color: #2e7d32;
@@ -305,52 +273,43 @@ $kuji-cream: #fdf6ef;
     }
   }
 
-  // ── Footer ────────────────────────────────────────────────────
   &__footer {
     display: flex;
     justify-content: flex-end;
-    margin-top: 4px;
   }
 
   &__btn {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    border: 0;
+    padding: 10px 14px;
+    border: none;
     border-radius: 10px;
-    padding: 11px 22px;
-    font-size: 14px;
-    font-weight: 900;
-    letter-spacing: 0.03em;
-    cursor: pointer;
-    background: linear-gradient(135deg, $kuji-red 0%, $kuji-red-d 100%);
+    background: linear-gradient(135deg, $kuji-red 0%, darken($kuji-red, 6%) 100%);
     color: #fff;
-    box-shadow: 0 4px 12px rgba($kuji-red, 0.35);
-    transition: opacity 0.15s, box-shadow 0.15s;
-
-    &:hover:not(:disabled) {
-      opacity: 0.9;
-      box-shadow: 0 6px 16px rgba($kuji-red, 0.45);
-    }
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
 
     &:disabled {
-      opacity: 0.42;
+      opacity: 0.6;
       cursor: not-allowed;
-      box-shadow: none;
     }
   }
 
   &__spinner {
-    width: 15px;
-    height: 15px;
-    border: 2px solid rgba(255, 255, 255, 0.35);
-    border-top-color: #fff;
+    width: 14px;
+    height: 14px;
     border-radius: 50%;
-    animation: cpSpin 0.7s linear infinite;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-top-color: #fff;
+    animation: spin 0.7s linear infinite;
   }
+}
 
-  @keyframes cpSpin {
-    to { transform: rotate(360deg); }
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 </style>

@@ -1,7 +1,7 @@
-<template>
+﻿<template>
   <section class="scratchRemainingCounter">
     <header class="scratchRemainingCounter__header">
-      <h3 class="scratchRemainingCounter__title">剩餘刮刮次數</h3>
+      <h3 class="scratchRemainingCounter__title">剩餘賞況</h3>
 
       <div class="scratchRemainingCounter__badge" :class="badgeClass">
         {{ badgeText }}
@@ -29,7 +29,7 @@
         <div class="scratchRemainingCounter__divider" aria-hidden="true" />
 
         <div class="scratchRemainingCounter__numberItem">
-          <div class="scratchRemainingCounter__numberLabel">已刮</div>
+          <div class="scratchRemainingCounter__numberLabel">已抽</div>
           <div class="scratchRemainingCounter__numberValue is-drawn">
             {{ drawnSafe }}
           </div>
@@ -56,7 +56,7 @@
           {{ protectionInfo.message }}
         </div>
         <div v-if="countdownText" class="scratchRemainingCounter__countdown">
-          ⏱ 保護剩餘：{{ countdownText }}
+          保護剩餘：{{ countdownText }}
         </div>
         <div
           v-else-if="protectionInfo.endTime"
@@ -79,8 +79,8 @@ type TicketItem = {
 };
 
 type ProtectionInfo = {
-  remainingDraws: number;
-  totalDraws: number;
+  remainingDraws?: number;
+  totalDraws?: number;
   endTime?: string;
   message: string;
 };
@@ -90,17 +90,17 @@ const props = defineProps<{
   totalPrizes: number | null;
   tickets?: TicketItem[] | null;
   protectionInfo?: ProtectionInfo | null;
-  /** ISO 8601 保護期結束時間，用於倒數計時 */
+  /** ISO 8601 靽風???????冽?閮? */
   protectionEndTime?: string | null;
 }>();
 
 const emit = defineEmits<{
-  /** 倒數歸零（保護期結束），父層應呼叫 reload */
+  /** ?甇賊嚗?霅瑟?蝯?嚗??嗅惜???reload */
   (e: 'expired'): void;
 }>();
 
 /* =========================
-   倒數計時
+   ?閮?
 ========================= */
 const secondsLeft = ref(0);
 let _timer: ReturnType<typeof setInterval> | null = null;
@@ -153,7 +153,7 @@ const countdownText = computed(() => {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
 });
 
-// 優先以 tickets 陣列本身計算，確保 剩餘 + 已刮 = 總數
+// ?芸?隞?tickets ????祈澈閮?嚗Ⅱ靽??拚? + 撌脣 = 蝮賣
 const ticketArr = computed(() =>
   Array.isArray(props.tickets) ? props.tickets : [],
 );
@@ -195,17 +195,17 @@ const progressPercent = computed(() => {
 
 const badgeText = computed(() => {
   if (totalSafe.value <= 0) return '尚未開始';
-  if (remainingSafe.value <= 0) return '已售罄';
-  if (progressPercent.value >= 90) return '快沒了';
+  if (remainingSafe.value <= 0) return '已售完';
+  if (progressPercent.value >= 90) return '即將完售';
   return '熱賣中';
 });
 
 const badgeClass = computed(() => {
   const t = badgeText.value;
   return {
-    'is-soldout': t === '已售罄',
+    'is-soldout': t === '已售完',
     'is-hot': t === '熱賣中',
-    'is-low': t === '快沒了',
+    'is-low': t === '即將完售',
     'is-idle': t === '尚未開始',
   };
 });
@@ -215,12 +215,12 @@ const protectionInfo = computed(() => props.protectionInfo ?? null);
 
 <style scoped lang="scss">
 /* =========================
-   Ichiban 深紅黑色系（統一）
+   Ichiban 瘛梁?暺蝟鳴?蝯曹?嚗?
 ========================= */
-$primary: #e10600; // 主紅
-$accent: #ff3b30; // 互動紅（亮）
-$deep: #0b0102; // 深黑紅底
-$deep-2: #140304; // 深紅黑
+$primary: #e10600; // 銝餌?
+$accent: #ff3b30; // 鈭?蝝?鈭殷?
+$deep: #0b0102; // 瘛梢?蝝?
+$deep-2: #140304; // 瘛梁?暺?
 $border: rgba(255, 255, 255, 0.08);
 $text-soft: rgba(255, 255, 255, 0.72);
 
@@ -288,7 +288,7 @@ $text-soft: rgba(255, 255, 255, 0.72);
   }
 
   &.is-low {
-    /* 用暖橘紅而不是黃：仍在紅系裡 */
+    /* ?冽?璈????舫?嚗??函?蝟餉ㄐ */
     background: rgba(255, 107, 61, 0.16);
     border-color: rgba(255, 107, 61, 0.42);
   }
@@ -368,7 +368,7 @@ $text-soft: rgba(255, 255, 255, 0.72);
   height: 100%;
   border-radius: 999px;
 
-  /* 紅系漸層：從深紅到亮朱砂 */
+  /* 蝝頂瞍詨惜嚗?瘛梁??唬漁?梁? */
   background: linear-gradient(
     90deg,
     rgba(225, 6, 0, 0.9),
@@ -442,7 +442,7 @@ $text-soft: rgba(255, 255, 255, 0.72);
 }
 
 /* =========================
-   RWD 微調（手機更舒服）
+   RWD 敺株矽嚗?璈??嚗?
 ========================= */
 @media (max-width: 520px) {
   .scratchRemainingCounter {
@@ -458,3 +458,5 @@ $text-soft: rgba(255, 255, 255, 0.72);
   }
 }
 </style>
+
+

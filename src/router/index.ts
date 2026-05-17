@@ -292,9 +292,31 @@ router.beforeEach(async (to, _from, next) => {
 
   if (to.meta.requiresAuth && !authStore.isLogin) {
     next({ name: 'Login', query: { redirect: to.fullPath } });
-  } else {
-    next();
+    return;
   }
+
+  if (to.name === 'ResetPassword' && !authStore.isLogin) {
+    next({ name: 'Login', query: { redirect: to.fullPath } });
+    return;
+  }
+
+  const isForceChangePassword = Boolean(authStore.forceChangePassword);
+  const forceChangeAllowedNames = new Set(['ResetPassword', 'Login', 'VerifyEmail']);
+
+  if (isForceChangePassword && !forceChangeAllowedNames.has(String(to.name ?? ''))) {
+    next({
+      name: 'ResetPassword',
+      query: { redirect: to.fullPath },
+    });
+    return;
+  }
+
+  if (!isForceChangePassword && to.name === 'ResetPassword') {
+    next({ name: 'MemberProfile' });
+    return;
+  }
+
+  next();
 });
 
 export default router;

@@ -6,15 +6,18 @@ const basePath = '/banner';
 export interface BannerRes {
   id: string;
   imageUrl: string;
-  mobileImageUrl: string | null;
   linkUrl: string | null;
-  linkTarget: '_self' | '_blank' | null;
   title: string | null;
-  sortOrder: number;
-  startAt: string | null;
-  endAt: string | null;
+  orderNum: number;
+  status?: string | null;
+  startTime: string | null;
+  endTime: string | null;
+  createdAt?: string | null;
   storeId: string | null;
   storeName: string | null;
+  storeLogoUrl?: string | null;
+  mobileImageUrl?: string | null;
+  linkTarget?: '_self' | '_blank' | null;
 }
 
 interface RequestData {

@@ -1,4 +1,4 @@
-<!-- src/views/IchibanDetail.vue -->
+﻿<!-- src/views/IchibanDetail.vue -->
 <template>
   <div class="ichibanDetail">
     <main class="ichibanDetail__main">
@@ -87,6 +87,12 @@
                       <div class="protection-title">開套者保護期</div>
                       <div class="protection-message">
                         {{ protectionInfo.message }}
+                      </div>
+                      <div
+                        v-if="protectionCountdownText"
+                        class="protection-countdown"
+                      >
+                        保護剩餘：{{ protectionCountdownText }}
                       </div>
                       <div
                         class="protection-detail"
@@ -250,7 +256,7 @@
           :total-prizes="detail?.maxDraws ?? null"
           :tickets="statusCards"
           :protection-info="protectionInfo"
-          :protection-end-time="session?.protectionEndTime ?? null"
+          :protection-end-time="protectionEndTime"
           @expired="reload"
         />
 
@@ -603,40 +609,112 @@ const cannotDrawReason = computed(
   () => session.value?.cannotDrawReason || '目前無法抽選',
 );
 
+const protectionEndTime = ref<string | null>(null);
+const protectionSecondsLeft = ref(0);
+let protectionTimer: ReturnType<typeof setInterval> | null = null;
+
+const stopProtectionTimer = () => {
+  if (protectionTimer) {
+    clearInterval(protectionTimer);
+    protectionTimer = null;
+  }
+};
+
+const calcProtectionSeconds = (endTime?: string | null) => {
+  if (!endTime) return 0;
+  const endMs = new Date(endTime).getTime();
+  if (Number.isNaN(endMs)) return 0;
+  return Math.max(0, Math.floor((endMs - Date.now()) / 1000));
+};
+
+const startProtectionTimer = (endTime?: string | null) => {
+  stopProtectionTimer();
+  protectionSecondsLeft.value = calcProtectionSeconds(endTime);
+  if (protectionSecondsLeft.value <= 0) return;
+
+  protectionTimer = setInterval(() => {
+    protectionSecondsLeft.value = calcProtectionSeconds(protectionEndTime.value);
+    if (protectionSecondsLeft.value <= 0) {
+      protectionEndTime.value = null;
+      if (session.value) {
+        session.value.protectionEndTime = null;
+      }
+      stopProtectionTimer();
+    }
+  }, 1000);
+};
+
+const hasActiveProtection = computed(() => {
+  const endTime = protectionEndTime.value;
+  if (!endTime) return false;
+  return calcProtectionSeconds(endTime) > 0;
+});
+
+const protectionCountdownText = computed(() => {
+  if (!hasActiveProtection.value || protectionSecondsLeft.value <= 0) return '';
+  const minutes = Math.floor(protectionSecondsLeft.value / 60);
+  const seconds = protectionSecondsLeft.value % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+});
+
+const formatDateTime = (iso?: string | null) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  const h = String(d.getHours()).padStart(2, '0');
+  const min = String(d.getMinutes()).padStart(2, '0');
+  const sec = String(d.getSeconds()).padStart(2, '0');
+  return `${y}/${m}/${day} ${h}:${min}:${sec}`;
+};
+
+const isProtectionBlockedState = (reason?: string | null) => {
+  const text = String(reason ?? '').trim().toLowerCase();
+  if (!text) return false;
+  return (
+    text.includes('draw is blocked until protection ends') ||
+    text.includes('商品正在被其他玩家抽獎中') ||
+    text.includes('保護期')
+  );
+};
+
+const getProtectionBlockedMessage = () => {
+  const countdown = protectionCountdownText.value;
+  if (countdown) {
+    return `目前有其他玩家正在保護期中，請稍後再試。剩餘時間 ${countdown}`;
+  }
+  return '目前有其他玩家正在保護期中，請稍後再試。';
+};
+
+const showBlockedByProtectionDialog = async (title = '暫時無法抽獎') => {
+  await ichibanInfoDialog({
+    title,
+    content: getProtectionBlockedMessage(),
+  });
+};
+
 /* -----------------------------
  * 保護期提示
  * ----------------------------- */
-const isInProtection = computed(() => {
-  const s = session.value;
-  if (!s) return false;
-  const protectionDraws = s.protectionDraws ?? 0;
-  const openerDrawCount = s.openerDrawCount ?? 0;
-  // 不限制 isOpener：小套者 / 非小套者都應看到保護期營出
-  return protectionDraws > 0 && openerDrawCount < protectionDraws;
-});
+const isInProtection = computed(() => hasActiveProtection.value);
 
 const protectionInfo = computed(() => {
   if (!isInProtection.value) return null;
 
-  const protectionDraws = session.value?.protectionDraws ?? 0;
-  const openerDrawCount = session.value?.openerDrawCount ?? 0;
-  const remainingDraws = protectionDraws - openerDrawCount;
-  const endTime = session.value?.protectionEndTime;
+  const endTime = protectionEndTime.value;
 
   if (!isOpener.value) {
     return {
-      remainingDraws,
-      totalDraws: protectionDraws,
-      endTime: endTime ? formatDate(endTime) : '',
-      message: '等待開套玩家完成保護抽，暫時無法抽取',
+      endTime: endTime ? formatDateTime(endTime) : '',
+      message: '目前有其他玩家正在保護期中，請稍後再試',
     };
   }
 
   return {
-    remainingDraws,
-    totalDraws: protectionDraws,
-    endTime: endTime ? formatDate(endTime) : '',
-    message: `保護期內：還剩 ${remainingDraws} 次專屬抽獎機會`,
+    endTime: endTime ? formatDateTime(endTime) : '',
+    message: '目前為您的保護期，其他玩家暫時無法抽獎',
   };
 });
 
@@ -685,12 +763,15 @@ const prices = computed<PriceItem[]>(() => {
 });
 
 /* -----------------------------
- * Prizes（排序：LAST 最後、等級、prizeNumber）
+ * Prizes
  * ----------------------------- */
 const prizes = computed(() => {
   const arr = Array.isArray(prizesData.value) ? prizesData.value : [];
+  const isCustomGachaPrizeList =
+    String(detail.value?.category ?? '').toUpperCase() === 'CUSTOM_GACHA';
 
   const levelOrder: Record<string, number> = {
+    GRAND: 0,
     A: 1,
     B: 2,
     C: 3,
@@ -730,16 +811,21 @@ const prizes = computed(() => {
       _lvlOrder: levelOrder[level] ?? 50,
       _num: Number(p?.prizeNumber ?? 9999) || 9999,
       _isLast: !!p?.isLastPrize || level === 'LAST',
+      _isGrand: !!p?.isGrandPrize || level === 'GRAND',
     };
   });
 
   mapped.sort((a: any, b: any) => {
-    if (a._isLast !== b._isLast) return a._isLast ? 1 : -1;
+    if (isCustomGachaPrizeList) {
+      if (a._isGrand !== b._isGrand) return a._isGrand ? -1 : 1;
+    } else if (a._isLast !== b._isLast) {
+      return a._isLast ? -1 : 1;
+    }
     if (a._lvlOrder !== b._lvlOrder) return a._lvlOrder - b._lvlOrder;
     return a._num - b._num;
   });
 
-  return mapped.map(({ _lvlOrder, _num, _isLast, ...rest }: any) => rest);
+  return mapped.map(({ _lvlOrder, _num, _isLast, _isGrand, ...rest }: any) => rest);
 });
 
 /* -----------------------------
@@ -917,11 +1003,14 @@ const ensureCanDraw = async () => {
   if (!canDraw.value) {
     try {
       overlay.open('ichiban-info', false);
-      await ichibanInfoDialog({
-        title: '提示訊息',
-        content: cannotDrawReason.value,
-      });
-      goLogin();
+      if (isProtectionBlockedState(cannotDrawReason.value)) {
+        await showBlockedByProtectionDialog();
+      } else {
+        await ichibanInfoDialog({
+          title: '提示訊息',
+          content: cannotDrawReason.value,
+        });
+      }
     } finally {
       overlay.close();
     }
@@ -936,6 +1025,41 @@ const handleDraw = async () => {
 
   statusSectionRef.value?.scrollIntoView({ behavior: 'smooth' });
   isDrawPanelOpen.value = true;
+};
+
+const syncProtectionEndTime = (
+  value?: string | null,
+  options?: { forceClear?: boolean },
+) => {
+  const current = protectionEndTime.value;
+
+  if (value) {
+    protectionEndTime.value = value;
+    if (!session.value) {
+      session.value = {
+        protectionEndTime: value,
+      };
+    } else {
+      session.value.protectionEndTime = value;
+    }
+    startProtectionTimer(value);
+    return;
+  }
+
+  if (current && calcProtectionSeconds(current) > 0) {
+    protectionEndTime.value = current;
+    if (session.value) {
+      session.value.protectionEndTime = current;
+    }
+    startProtectionTimer(current);
+    return;
+  }
+
+  protectionEndTime.value = null;
+  if (options?.forceClear && session.value) {
+    session.value.protectionEndTime = null;
+  }
+  startProtectionTimer(null);
 };
 
 const normalizePaymentType = (value: unknown): 'GOLD' | 'BONUS' => {
@@ -1001,16 +1125,18 @@ const handleGacha = async () => {
           : [];
 
       // ✅ 新增：處理 protectionEndTime（扭蛋模式為 null）
-      if (data?.protectionEndTime && session.value) {
-        session.value.protectionEndTime = data.protectionEndTime;
-      }
+      syncProtectionEndTime(data?.protectionEndTime);
 
       // 檢查後端回傳的失敗結果
       if (drawResults.length > 0 && drawResults[0]?.success === false) {
-        await ichibanInfoDialog({
-          title: '扭蛋失敗',
-          content: drawResults[0].message || '請稍後再試',
-        });
+        if (isProtectionBlockedState(drawResults[0].message)) {
+          await showBlockedByProtectionDialog();
+        } else {
+          await ichibanInfoDialog({
+            title: '扭蛋失敗',
+            content: drawResults[0].message || '請稍後再試',
+          });
+        }
         return;
       }
 
@@ -1334,15 +1460,17 @@ const handleExchange = async (payload: {
             : [];
 
         // ✅ 新增：處理 protectionEndTime
-        if (data?.protectionEndTime && session.value) {
-          session.value.protectionEndTime = data.protectionEndTime;
-        }
+        syncProtectionEndTime(data?.protectionEndTime);
 
         if (drawResults.length > 0 && drawResults[0]?.success === false) {
-          await ichibanInfoDialog({
-            title: '抽獎失敗',
-            content: drawResults[0].message || '請稍後再試',
-          });
+          if (isProtectionBlockedState(drawResults[0].message)) {
+            await showBlockedByProtectionDialog();
+          } else {
+            await ichibanInfoDialog({
+              title: '抽獎失敗',
+              content: drawResults[0].message || '請稍後再試',
+            });
+          }
           return;
         }
 
@@ -1410,15 +1538,17 @@ const handleExchange = async (payload: {
             : [];
 
         // ✅ 新增：處理 protectionEndTime
-        if (data?.protectionEndTime && session.value) {
-          session.value.protectionEndTime = data.protectionEndTime;
-        }
+        syncProtectionEndTime(data?.protectionEndTime);
 
         if (drawResults.length > 0 && drawResults[0]?.success === false) {
-          await ichibanInfoDialog({
-            title: '抽獎失敗',
-            content: drawResults[0].message || '請稍後再試',
-          });
+          if (isProtectionBlockedState(drawResults[0].message)) {
+            await showBlockedByProtectionDialog();
+          } else {
+            await ichibanInfoDialog({
+              title: '抽獎失敗',
+              content: drawResults[0].message || '請稍後再試',
+            });
+          }
           return;
         }
 
@@ -1482,7 +1612,21 @@ const refreshSession = async () => {
     showCatchDialog: false,
     showFailDialog: false,
     onSuccess: (data: any) => {
-      session.value = data;
+      if (data) {
+        session.value = {
+          ...(session.value ?? {}),
+          ...data,
+        };
+        syncProtectionEndTime(data.protectionEndTime ?? null, {
+          forceClear: data.protectionEndTime == null,
+        });
+        return;
+      }
+
+      if (!hasActiveProtection.value) {
+        session.value = null;
+        syncProtectionEndTime(null, { forceClear: true });
+      }
     },
   });
 };
@@ -1516,6 +1660,17 @@ const reload = async () => {
                 ticketNumber: Number(t.ticketNumber),
               }))
             : [];
+
+        const detailSession = payload.session ?? lottery?.session ?? null;
+        if (detailSession) {
+          session.value = {
+            ...(session.value ?? {}),
+            ...detailSession,
+          };
+          syncProtectionEndTime(detailSession.protectionEndTime ?? null, {
+            forceClear: detailSession.protectionEndTime == null,
+          });
+        }
 
         // ✅ 新增：取得 designatedWinningNumbers（刮刮樂大獎中獎號碼）
         designatedWinningNumbers.value = Array.isArray(
@@ -1626,7 +1781,28 @@ const hitHotCount = async () => {
   });
 };
 
+watch(
+  () => protectionEndTime.value,
+  (value) => {
+    startProtectionTimer(value);
+  },
+  { immediate: true },
+);
+
+watch(
+  () => protectionSecondsLeft.value,
+  async (value, oldValue) => {
+    if (oldValue && oldValue > 0 && value === 0 && kujiId.value) {
+      await refreshSession();
+    }
+  },
+);
+
 onMounted(async () => {});
+
+onUnmounted(() => {
+  stopProtectionTimer();
+});
 
 watch(
   () => kujiId.value,
@@ -1654,8 +1830,8 @@ const showFreeDrawModal = async (results: any[]) => {
   for (const result of results) {
     if (result.triggeredFreeDraw && Number(result.refundAmount ?? 0) > 0) {
       await ichibanInfoDialog({
-        title: '恰喜！開套免單',
-        content: `已退還 ${result.refundAmount} 元至你的帳戶`,
+        title: '恭喜！開套免單',
+        content: `已退還 ${Number(result.refundAmount ?? 0).toLocaleString()} 金幣至你的帳戶`,
       });
     }
   }
@@ -1712,17 +1888,19 @@ const drawScratchTicket = async (
       return { result: null, rawData: data };
     }
 
-    if (data?.protectionEndTime && session.value) {
-      session.value.protectionEndTime = data.protectionEndTime;
-    }
+    syncProtectionEndTime(data?.protectionEndTime);
 
     const result = drawResults[0];
 
     if (result?.success === false) {
-      await ichibanInfoDialog({
-        title: '刮刮樂失敗',
-        content: result.message || '請稍後再試',
-      });
+      if (isProtectionBlockedState(result.message)) {
+        await showBlockedByProtectionDialog();
+      } else {
+        await ichibanInfoDialog({
+          title: '刮刮樂失敗',
+          content: result.message || '請稍後再試',
+        });
+      }
       return { result: null, rawData: data };
     }
 
@@ -1756,21 +1934,19 @@ const handleScratchBatch = async (ticketIds: string[]) => {
   }
 
   const results: DrawResult[] = [];
-  let batchGameMode = '';
 
   for (const ticketId of normalizedTicketIds) {
     if (showWaitingOverlay.value) return;
 
-    const { result, blocked, rawData } = await drawScratchTicket(ticketId);
+    const { result, blocked } = await drawScratchTicket(ticketId);
 
     // 被指定流程 / 等待流程攔截，整批先中止
     if (blocked) return;
 
     if (result) {
       results.push(result);
-      // 從第一筆成功回應取得 gameMode（批次中每張相同）
-      if (!batchGameMode && rawData?.gameMode) {
-        batchGameMode = String(rawData.gameMode).toUpperCase();
+      if (result.isGrandPrize) {
+        break;
       }
     }
   }
@@ -1782,10 +1958,6 @@ const handleScratchBatch = async (ticketIds: string[]) => {
     (a, b) => Number(a.ticketNumber ?? 0) - Number(b.ticketNumber ?? 0),
   );
 
-  // spec：SCRATCH_STORE / RANDOM 模式下前端完全不需要讀 revealedNumber
-  // 只有 SCRATCH_PLAYER 模式才在卡片底部顯示 revealedNumber 供玩家比對大獎號碼
-  const isScratchPlayerMode = batchGameMode === 'SCRATCH_PLAYER';
-
   const cards = sortedResults.map((item) => ({
     imageSrc: item.prizeImageUrl || '',
     imageAlt: item.prizeName || 'scratch prize',
@@ -1793,9 +1965,7 @@ const handleScratchBatch = async (ticketIds: string[]) => {
     revealText: item.prizeName ?? '銘謝惠顧',
     threshold: 45,
     grade: item.prizeLevel,
-    // 只有 SCRATCH_PLAYER 模式才傳 revealedNumber；
-    // SCRATCH_STORE 傳 null，確保底層顯示獎品圖片而非亂數
-    revealedNumber: isScratchPlayerMode ? (item.revealedNumber ?? null) : null,
+    revealedNumber: item.revealedNumber ?? null,
   }));
   overlay.open();
   activeCards.value = [];
@@ -1838,10 +2008,6 @@ const handleScratch = async (ticketIdOverride?: string) => {
   const { result, blocked, rawData } = await drawScratchTicket(String(selectedTicketId));
   if (blocked || !result) return;
 
-  // spec：SCRATCH_STORE 模式下不應顯示 revealedNumber，只有 SCRATCH_PLAYER 才需要
-  const isScratchPlayerMode =
-    String(rawData?.gameMode ?? '').toUpperCase() === 'SCRATCH_PLAYER';
-
   overlay.open();
   activeCards.value = [];
 
@@ -1853,7 +2019,7 @@ const handleScratch = async (ticketIdOverride?: string) => {
       revealText: result.prizeName ?? '銘謝惠顧',
       threshold: 45,
       grade: result.prizeLevel,
-      revealedNumber: isScratchPlayerMode ? (result.revealedNumber ?? null) : null,
+      revealedNumber: result.revealedNumber ?? null,
     });
 
     const paymentType = resolvePaymentTypeFromResults([result]);
@@ -1929,6 +2095,13 @@ $gold-400: #d9b56c;
   font-size: 15px;
   font-weight: 600;
   margin-bottom: 4px;
+}
+
+.protection-countdown {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 4px;
+  color: rgba(255, 255, 255, 0.96);
 }
 
 .protection-detail {
@@ -2247,3 +2420,6 @@ $gold-400: #d9b56c;
   }
 }
 </style>
+
+
+
