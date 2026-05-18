@@ -1,3 +1,4 @@
+<!-- src/components/register/RegisterOtherSection.vue -->
 <script setup lang="ts">
 import { inject, ref, type Ref } from 'vue';
 import { useFormContext } from 'vee-validate';
