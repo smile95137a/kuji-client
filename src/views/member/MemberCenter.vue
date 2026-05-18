@@ -11,54 +11,6 @@
           <!-- 標題 + 錢包資訊 -->
           <header class="memberCenter__header">
             <h1 class="memberCenter__headline">會員中心</h1>
-
-            <div class="memberCenter__walletRow memberCenter__walletRow--two">
-              <!-- 金幣 -->
-              <div
-                class="memberCenter__walletItem memberCenter__walletItem--gold"
-              >
-                <div
-                  class="memberCenter__walletIcon memberCenter__walletIcon--coin"
-                >
-                  <img
-                    :src="GCoin"
-                    alt="Gold coin"
-                    class="memberCenter__walletImg"
-                    draggable="false"
-                  />
-                </div>
-
-                <div class="memberCenter__walletBar">
-                  <span class="memberCenter__walletTag">代幣</span>
-                  <span class="memberCenter__walletAmount">
-                    {{ store.formatNumber(store.wallet.goldCoins) }}
-                  </span>
-                </div>
-              </div>
-
-              <!-- 紅利 -->
-              <div
-                class="memberCenter__walletItem memberCenter__walletItem--bonus"
-              >
-                <div
-                  class="memberCenter__walletIcon memberCenter__walletIcon--coin"
-                >
-                  <img
-                    :src="RCoin"
-                    alt="Bonus coin"
-                    class="memberCenter__walletImg"
-                    draggable="false"
-                  />
-                </div>
-
-                <div class="memberCenter__walletBar">
-                  <span class="memberCenter__walletTag">紅利</span>
-                  <span class="memberCenter__walletAmount">
-                    {{ store.formatNumber(store.wallet.bonusCoins) }}
-                  </span>
-                </div>
-              </div>
-            </div>
           </header>
 
           <div class="memberCenter__hr"></div>

@@ -1,3 +1,4 @@
+<!-- src/components/member/MemberSideMenu.vue -->
 <template>
   <aside class="memberCenter__side" aria-label="會員中心選單">
     <nav class="memberCenter__menu" role="tablist">
