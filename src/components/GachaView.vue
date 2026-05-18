@@ -89,7 +89,10 @@ import MSelect from '@/components/common/MSelect.vue';
 import MSearch from '@/components/common/MSearch.vue';
 import BasePagination from '@/components/common/BasePagination.vue';
 
-import { queryBrowseLotteries, type BrowseCondition } from '@/services/lotteryBrowseService';
+import {
+  queryBrowseLotteries,
+  type BrowseCondition,
+} from '@/services/lotteryBrowseService';
 import { queryThemes, type CategoryRes } from '@/services/categoryService';
 import { executeApi } from '@/utils/executeApiUtils';
 import { useServerPagination } from '@/composables/useServerPagination';
@@ -148,9 +151,7 @@ const loadThemeOptions = async () => {
       const list: CategoryRes[] = Array.isArray(res) ? res : (res?.data ?? []);
       themeOptions.value = Array.from(
         new Set(
-          list
-            .map((item) => String(item?.name ?? '').trim())
-            .filter(Boolean),
+          list.map((item) => String(item?.name ?? '').trim()).filter(Boolean),
         ),
       )
         .sort((a, b) => a.localeCompare(b, 'zh-Hant'))
@@ -183,7 +184,7 @@ const fetchList = async () => {
       }));
       sync(result);
     },
-    onFinal: () => {
+    onFinally: () => {
       loading.value = false;
     },
   });

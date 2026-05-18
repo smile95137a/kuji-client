@@ -27,7 +27,7 @@ interface ExecuteApiOptions<T> {
   showCatchDialog?: boolean;
   showFailDialog?: boolean;
   showSuccessDialog?: boolean;
-  onFinal?: () => void | Promise<void>;
+  onFinally?: () => void | Promise<void>;
 }
 export async function executeApi<T = any>({
   fn,
@@ -40,7 +40,7 @@ export async function executeApi<T = any>({
   showCatchDialog = true,
   showFailDialog = false,
   showSuccessDialog = false,
-  onFinal,
+  onFinally,
 }: ExecuteApiOptions<T>): Promise<ApiResponse<T> | null> {
   const overlay = useOverlayStore();
   try {
@@ -82,6 +82,6 @@ export async function executeApi<T = any>({
     }
     return null;
   } finally {
-    if (onFinal) await onFinal();
+    if (onFinally) await onFinally();
   }
 }

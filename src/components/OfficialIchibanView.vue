@@ -139,7 +139,7 @@ const fetchList = async () => {
       }));
       sync(result);
     },
-    onFinal: () => {
+    onFinally: () => {
       loading.value = false;
     },
   });
@@ -159,9 +159,7 @@ const loadThemeOptions = async () => {
       const list: CategoryRes[] = Array.isArray(res) ? res : (res?.data ?? []);
       const themes = Array.from(
         new Set(
-          list
-            .map((item) => String(item?.name ?? '').trim())
-            .filter(Boolean),
+          list.map((item) => String(item?.name ?? '').trim()).filter(Boolean),
         ),
       )
         .sort((a, b) => a.localeCompare(b, 'zh-Hant'))

@@ -101,7 +101,9 @@
                 <input
                   type="checkbox"
                   :checked="allChecked"
-                  @change="toggleAll(($event.target as HTMLInputElement).checked)"
+                  @change="
+                    toggleAll(($event.target as HTMLInputElement).checked)
+                  "
                 />
               </th>
               <th>賞品</th>
@@ -120,13 +122,22 @@
                   type="checkbox"
                   :checked="checkedIds.has(row.id)"
                   :disabled="row.status !== 'IN_BOX'"
-                  @change="toggleOne(row.id, ($event.target as HTMLInputElement).checked)"
+                  @change="
+                    toggleOne(
+                      row.id,
+                      ($event.target as HTMLInputElement).checked,
+                    )
+                  "
                 />
               </td>
 
               <td>
                 <div class="prizeBox__prizeCell">
-                  <img class="prizeBox__thumb" :src="row.prizeImageUrl" alt="thumb" />
+                  <img
+                    class="prizeBox__thumb"
+                    :src="row.prizeImageUrl"
+                    alt="thumb"
+                  />
                   <div class="prizeBox__prizeMeta">
                     <p class="prizeBox__prizeName">
                       {{ row.prizeName }}
@@ -153,14 +164,20 @@
               </td>
 
               <td class="prizeBox__right">
-                <button class="prizeBox__link" type="button" @click="openDetail(row)">
+                <button
+                  class="prizeBox__link"
+                  type="button"
+                  @click="openDetail(row)"
+                >
                   查看
                 </button>
               </td>
             </tr>
 
             <tr v-if="!loading && pageRows.length === 0">
-              <td class="prizeBox__empty" colspan="7">目前沒有符合條件的賞品</td>
+              <td class="prizeBox__empty" colspan="7">
+                目前沒有符合條件的賞品
+              </td>
             </tr>
             <tr v-if="loading">
               <td class="prizeBox__empty" colspan="7">載入中...</td>
@@ -177,7 +194,9 @@
                 type="checkbox"
                 :checked="checkedIds.has(row.id)"
                 :disabled="row.status !== 'IN_BOX'"
-                @change="toggleOne(row.id, ($event.target as HTMLInputElement).checked)"
+                @change="
+                  toggleOne(row.id, ($event.target as HTMLInputElement).checked)
+                "
               />
               <span>選取</span>
             </label>
@@ -201,7 +220,9 @@
               <p class="prizeBox__prizeId">{{ row.id }}</p>
               <p class="prizeBox__mini">商品：{{ row.lotteryTitle || '-' }}</p>
               <p class="prizeBox__mini">店家：{{ row.storeName || '-' }}</p>
-              <p class="prizeBox__mini">入盒：{{ formatDate(row.createdAt) }}</p>
+              <p class="prizeBox__mini">
+                入盒：{{ formatDate(row.createdAt) }}
+              </p>
 
               <p v-if="row.isRecyclable" class="prizeBox__mini">
                 可回收，回饋 +{{ row.recycleBonus }} 蝦幣
@@ -218,7 +239,10 @@
           </button>
         </div>
 
-        <div v-if="!loading && pageRows.length === 0" class="prizeBox__emptyCard">
+        <div
+          v-if="!loading && pageRows.length === 0"
+          class="prizeBox__emptyCard"
+        >
           目前沒有符合條件的賞品
         </div>
         <div v-if="loading" class="prizeBox__emptyCard">載入中...</div>
@@ -252,7 +276,11 @@
 
         <div v-if="selected" class="prizeBox__dialogBody">
           <div class="prizeBox__detailTop">
-            <img class="prizeBox__detailImg" :src="selected.prizeImageUrl" alt="img" />
+            <img
+              class="prizeBox__detailImg"
+              :src="selected.prizeImageUrl"
+              alt="img"
+            />
             <div class="prizeBox__detailMeta">
               <p class="prizeBox__detailName">
                 {{ selected.prizeName }}
@@ -262,13 +290,22 @@
               </p>
 
               <p class="prizeBox__detailId">{{ selected.id }}</p>
-              <p class="prizeBox__mini">商品：{{ selected.lotteryTitle || '-' }}</p>
-              <p class="prizeBox__mini">店家：{{ selected.storeName || '-' }}</p>
-              <p class="prizeBox__mini">入盒時間：{{ formatDate(selected.createdAt) }}</p>
+              <p class="prizeBox__mini">
+                商品：{{ selected.lotteryTitle || '-' }}
+              </p>
+              <p class="prizeBox__mini">
+                店家：{{ selected.storeName || '-' }}
+              </p>
+              <p class="prizeBox__mini">
+                入盒時間：{{ formatDate(selected.createdAt) }}
+              </p>
 
               <p class="prizeBox__mini">
                 狀態：
-                <span class="prizeBox__badge" :class="badgeClass(selected.status)">
+                <span
+                  class="prizeBox__badge"
+                  :class="badgeClass(selected.status)"
+                >
                   {{ selected.statusName || statusLabel(selected.status) }}
                 </span>
               </p>
@@ -294,7 +331,11 @@
             <button
               class="prizeBox__btn prizeBox__btn--ghost"
               type="button"
-              :disabled="loading || !selected.isRecyclable || selected.status !== 'IN_BOX'"
+              :disabled="
+                loading ||
+                !selected.isRecyclable ||
+                selected.status !== 'IN_BOX'
+              "
               @click="recycleOne(selected)"
             >
               回收領回饋
@@ -362,8 +403,9 @@ const lotteryTitleOptions = computed(() => {
   return Array.from(set);
 });
 
-const useServerPaging = computed(() =>
-  !lotteryTitle.value.trim() && !keyword.value.trim() && !onlyUnshipped.value,
+const useServerPaging = computed(
+  () =>
+    !lotteryTitle.value.trim() && !keyword.value.trim() && !onlyUnshipped.value,
 );
 
 /** 雿?API ??撠望摰 list嚗?蝡臬??祟??*/
@@ -373,25 +415,23 @@ const filteredRows = computed(() => {
   const baseRows = useServerPaging.value
     ? rows.value
     : rows.value.filter((r) => {
-      const okStatus = status.value ? r.status === status.value : true;
-      const okLottery = lotteryTitle.value
-        ? r.lotteryTitle === lotteryTitle.value
-        : true;
+        const okStatus = status.value ? r.status === status.value : true;
+        const okLottery = lotteryTitle.value
+          ? r.lotteryTitle === lotteryTitle.value
+          : true;
 
-      const okKw = kw
-        ? (r.prizeName || '').toLowerCase().includes(kw) ||
-          (r.lotteryTitle || '').toLowerCase().includes(kw) ||
-          (r.storeName || '').toLowerCase().includes(kw)
-        : true;
+        const okKw = kw
+          ? (r.prizeName || '').toLowerCase().includes(kw) ||
+            (r.lotteryTitle || '').toLowerCase().includes(kw) ||
+            (r.storeName || '').toLowerCase().includes(kw)
+          : true;
 
-      const okUnshipped = onlyUnshipped.value ? r.status === 'IN_BOX' : true;
+        const okUnshipped = onlyUnshipped.value ? r.status === 'IN_BOX' : true;
 
-      return okStatus && okLottery && okKw && okUnshipped;
-    });
+        return okStatus && okLottery && okKw && okUnshipped;
+      });
 
-  return baseRows
-    .slice()
-    .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+  return baseRows.slice().sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 });
 
 const totalPages = computed(() =>
@@ -469,20 +509,20 @@ const extractPageItems = (raw: any) => {
 
 const extractPageTotal = (raw: any, fallback: number) => {
   const payload = raw?.data ?? raw;
-  return Number(
-    payload?.totalItems ??
-      payload?.total ??
-      payload?.count ??
-      fallback,
-  ) || fallback;
+  return (
+    Number(
+      payload?.totalItems ?? payload?.total ?? payload?.count ?? fallback,
+    ) || fallback
+  );
 };
 
 const extractPageTotalPages = (raw: any, fallbackTotal: number) => {
   const payload = raw?.data ?? raw;
-  return Number(
-    payload?.totalPages ??
-      Math.max(1, Math.ceil(fallbackTotal / pageSize)),
-  ) || 1;
+  return (
+    Number(
+      payload?.totalPages ?? Math.max(1, Math.ceil(fallbackTotal / pageSize)),
+    ) || 1
+  );
 };
 
 const loadPrizeBox = async () => {
@@ -513,7 +553,7 @@ const loadPrizeBox = async () => {
       serverTotal.value = total;
       serverTotalPages.value = extractPageTotalPages(raw, total);
     },
-    onFinal: () => {
+    onFinally: () => {
       loading.value = false;
     },
   });
@@ -556,7 +596,7 @@ const recycleByIds = async (ids: string[]) => {
       detailOpen.value = false;
       await loadPrizeBox();
     },
-    onFinal: () => {
+    onFinally: () => {
       loading.value = false;
     },
   });
@@ -1053,10 +1093,3 @@ onMounted(async () => {
   }
 }
 </style>
-
-
-
-
-
-
-
