@@ -7,6 +7,86 @@ interface RequestData {
   [key: string]: any;
 }
 
+export type StoreBusinessHoursStructuredDay =
+  | 'MON'
+  | 'TUE'
+  | 'WED'
+  | 'THU'
+  | 'FRI'
+  | 'SAT'
+  | 'SUN';
+
+export interface StoreBusinessHoursStructuredSchedule {
+  day: StoreBusinessHoursStructuredDay;
+  open?: string | null;
+  close?: string | null;
+  closed?: boolean | null;
+}
+
+export interface StoreBusinessHoursStructuredException {
+  date?: string | null;
+  closed?: boolean | null;
+  open?: string | null;
+  close?: string | null;
+}
+
+export interface StoreBusinessHoursStructured {
+  schedules: StoreBusinessHoursStructuredSchedule[];
+  exceptions?: StoreBusinessHoursStructuredException[] | null;
+  tz?: string | null;
+}
+
+export interface StoreBusinessHoursDay {
+  isClosed?: boolean | null;
+  open?: string | null;
+  close?: string | null;
+}
+
+export type StoreBusinessHours =
+  | string
+  | null
+  | undefined
+  | StoreBusinessHoursStructured
+  | Record<string, StoreBusinessHoursDay>;
+
+export interface Store {
+  id: string;
+  storeName: string;
+  name?: string | null;
+  shortDescription?: string | null;
+  description?: string | null;
+  logoUrl?: string | null;
+  coverImageUrl?: string | null;
+  coverImages?: string[] | null;
+  address?: string | null;
+  isActive?: boolean | null;
+  businessHours?: StoreBusinessHours;
+}
+
+export interface StoreProduct {
+  id: string;
+  title?: string | null;
+  imageUrl?: string | null;
+  bannerImageUrl?: string | null;
+  category?: string | null;
+  subCategory?: string | null;
+  playMode?: string | null;
+  pricePerDraw?: number | null;
+  maxDraws?: number | null;
+  status?: string | null;
+}
+
+export interface StoreDetail extends Store {
+  longDescription?: string | null;
+  email?: string | null;
+  phone?: string | null;
+  businessHoursStructured?: StoreBusinessHoursStructured | null;
+  facebookUrl?: string | null;
+  instagramUrl?: string | null;
+  lineId?: string | null;
+  products?: StoreProduct[] | null;
+}
+
 /** 前台 - 取得店家列表 GET /stores */
 export const getStores = async (
   req?: RequestData,

@@ -1097,6 +1097,17 @@ onMounted(async () => {
   }
 
   &__dialogOverlay {
+    --primary: #b43325;
+    --primary-dark: #8f261b;
+    --primary-soft: rgba(180, 51, 37, 0.1);
+    --brown: #3f2412;
+    --cream: #fff8ef;
+    --cream-deep: #f5eadc;
+    --card: #ffffff;
+    --line: rgba(63, 36, 18, 0.1);
+    --text: #201713;
+    --text-soft: rgba(32, 23, 19, 0.58);
+
     position: fixed;
     inset: 0;
     z-index: 1000;
