@@ -684,6 +684,10 @@ const formatDateTime = (iso?: string | null) => {
   return `${y}/${m}/${day} ${h}:${min}:${sec}`;
 };
 
+const protectionDeadlineText = computed(() =>
+  protectionEndTime.value ? formatDateTime(protectionEndTime.value) : '',
+);
+
 const isProtectionBlockedState = (reason?: string | null) => {
   const text = String(reason ?? '')
     .trim()
@@ -698,10 +702,17 @@ const isProtectionBlockedState = (reason?: string | null) => {
 
 const getProtectionBlockedMessage = () => {
   const countdown = protectionCountdownText.value;
+  const deadline = protectionDeadlineText.value;
+  const details: string[] = ['目前有其他玩家正在保護期中，請稍後再試。'];
+
   if (countdown) {
-    return `目前有其他玩家正在保護期中，請稍後再試。剩餘時間 ${countdown}`;
+    details.push(`剩餘時間：${countdown}`);
   }
-  return '目前有其他玩家正在保護期中，請稍後再試。';
+  if (deadline) {
+    details.push(`保護截止：${deadline}`);
+  }
+
+  return details.join('<br/>');
 };
 
 const showBlockedByProtectionDialog = async (title = '暫時無法抽獎') => {
