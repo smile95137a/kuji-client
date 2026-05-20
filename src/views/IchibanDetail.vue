@@ -2,203 +2,212 @@
 <template>
   <div class="ichibanDetail">
     <main class="ichibanDetail__main">
-      <!-- 賞品一覽 -->
       <section class="ichibanDetail__hero">
-        <div class="ichibanDetail__hero-bg" aria-hidden="true" />
-
-        <div class="ichibanDetail__hero-inner">
-          <!-- 麵包屑 -->
+        <div class="ichibanDetail__heroHead">
           <nav class="ichibanDetail__breadcrumb">
             <span class="clickable" @click="goHome">首頁</span>
-            <span> / </span>
+            <span class="ichibanDetail__breadcrumbSep">/</span>
             <span>{{ breadcrumbCategory }}</span>
-            <span> / </span>
+            <span class="ichibanDetail__breadcrumbSep">/</span>
             <span class="ichibanDetail__breadcrumb-current">
               {{ kujiTitle }}
             </span>
           </nav>
+        </div>
 
-          <div class="ichibanDetail__top">
+        <div class="ichibanDetail__top">
+          <div class="ichibanDetail__mediaCard">
             <div class="ichibanDetail__banner">
-              <img :src="bannerSrc" alt="Ichiban Banner" />
-
-              <div v-if="galleryThumbs.length" class="ichibanDetail__gallery">
-                <button
-                  v-for="(img, idx) in galleryThumbs"
-                  :key="img + idx"
-                  type="button"
-                  class="ichibanDetail__galleryItem"
-                  :class="{ 'is-active': idx === activeGalleryIndex }"
-                  @click="activeGalleryIndex = idx"
-                >
-                  <img :src="img" alt="Gallery" />
-                </button>
-              </div>
+              <img :src="bannerSrc" alt="STARO 商品主圖" />
             </div>
 
-            <!-- Info -->
-            <aside class="ichibanDetail__info">
-              <template v-if="loading">
-                <h1 class="ichibanDetail__title">載入中...</h1>
-                <p class="ichibanDetail__subtitle">請稍候</p>
-              </template>
+            <div v-if="galleryThumbs.length" class="ichibanDetail__gallery">
+              <button
+                v-for="(img, idx) in galleryThumbs"
+                :key="img + idx"
+                type="button"
+                class="ichibanDetail__galleryItem"
+                :class="{ 'is-active': idx === activeGalleryIndex }"
+                @click="activeGalleryIndex = idx"
+              >
+                <img :src="img" alt="商品縮圖" />
+              </button>
+            </div>
+          </div>
 
-              <template v-else-if="errorMsg">
-                <h1 class="ichibanDetail__title">載入失敗</h1>
-                <p class="ichibanDetail__subtitle">{{ errorMsg }}</p>
-                <div class="ichibanDetail__actions">
-                  <KujiButton variant="secondary" block @click="reload">
-                    重新載入
-                  </KujiButton>
+          <aside class="ichibanDetail__info">
+            <template v-if="loading">
+              <p class="ichibanDetail__eyebrow">LOADING</p>
+              <h1 class="ichibanDetail__title">載入中...</h1>
+              <p class="ichibanDetail__subtitle">請稍候，正在取得商品資訊。</p>
+            </template>
+
+            <template v-else-if="errorMsg">
+              <p class="ichibanDetail__eyebrow">ERROR</p>
+              <h1 class="ichibanDetail__title">載入失敗</h1>
+              <p class="ichibanDetail__subtitle">{{ errorMsg }}</p>
+
+              <div class="ichibanDetail__actions">
+                <KujiButton variant="secondary" block @click="reload">
+                  重新載入
+                </KujiButton>
+              </div>
+            </template>
+
+            <template v-else>
+              <p class="ichibanDetail__eyebrow">STARO ITEM</p>
+
+              <h1 class="ichibanDetail__title">{{ kujiTitle }}</h1>
+
+              <p v-if="kujiSubTitle" class="ichibanDetail__subtitle">
+                {{ kujiSubTitle }}
+              </p>
+
+              <div class="ichibanDetail__priceBox">
+                <span class="ichibanDetail__priceBoxTag">特價</span>
+
+                <div class="ichibanDetail__priceBoxRight">
+                  <span class="ichibanDetail__priceBoxNumber">
+                    <NumberFormatter :number="displayPrice" locale="zh-TW" />
+                  </span>
+                  <span class="ichibanDetail__priceBoxUnit">元</span>
                 </div>
-              </template>
+              </div>
 
-              <template v-else>
-                <h1 class="ichibanDetail__title">{{ kujiTitle }}</h1>
-                <p class="ichibanDetail__subtitle">{{ kujiSubTitle }}</p>
-
-                <div class="ichibanDetail__priceBox">
-                  <div class="ichibanDetail__priceBoxLeft">
-                    <span class="ichibanDetail__priceBoxTag">特價</span>
-                  </div>
-
-                  <div class="ichibanDetail__priceBoxRight">
-                    <span class="ichibanDetail__priceBoxNumber">
-                      <NumberFormatter :number="displayPrice" locale="zh-TW" />
-                    </span>
-                    <span class="ichibanDetail__priceBoxUnit">元</span>
-                  </div>
-                </div>
-
+              <div class="ichibanDetail__metaWrap">
                 <IchibanMetaInfo
                   :detail="detail"
                   :play-mode-text="playModeText"
                   :period-text="periodText"
                   :tags="tags"
                 />
+              </div>
 
-                <div v-if="protectionInfo" class="ichibanDetail__protection">
-                  <div class="protection-badge">
-                    <span class="protection-icon" aria-hidden="true">
-                      <font-awesome-icon :icon="['fas', 'shield-halved']" />
-                    </span>
+              <div v-if="protectionInfo" class="ichibanDetail__protection">
+                <div class="protection-badge">
+                  <div class="protection-content">
+                    <div class="protection-title">開套者保護期</div>
 
-                    <div class="protection-content">
-                      <div class="protection-title">開套者保護期</div>
-                      <div class="protection-message">
-                        {{ protectionInfo.message }}
-                      </div>
-                      <div
-                        v-if="protectionCountdownText"
-                        class="protection-countdown"
-                      >
-                        保護剩餘：{{ protectionCountdownText }}
-                      </div>
-                      <div
-                        class="protection-detail"
-                        v-if="protectionInfo.endTime"
-                      >
-                        有效期限：{{ protectionInfo.endTime }}
-                      </div>
+                    <div class="protection-message">
+                      {{ protectionInfo.message }}
+                    </div>
+
+                    <div
+                      v-if="protectionCountdownText"
+                      class="protection-countdown"
+                    >
+                      保護剩餘：{{ protectionCountdownText }}
+                    </div>
+
+                    <div
+                      v-if="protectionInfo.endTime"
+                      class="protection-detail"
+                    >
+                      有效期限：{{ protectionInfo.endTime }}
                     </div>
                   </div>
                 </div>
+              </div>
 
-                <!-- 開套者指定大獎橫幅 (FE-1) -->
-                <div
-                  v-if="showOpenerBanner"
-                  class="ichibanDetail__designation-banner"
-                >
-                  <div class="designation-badge">
-                    <span class="designation-icon" aria-hidden="true">
-                      <font-awesome-icon :icon="['fas', 'trophy']" />
-                    </span>
-                    <div class="designation-content">
-                      <div class="designation-title">指定大獎號碼</div>
-                      <div class="designation-message">
-                        您是開套者，請先指定大獎號碼才能開始抽獎。
-                      </div>
+              <div
+                v-if="showOpenerBanner"
+                class="ichibanDetail__designation-banner"
+              >
+                <div class="designation-badge">
+                  <div class="designation-content">
+                    <div class="designation-title">指定大獎號碼</div>
+                    <div class="designation-message">
+                      您是開套者，請先指定大獎號碼才能開始抽獎。
                     </div>
-                    <KujiButton
-                      variant="primary"
-                      size="sm"
-                      @click="triggerDesignationFromSession"
-                    >
-                      立即指定
-                    </KujiButton>
-                  </div>
-                </div>
-
-                <!-- 扭蛋次數選擇（1-10），僅 GACHA 模式顯示 -->
-                <div v-if="isGacha" class="ichibanDetail__gachaCount">
-                  <div class="ichibanDetail__gachaCountHead">
-                    <span class="ichibanDetail__gachaCountLabel">扭蛋次數</span>
-                    <span class="ichibanDetail__gachaCountHint"
-                      >選擇一次要扭幾顆</span
-                    >
                   </div>
 
-                  <div class="ichibanDetail__gachaCountBtns">
-                    <button
-                      v-for="n in [1, 2, 3, 5, 10]"
-                      :key="n"
-                      type="button"
-                      :class="[
-                        'ichibanDetail__gachaCountBtn',
-                        { 'is-active': gachaCount === n },
-                      ]"
-                      @click="gachaCount = n"
-                    >
-                      <span class="ichibanDetail__gachaCountBtnNumber">{{
-                        n
-                      }}</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div class="ichibanDetail__actions">
                   <KujiButton
-                    class="ichibanDetail__cta ichibanDetail__cta--primary"
                     variant="primary"
-                    block
-                    @click="handlePrimaryAction"
+                    size="sm"
+                    @click="triggerDesignationFromSession"
                   >
-                    {{ primaryCtaText }}
-                  </KujiButton>
-
-                  <KujiButton
-                    class="ichibanDetail__cta ichibanDetail__cta--secondary"
-                    variant="secondary"
-                    block
-                    @click="handleViewStatus"
-                  >
-                    <template #icon>
-                      <span class="ichibanDetail__ctaIcon">
-                        <font-awesome-icon :icon="['fas', 'square-check']" />
-                      </span>
-                    </template>
-                    檢視抽況
+                    立即指定
                   </KujiButton>
                 </div>
-              </template>
-            </aside>
-          </div>
+              </div>
+
+              <div v-if="isGacha" class="ichibanDetail__gachaCount">
+                <div class="ichibanDetail__gachaCountHead">
+                  <span class="ichibanDetail__gachaCountLabel">扭蛋次數</span>
+                  <span class="ichibanDetail__gachaCountHint">
+                    選擇一次要扭幾顆
+                  </span>
+                </div>
+
+                <div class="ichibanDetail__gachaCountBtns">
+                  <button
+                    v-for="n in [1, 2, 3, 5, 10]"
+                    :key="n"
+                    type="button"
+                    :class="[
+                      'ichibanDetail__gachaCountBtn',
+                      { 'is-active': gachaCount === n },
+                    ]"
+                    @click="gachaCount = n"
+                  >
+                    {{ n }}
+                  </button>
+                </div>
+              </div>
+
+              <div class="ichibanDetail__actions">
+                <KujiButton
+                  class="ichibanDetail__cta ichibanDetail__cta--primary"
+                  variant="primary"
+                  block
+                  @click="handlePrimaryAction"
+                >
+                  <template #icon>
+                    <span class="ichibanDetail__ctaIcon">
+                      <font-awesome-icon
+                        :icon="
+                          isGacha
+                            ? 'fa-capsules'
+                            : isScratchMode
+                              ? 'fa-wand-magic-sparkles'
+                              : 'fa-gift'
+                        "
+                      />
+                    </span>
+                  </template>
+
+                  {{ primaryCtaText }}
+                </KujiButton>
+
+                <KujiButton
+                  class="ichibanDetail__cta ichibanDetail__cta--secondary"
+                  variant="secondary"
+                  block
+                  @click="handleViewStatus"
+                >
+                  檢視抽況
+                </KujiButton>
+              </div>
+            </template>
+          </aside>
         </div>
       </section>
-      <!-- 賞品介紹 -->
-      <section class="ichibanDetail__intro" v-if="detail?.content">
-        <header class="ichibanDetail__intro-header">
-          <h2 class="ichibanDetail__intro-title">賞品介紹</h2>
+
+      <section v-if="detail?.content" class="ichibanDetail__intro">
+        <header class="ichibanDetail__sectionHeader">
+          <p class="ichibanDetail__sectionEyebrow">DETAIL</p>
+          <h2 class="ichibanDetail__sectionTitle">賞品介紹</h2>
         </header>
 
-        <div class="ichibanDetail__intro-body">
-          <div class="ichibanDetail__intro-content" v-html="detail.content" />
+        <div class="ichibanDetail__introBody">
+          <div class="ichibanDetail__introContent" v-html="detail.content" />
         </div>
       </section>
 
       <section class="ichibanDetail__prizes">
-        <header class="ichibanDetail__prizes-header">
-          <h2 class="ichibanDetail__prizes-title">賞品一覽</h2>
+        <header class="ichibanDetail__sectionHeader">
+          <p class="ichibanDetail__sectionEyebrow">PRIZES</p>
+          <h2 class="ichibanDetail__sectionTitle">賞品一覽</h2>
         </header>
 
         <div class="ichibanDetail__prizes-grid">
@@ -215,36 +224,44 @@
         </div>
       </section>
 
-      <!-- 抽況 / 格數選擇 -->
       <section
-        class="ichibanDetail__status"
-        ref="statusSectionRef"
         v-if="!isGacha"
+        ref="statusSectionRef"
+        class="ichibanDetail__status"
       >
-        <h2 class="ichibanDetail__status-title">
-          {{ isScratchMode ? '選擇格數' : '檢視抽況' }}
-        </h2>
+        <header class="ichibanDetail__sectionHeader">
+          <p class="ichibanDetail__sectionEyebrow">
+            {{ isScratchMode ? 'SELECT' : 'STATUS' }}
+          </p>
+          <h2 class="ichibanDetail__sectionTitle">
+            {{ isScratchMode ? '選擇格數' : '檢視抽況' }}
+          </h2>
+        </header>
 
-        <!-- ✅ 刮刮樂大獎提示（顯示中獎號碼） -->
         <div
           v-if="isScratchMode && designatedWinningNumbers.length"
           class="ichibanDetail__grandPrizeBanner"
         >
           <div class="grand-prize-announcement">
-            <div class="grand-prize-icon" aria-hidden="true">🏆</div>
             <div class="grand-prize-content">
               <div class="grand-prize-title">中獎號碼公告</div>
+
               <div
                 v-for="(group, idx) in grandPrizeDisplay"
                 :key="idx"
                 class="grand-prize-item"
               >
-                <strong class="grand-prize-numbers">{{
-                  group.numbers.join('、')
-                }}</strong>
+                <strong class="grand-prize-numbers">
+                  {{ group.numbers.join('、') }}
+                </strong>
+
                 <span class="grand-prize-arrow">→</span>
-                <span class="grand-prize-name">{{ group.prizeName }}</span>
+
+                <span class="grand-prize-name">
+                  {{ group.prizeName }}
+                </span>
               </div>
+
               <div class="grand-prize-hint">刮中以上號碼即可獲得對應大獎！</div>
             </div>
           </div>
@@ -297,7 +314,6 @@
       @exchange="handleExchange"
     />
 
-    <!-- 刮刮樂確認面板 -->
     <IchibanScratchPanel
       :is-open="isScratchPanelOpen"
       :ticket-numbers="activeCardNumbers"
@@ -308,7 +324,6 @@
       @scratch="handleScratchFromPanel"
     />
 
-    <!-- 🎯 大獎指定對話框 -->
     <PrizeDesignationDialog
       v-if="showDesignationDialog"
       :available-numbers="designationAvailableNumbers"
@@ -320,7 +335,6 @@
       @close="onDesignationCancel"
     />
 
-    <!-- 非開套玩家等待 overlay (FE-2 / FE-4) -->
     <DesignationWaitingOverlay
       :show="showWaitingOverlay"
       :opener-deadline="waitingOpenerDeadline"
@@ -394,8 +408,8 @@ const kujiId = computed(() => String(route.params.id || ''));
  * ----------------------------- */
 type TicketItem = {
   id: string; //  UUID
-  ticketNumber: number;      // 物理位置（第幾格），用來定位 grid 哪格要更新
-  revealedNumber?: number | null;  // 刮開後顯示的亂數（隨機洗牌），僅作顯示用，不代表格子位置
+  ticketNumber: number; // 物理位置（第幾格），用來定位 grid 哪格要更新
+  revealedNumber?: number | null; // 刮開後顯示的亂數（隨機洗牌），僅作顯示用，不代表格子位置
   status: 'AVAILABLE' | 'DRAWN' | 'RESERVED' | 'LOCKED' | string;
   isDesignatedPrize?: boolean;
 
@@ -568,9 +582,7 @@ const isGacha = computed(() => {
   const category = String(detail.value?.category ?? '').toUpperCase();
   const m = String(detail.value?.playMode ?? '').toUpperCase();
   return (
-    category === 'GACHA' &&
-    m !== 'SCRATCH_MODE' &&
-    m !== 'SCRATCH_CARD_MODE'
+    category === 'GACHA' && m !== 'SCRATCH_MODE' && m !== 'SCRATCH_CARD_MODE'
   );
 });
 
@@ -633,7 +645,9 @@ const startProtectionTimer = (endTime?: string | null) => {
   if (protectionSecondsLeft.value <= 0) return;
 
   protectionTimer = setInterval(() => {
-    protectionSecondsLeft.value = calcProtectionSeconds(protectionEndTime.value);
+    protectionSecondsLeft.value = calcProtectionSeconds(
+      protectionEndTime.value,
+    );
     if (protectionSecondsLeft.value <= 0) {
       protectionEndTime.value = null;
       if (session.value) {
@@ -671,7 +685,9 @@ const formatDateTime = (iso?: string | null) => {
 };
 
 const isProtectionBlockedState = (reason?: string | null) => {
-  const text = String(reason ?? '').trim().toLowerCase();
+  const text = String(reason ?? '')
+    .trim()
+    .toLowerCase();
   if (!text) return false;
   return (
     text.includes('draw is blocked until protection ends') ||
@@ -825,7 +841,9 @@ const prizes = computed(() => {
     return a._num - b._num;
   });
 
-  return mapped.map(({ _lvlOrder, _num, _isLast, _isGrand, ...rest }: any) => rest);
+  return mapped.map(
+    ({ _lvlOrder, _num, _isLast, _isGrand, ...rest }: any) => rest,
+  );
 });
 
 /* -----------------------------
@@ -1071,7 +1089,9 @@ const resolvePaymentTypeFromResults = (
   results: DrawResult[],
 ): 'GOLD' | 'BONUS' => {
   for (const item of results) {
-    const typed = String((item as any)?.costType ?? (item as any)?.paymentType ?? '').toUpperCase();
+    const typed = String(
+      (item as any)?.costType ?? (item as any)?.paymentType ?? '',
+    ).toUpperCase();
     if (typed === 'GOLD' || typed === 'BONUS') return typed;
   }
 
@@ -1561,7 +1581,11 @@ const handleExchange = async (payload: {
 
           const drawnCount = drawResults.length;
           const paymentType = resolvePaymentTypeFromResults(drawResults);
-          const totalPrice = calcTotalSpend(drawResults, drawnCount, paymentType);
+          const totalPrice = calcTotalSpend(
+            drawResults,
+            drawnCount,
+            paymentType,
+          );
           const costTypeLabel = getPaymentLabel(paymentType);
           const beforeRemain = Math.max(
             0,
@@ -2005,7 +2029,9 @@ const handleScratch = async (ticketIdOverride?: string) => {
     return;
   }
 
-  const { result, blocked, rawData } = await drawScratchTicket(String(selectedTicketId));
+  const { result, blocked, rawData } = await drawScratchTicket(
+    String(selectedTicketId),
+  );
   if (blocked || !result) return;
 
   overlay.open();
@@ -2040,129 +2066,481 @@ const handleScratch = async (ticketIdOverride?: string) => {
 };
 </script>
 <style scoped lang="scss">
-$wine-base: #5c0505;
-$wine-950: #120101;
-$wine-900: #1c0202;
-$wine-850: #260303;
-$wine-800: #320404;
-$wine-700: #470505;
-$wine-600: #5c0505;
-$wine-500: #7a1016;
-$wine-400: #9b2430;
-$wine-300: #bc4658;
+.ichibanDetail {
+  min-height: 100vh;
+  position: relative;
+  z-index: 9;
 
-$rose-100: #fff5f5;
-$rose-200: #ffe8ea;
-$rose-300: #f4c6cc;
-$rose-400: #e4a3ad;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(180, 51, 37, 0.06), transparent 30%),
+    radial-gradient(
+      circle at 92% 10%,
+      rgba(229, 166, 87, 0.12),
+      transparent 28%
+    ),
+    #fff;
 
-$gold-300: #efd6a0;
-$gold-400: #d9b56c;
+  color: #241610;
 
-/* 保護期提示樣式 */
-.ichibanDetail__protection {
-  margin: 16px 0;
+  --primary: #b43325;
+  --primary-dark: #3f2412;
+  --primary-soft: rgba(180, 51, 37, 0.1);
+  --gold: #e4aa43;
+  --gold-soft: rgba(228, 170, 67, 0.18);
+  --cream: #fff8ef;
+  --text: #241610;
+  --text-soft: rgba(36, 22, 16, 0.58);
+  --line: rgba(63, 36, 18, 0.1);
+  --danger: #b42318;
 }
 
-.protection-badge {
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 14px 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+.ichibanDetail__main {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  padding: 34px 20px 64px;
 }
 
-.protection-icon {
-  font-size: 24px;
-  line-height: 1;
+/* ==============================
+ * Hero
+ * ============================== */
+.ichibanDetail__hero {
+  position: relative;
+  overflow: hidden;
+  padding: 26px;
+
+  border-radius: 34px;
+  background:
+    radial-gradient(
+      circle at 8% 0%,
+      rgba(255, 255, 255, 0.32),
+      transparent 32%
+    ),
+    linear-gradient(135deg, #4a2617 0%, #b43325 58%, #d66b42 100%);
+  box-shadow: 0 26px 70px rgba(63, 36, 18, 0.12);
+
+  &::after {
+    content: '';
+    position: absolute;
+    right: -110px;
+    top: -130px;
+    width: 330px;
+    height: 330px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.12);
+    pointer-events: none;
+  }
 }
 
-.protection-content {
-  flex: 1;
-  color: #fff;
+.ichibanDetail__hero-bg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+
+  background:
+    radial-gradient(
+      circle at 86% 18%,
+      rgba(228, 170, 67, 0.24),
+      transparent 26%
+    ),
+    radial-gradient(
+      circle at 18% 100%,
+      rgba(255, 255, 255, 0.12),
+      transparent 30%
+    );
 }
 
-.protection-title {
-  font-size: 14px;
-  font-weight: 700;
-  margin-bottom: 4px;
-  opacity: 0.95;
+.ichibanDetail__heroHead,
+.ichibanDetail__hero-inner {
+  position: relative;
+  z-index: 1;
 }
 
-.protection-message {
-  font-size: 15px;
-  font-weight: 600;
-  margin-bottom: 4px;
+.ichibanDetail__heroHead {
+  margin-bottom: 22px;
 }
 
-.protection-countdown {
+.ichibanDetail__hero-inner {
+  padding: 0;
+}
+
+/* ==============================
+ * Breadcrumb
+ * ============================== */
+.ichibanDetail__breadcrumb {
+  width: fit-content;
+  max-width: 100%;
+  min-height: 38px;
+  padding: 0 16px;
+  border-radius: 999px;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  background: rgba(255, 255, 255, 0.18);
+  color: rgba(255, 255, 255, 0.78);
+  backdrop-filter: blur(10px);
+
   font-size: 13px;
-  font-weight: 700;
-  margin-bottom: 4px;
-  color: rgba(255, 255, 255, 0.96);
+  font-weight: 850;
+
+  svg {
+    color: #ffe0a3;
+    font-size: 12px;
+  }
 }
 
-.protection-detail {
+.ichibanDetail__breadcrumbSep {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.ichibanDetail__breadcrumb-current {
+  color: #fff;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.clickable {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+
+  color: #ffe0a3;
+  font-weight: 950;
+
+  &:hover {
+    color: #fff;
+  }
+}
+
+/* ==============================
+ * Top Layout
+ * ============================== */
+.ichibanDetail__top {
+  position: relative;
+  z-index: 1;
+
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(360px, 0.72fr);
+  gap: 24px;
+  align-items: stretch;
+}
+
+/* ==============================
+ * Media / Banner / Gallery
+ * ============================== */
+.ichibanDetail__mediaCard,
+.ichibanDetail__banner {
+  overflow: hidden;
+}
+
+.ichibanDetail__mediaCard {
+  padding: 14px;
+
+  border-radius: 30px;
+  background: rgba(255, 255, 255, 0.92);
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  box-shadow: 0 18px 44px rgba(63, 36, 18, 0.16);
+}
+
+.ichibanDetail__banner {
+  border-radius: 22px;
+  background: var(--cream);
+
+  img {
+    width: 100%;
+    aspect-ratio: 16 / 10;
+    object-fit: cover;
+    display: block;
+  }
+}
+
+.ichibanDetail__gallery {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.ichibanDetail__galleryItem {
+  flex: 0 0 76px;
+  width: 76px;
+  height: 76px;
+  padding: 4px;
+
+  border-radius: 18px;
+  border: 1px solid rgba(180, 51, 37, 0.14);
+
+  background: #fff;
+  cursor: pointer;
+
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease;
+
+  img {
+    width: 100%;
+    height: 100%;
+    border-radius: 14px;
+    object-fit: cover;
+  }
+
+  &:hover {
+    transform: translateY(-1px);
+    border-color: rgba(180, 51, 37, 0.32);
+  }
+
+  &.is-active {
+    border-color: var(--primary);
+    box-shadow: 0 10px 22px rgba(180, 51, 37, 0.18);
+  }
+}
+
+/* ==============================
+ * Info Card
+ * ============================== */
+.ichibanDetail__info {
+  min-width: 0;
+  padding: 32px;
+
+  display: flex;
+  flex-direction: column;
+
+  border-radius: 30px;
+  background:
+    radial-gradient(circle at 92% 8%, rgba(180, 51, 37, 0.08), transparent 34%),
+    linear-gradient(180deg, #fff8ef 0%, #ffffff 66%);
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  box-shadow: 0 18px 44px rgba(63, 36, 18, 0.16);
+}
+
+.ichibanDetail__eyebrow {
+  width: fit-content;
+  min-height: 26px;
+  padding: 0 12px;
+  border-radius: 999px;
+  margin: 0 0 12px;
+
+  display: inline-flex;
+  align-items: center;
+
+  background: rgba(180, 51, 37, 0.1);
+  color: var(--primary);
+
   font-size: 12px;
-  opacity: 0.85;
+  font-weight: 950;
+  letter-spacing: 1.6px;
 }
 
-/* 開套者指定大獎橫幅 */
+.ichibanDetail__title {
+  margin: 0;
+  color: var(--text);
+  font-size: 32px;
+  line-height: 1.25;
+  font-weight: 950;
+  letter-spacing: 1px;
+}
+
+.ichibanDetail__subtitle {
+  margin: 10px 0 0;
+  color: var(--text-soft);
+  font-size: 15px;
+  line-height: 1.8;
+  font-weight: 800;
+}
+
+/* ==============================
+ * Price
+ * ============================== */
+.ichibanDetail__priceBox {
+  margin: 24px 0 18px;
+  padding: 16px 18px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid var(--line);
+  box-shadow: 0 14px 32px rgba(63, 36, 18, 0.06);
+}
+
+.ichibanDetail__priceBoxLeft {
+  flex: 0 0 auto;
+}
+
+.ichibanDetail__priceBoxTag {
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+
+  background: var(--primary-soft);
+  color: var(--primary);
+
+  font-size: 13px;
+  font-weight: 950;
+  letter-spacing: 1px;
+
+  svg {
+    color: var(--gold);
+    font-size: 12px;
+  }
+}
+
+.ichibanDetail__priceBoxRight {
+  display: flex;
+  align-items: baseline;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.ichibanDetail__priceBoxNumber {
+  color: var(--primary);
+  font-size: 34px;
+  line-height: 1;
+  font-weight: 950;
+  letter-spacing: -1px;
+}
+
+.ichibanDetail__priceBoxUnit {
+  color: var(--text-soft);
+  font-size: 15px;
+  font-weight: 950;
+}
+
+/* ==============================
+ * Meta Info Fix
+ * ============================== */
+.ichibanDetail__metaWrap {
+  margin-top: 4px;
+  color: var(--text);
+}
+
+/* 修掉 IchibanMetaInfo 裡面白字看不到 */
+.ichibanDetail__metaWrap :deep(*) {
+  color: inherit;
+}
+
+.ichibanDetail__metaWrap :deep([class*='label']),
+.ichibanDetail__metaWrap :deep([class*='Label']),
+.ichibanDetail__metaWrap :deep([class*='title']),
+.ichibanDetail__metaWrap :deep([class*='Title']) {
+  color: var(--text-soft) !important;
+}
+
+.ichibanDetail__metaWrap :deep([class*='value']),
+.ichibanDetail__metaWrap :deep([class*='Value']),
+.ichibanDetail__metaWrap :deep(span),
+.ichibanDetail__metaWrap :deep(p),
+.ichibanDetail__metaWrap :deep(div) {
+  color: var(--text) !important;
+}
+
+/* ==============================
+ * Protection / Designation
+ * ============================== */
+.ichibanDetail__protection,
 .ichibanDetail__designation-banner {
-  margin: 8px 0;
+  margin: 16px 0 0;
 }
 
+.protection-badge,
 .designation-badge {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 16px;
-  background: linear-gradient(135deg, #b45309 0%, #d97706 100%);
-  border-radius: 12px;
-  color: #fff;
+  gap: 14px;
+  padding: 16px;
+
+  border-radius: 20px;
+  border: 1px solid var(--line);
 }
 
+.protection-badge {
+  background: rgba(79, 70, 229, 0.08);
+}
+
+.designation-badge {
+  background: rgba(228, 170, 67, 0.16);
+}
+
+.protection-icon,
 .designation-icon {
-  font-size: 1.4rem;
-  flex-shrink: 0;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 38px;
+  border-radius: 14px;
+
+  display: grid;
+  place-items: center;
+
+  background: rgba(180, 51, 37, 0.1);
+  color: var(--primary);
+
+  font-size: 17px;
 }
 
+.protection-content,
 .designation-content {
   flex: 1;
   min-width: 0;
 }
 
+.protection-title,
 .designation-title {
-  font-size: 0.85rem;
-  font-weight: 700;
-  opacity: 0.9;
+  margin-bottom: 4px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 950;
 }
 
+.protection-message,
 .designation-message {
-  font-size: 0.8rem;
-  margin-top: 2px;
-  line-height: 1.4;
+  color: var(--text-soft);
+  font-size: 13px;
+  line-height: 1.6;
+  font-weight: 800;
 }
 
-/* 扭蛋次數選擇器 */
+.protection-countdown {
+  margin-top: 4px;
+  color: var(--primary);
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.protection-detail {
+  margin-top: 4px;
+  color: var(--text-soft);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+/* ==============================
+ * Gacha Count
+ * ============================== */
 .ichibanDetail__gachaCount {
-  margin: 16px 0 18px;
-  padding: 16px;
-  border-radius: 18px;
-  border: 1px solid rgba($gold-400, 0.28);
-  background:
-    radial-gradient(
-      circle at top left,
-      rgba($wine-300, 0.18) 0%,
-      rgba($wine-300, 0) 34%
-    ),
-    linear-gradient(145deg, $wine-950 0%, $wine-850 42%, $wine-700 100%);
-  box-shadow:
-    0 14px 30px rgba($wine-950, 0.26),
-    inset 0 1px 0 rgba(#fff, 0.08),
-    inset 0 0 0 1px rgba($gold-300, 0.08);
+  margin: 18px 0 0;
+  padding: 18px;
+
+  border-radius: 22px;
+  background: #fff;
+  border: 1px solid var(--line);
+  box-shadow: 0 14px 32px rgba(63, 36, 18, 0.06);
 }
 
 .ichibanDetail__gachaCountHead {
@@ -2177,28 +2555,21 @@ $gold-400: #d9b56c;
 .ichibanDetail__gachaCountLabel {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  min-height: 32px;
-  padding: 0 12px;
-  border-radius: 999px;
-  background: linear-gradient(
-    135deg,
-    rgba($gold-300, 0.22),
-    rgba($gold-400, 0.12)
-  );
-  border: 1px solid rgba($gold-300, 0.4);
-  color: $gold-300;
-  font-size: 13px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  white-space: nowrap;
-  box-shadow: inset 0 1px 0 rgba(#fff, 0.12);
+  gap: 8px;
+
+  color: var(--text);
+  font-size: 15px;
+  font-weight: 950;
+
+  svg {
+    color: var(--primary);
+  }
 }
 
 .ichibanDetail__gachaCountHint {
-  font-size: 12px;
-  color: rgba($rose-200, 0.86);
-  letter-spacing: 0.02em;
+  color: var(--text-soft);
+  font-size: 13px;
+  font-weight: 800;
 }
 
 .ichibanDetail__gachaCountBtns {
@@ -2208,218 +2579,436 @@ $gold-400: #d9b56c;
 }
 
 .ichibanDetail__gachaCountBtn {
-  position: relative;
-  min-height: 58px;
-  padding: 10px 8px;
-  border: 1px solid rgba($gold-300, 0.18);
+  min-height: 52px;
   border-radius: 16px;
-  background: linear-gradient(
-    180deg,
-    rgba($wine-400, 0.16) 0%,
-    rgba($wine-800, 0.9) 100%
-  );
-  color: $rose-100;
-  cursor: pointer;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  transition:
-    transform 0.18s ease,
-    box-shadow 0.18s ease,
-    border-color 0.18s ease,
-    background 0.18s ease,
-    color 0.18s ease;
-  box-shadow:
-    0 8px 18px rgba($wine-950, 0.22),
-    inset 0 1px 0 rgba(#fff, 0.06);
+  border: 1px solid rgba(180, 51, 37, 0.14);
 
-  &::before {
-    content: '';
-    position: absolute;
-    inset: 1px;
-    border-radius: 15px;
-    background: linear-gradient(
-      180deg,
-      rgba(#fff, 0.08) 0%,
-      rgba(#fff, 0.02) 30%,
-      rgba(#fff, 0) 100%
-    );
-    pointer-events: none;
-  }
+  display: grid;
+  place-items: center;
+
+  background: var(--cream);
+  color: var(--text);
+
+  font-size: 20px;
+  font-weight: 950;
+  cursor: pointer;
+
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    background 0.16s ease,
+    color 0.16s ease,
+    box-shadow 0.16s ease;
 
   &:hover {
-    transform: translateY(-2px);
-    border-color: rgba($gold-300, 0.48);
-    color: #fff;
-    box-shadow:
-      0 12px 24px rgba($wine-950, 0.28),
-      0 0 0 1px rgba($gold-300, 0.12),
-      inset 0 1px 0 rgba(#fff, 0.1);
-  }
-
-  &:active {
-    transform: translateY(0);
+    transform: translateY(-1px);
+    border-color: rgba(180, 51, 37, 0.28);
+    color: var(--primary);
   }
 
   &.is-active {
-    border-color: rgba($gold-300, 0.72);
-    background:
-      radial-gradient(
-        circle at top,
-        rgba($gold-300, 0.3) 0%,
-        rgba($gold-300, 0.08) 25%,
-        rgba($gold-300, 0) 55%
-      ),
-      linear-gradient(180deg, $wine-400 0%, $wine-600 48%, $wine-800 100%);
+    border-color: var(--primary);
+    background: linear-gradient(135deg, var(--primary) 0%, #d66b42 100%);
     color: #fff;
-    box-shadow:
-      0 14px 28px rgba($wine-950, 0.34),
-      0 0 0 1px rgba($gold-300, 0.2),
-      0 0 18px rgba($gold-400, 0.18),
-      inset 0 1px 0 rgba(#fff, 0.18);
-
-    .ichibanDetail__gachaCountBtnNumber {
-      color: $gold-300;
-      text-shadow: 0 0 14px rgba($gold-400, 0.22);
-    }
-
-    .ichibanDetail__gachaCountBtnUnit {
-      color: $rose-100;
-    }
+    box-shadow: 0 12px 24px rgba(180, 51, 37, 0.18);
   }
 }
 
 .ichibanDetail__gachaCountBtnNumber {
-  position: relative;
-  z-index: 1;
   font-size: 22px;
-  line-height: 1;
-  font-weight: 900;
-  letter-spacing: 0.01em;
+  font-weight: 950;
 }
 
-.ichibanDetail__gachaCountBtnUnit {
-  position: relative;
-  z-index: 1;
+/* ==============================
+ * Actions
+ * ============================== */
+.ichibanDetail__actions {
+  display: grid;
+  gap: 12px;
+  margin-top: auto;
+  padding-top: 22px;
+}
+
+.ichibanDetail__cta {
+  min-height: 56px;
+}
+
+.ichibanDetail__ctaIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* ==============================
+ * Sections
+ * ============================== */
+.ichibanDetail__intro,
+.ichibanDetail__prizes,
+.ichibanDetail__status {
+  margin-top: 28px;
+  padding: 28px;
+
+  border-radius: 34px;
+  background: #fff;
+  border: 1px solid var(--line);
+  box-shadow: 0 18px 48px rgba(63, 36, 18, 0.08);
+}
+
+.ichibanDetail__intro-header,
+.ichibanDetail__prizes-header,
+.ichibanDetail__sectionHeader {
+  margin-bottom: 18px;
+}
+
+.ichibanDetail__sectionEyebrow {
+  width: fit-content;
+  min-height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  margin: 0 0 8px;
+
+  display: inline-flex;
+  align-items: center;
+
+  background: var(--primary-soft);
+  color: var(--primary);
+
   font-size: 11px;
-  line-height: 1;
-  font-weight: 700;
-  color: rgba($rose-200, 0.85);
-  letter-spacing: 0.08em;
+  font-weight: 950;
+  letter-spacing: 1.4px;
 }
 
-/* 刮刮樂大獎提示 */
+.ichibanDetail__intro-title,
+.ichibanDetail__prizes-title,
+.ichibanDetail__status-title,
+.ichibanDetail__sectionTitle {
+  margin: 0;
+
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+
+  color: var(--text);
+  font-size: 26px;
+  line-height: 1.3;
+  font-weight: 950;
+  letter-spacing: 1px;
+
+  svg {
+    color: var(--primary);
+    font-size: 18px;
+  }
+}
+
+.ichibanDetail__intro-body,
+.ichibanDetail__introBody {
+  padding: 20px;
+  border-radius: 24px;
+  background: var(--cream);
+  border: 1px solid var(--line);
+}
+
+.ichibanDetail__intro-content,
+.ichibanDetail__introContent {
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.85;
+  font-weight: 700;
+
+  :deep(img) {
+    max-width: 100%;
+    height: auto;
+    border-radius: 18px;
+  }
+
+  :deep(p) {
+    margin: 0 0 12px;
+  }
+
+  :deep(p:last-child) {
+    margin-bottom: 0;
+  }
+}
+
+.ichibanDetail__prizes-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 18px;
+}
+
+/* ==============================
+ * Grand Prize Banner
+ * ============================== */
 .ichibanDetail__grandPrizeBanner {
-  padding: 14px 18px;
-  margin-bottom: 16px;
+  margin: 18px 0;
+  padding: 18px;
+
+  border-radius: 24px;
   background: linear-gradient(135deg, #fff8e7 0%, #fff3cd 100%);
-  border: 2px solid #f5c518;
-  border-radius: 12px;
+  border: 1px solid rgba(228, 170, 67, 0.34);
+  box-shadow: 0 14px 32px rgba(180, 83, 9, 0.08);
 }
 
 .grand-prize-announcement {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 14px;
 }
 
 .grand-prize-icon {
-  font-size: 28px;
-  line-height: 1;
-  flex-shrink: 0;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: 16px;
+
+  display: grid;
+  place-items: center;
+
+  background: rgba(228, 170, 67, 0.22);
+  color: #92400e;
+  font-size: 22px;
 }
 
 .grand-prize-content {
   flex: 1;
+  min-width: 0;
 }
 
 .grand-prize-title {
-  font-size: 16px;
-  font-weight: 700;
-  color: #b8860b;
   margin-bottom: 8px;
+  color: #92400e;
+  font-size: 16px;
+  font-weight: 950;
 }
 
 .grand-prize-item {
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 6px;
-  font-size: 14px;
-  color: #6b4c00;
+  flex-wrap: wrap;
 
-  &:last-of-type {
-    margin-bottom: 8px;
-  }
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.6;
+  font-weight: 850;
 }
 
 .grand-prize-numbers {
-  font-weight: 700;
-  color: #d4880f;
-  font-size: 16px;
+  color: var(--primary);
 }
 
 .grand-prize-arrow {
-  color: #b8860b;
-  font-weight: 600;
-}
-
-.grand-prize-name {
-  font-weight: 600;
-  color: #6b4c00;
+  color: rgba(36, 22, 16, 0.4);
 }
 
 .grand-prize-hint {
-  font-size: 12px;
-  color: #8b6914;
-  font-style: italic;
-  margin-top: 4px;
+  margin-top: 8px;
+  color: rgba(36, 22, 16, 0.62);
+  font-size: 13px;
+  font-weight: 800;
 }
 
-@media (max-width: 768px) {
-  .ichibanDetail__gachaCount {
-    padding: 14px;
+/* ==============================
+ * Status
+ * ============================== */
+.ichibanDetail__status {
+  scroll-margin-top: 24px;
+}
+
+.ichibanDetail__status-title {
+  margin-bottom: 18px;
+}
+
+/* ==============================
+ * RWD
+ * ============================== */
+@media (max-width: 1100px) {
+  .ichibanDetail__top {
+    grid-template-columns: 1fr;
+  }
+
+  .ichibanDetail__prizes-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 820px) {
+  .ichibanDetail__main {
+    padding: 22px 16px 48px;
+  }
+
+  .ichibanDetail__hero {
+    padding: 20px;
+    border-radius: 30px;
+  }
+
+  .ichibanDetail__info {
+    padding: 24px;
+    border-radius: 26px;
+  }
+
+  .ichibanDetail__title {
+    font-size: 26px;
+  }
+
+  .ichibanDetail__priceBox {
+    align-items: flex-start;
+    flex-direction: column;
+    border-radius: 24px;
+  }
+
+  .ichibanDetail__priceBoxRight {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .ichibanDetail__intro,
+  .ichibanDetail__prizes,
+  .ichibanDetail__status {
+    padding: 22px;
+    border-radius: 28px;
+  }
+
+  .ichibanDetail__prizes-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+  }
+}
+
+@media (max-width: 560px) {
+  .ichibanDetail {
+    background:
+      radial-gradient(
+        circle at 8% 0%,
+        rgba(180, 51, 37, 0.06),
+        transparent 34%
+      ),
+      #fff;
+  }
+
+  .ichibanDetail__main {
+    width: 100%;
+    padding: 0 0 38px;
+  }
+
+  .ichibanDetail__hero {
+    padding: 18px 14px 20px;
+    border-radius: 0 0 28px 28px;
+    box-shadow: 0 14px 28px rgba(63, 36, 18, 0.12);
+  }
+
+  .ichibanDetail__breadcrumb {
+    width: 100%;
+    min-height: auto;
+    padding: 10px 12px;
+    border-radius: 18px;
+    font-size: 12px;
+    flex-wrap: wrap;
+  }
+
+  .ichibanDetail__breadcrumb-current {
+    max-width: 100%;
+    white-space: normal;
+  }
+
+  .ichibanDetail__top {
+    gap: 16px;
+  }
+
+  .ichibanDetail__mediaCard {
+    padding: 10px;
+    border-radius: 24px;
+  }
+
+  .ichibanDetail__banner {
+    border-radius: 18px;
+  }
+
+  .ichibanDetail__galleryItem {
+    flex-basis: 64px;
+    width: 64px;
+    height: 64px;
     border-radius: 16px;
+  }
+
+  .ichibanDetail__info {
+    padding: 20px 16px;
+    border-radius: 24px;
+  }
+
+  .ichibanDetail__title {
+    font-size: 24px;
+  }
+
+  .ichibanDetail__subtitle {
+    font-size: 14px;
+  }
+
+  .ichibanDetail__priceBoxNumber {
+    font-size: 32px;
+  }
+
+  .designation-badge,
+  .protection-badge {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .ichibanDetail__gachaCountBtns {
+    gap: 8px;
+  }
+
+  .ichibanDetail__gachaCountBtn {
+    min-height: 48px;
+    border-radius: 16px;
+  }
+
+  .ichibanDetail__intro,
+  .ichibanDetail__prizes,
+  .ichibanDetail__status {
+    margin: 18px 14px 0;
+    padding: 18px 14px;
+    border-radius: 24px;
+  }
+
+  .ichibanDetail__intro-title,
+  .ichibanDetail__prizes-title,
+  .ichibanDetail__status-title,
+  .ichibanDetail__sectionTitle {
+    font-size: 22px;
+
+    svg {
+      font-size: 16px;
+    }
+  }
+
+  .ichibanDetail__intro-body,
+  .ichibanDetail__introBody {
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .ichibanDetail__prizes-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .grand-prize-announcement {
+    flex-direction: column;
+  }
+}
+
+@media (max-width: 380px) {
+  .ichibanDetail__title {
+    font-size: 22px;
   }
 
   .ichibanDetail__gachaCountBtns {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
-  .ichibanDetail__gachaCountBtn {
-    min-height: 54px;
-  }
-
-  .ichibanDetail__gachaCountBtnNumber {
-    font-size: 20px;
-  }
-
-  .designation-badge,
-  .protection-badge,
-  .grand-prize-announcement {
-    flex-direction: row;
-  }
-}
-
-@media (max-width: 480px) {
-  .ichibanDetail__gachaCountHead {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .ichibanDetail__gachaCountBtns {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .designation-badge,
-  .protection-badge,
-  .grand-prize-announcement {
-    flex-direction: column;
+  .ichibanDetail__prizes-grid {
+    grid-template-columns: 1fr;
   }
 }
 </style>
-
-
-

@@ -134,14 +134,29 @@ const resolvedRemainingPrizes = computed(() => {
   if (isScratchMode.value) {
     return ~~(props.item?.remainingDraws ?? props.item?.remainingPrizes ?? 0);
   }
-  return ~~(props.item?.remainingTickets ?? props.item?.remainingPrizes ?? props.item?.remainingDraws ?? 0);
+  return ~~(
+    props.item?.remainingTickets ??
+    props.item?.remainingPrizes ??
+    props.item?.remainingDraws ??
+    0
+  );
 });
 
 const resolvedTotalPrizes = computed(() => {
   if (isScratchMode.value) {
-    return ~~(props.item?.maxDraws ?? props.item?.totalDraws ?? props.item?.totalPrizes ?? 0);
+    return ~~(
+      props.item?.maxDraws ??
+      props.item?.totalDraws ??
+      props.item?.totalPrizes ??
+      0
+    );
   }
-  return ~~(props.item?.totalTickets ?? props.item?.totalPrizes ?? props.item?.totalDraws ?? 0);
+  return ~~(
+    props.item?.totalTickets ??
+    props.item?.totalPrizes ??
+    props.item?.totalDraws ??
+    0
+  );
 });
 
 const isTerminalSoldOut = computed(
@@ -153,12 +168,15 @@ const isTerminalSoldOut = computed(
 const terminalStatusLabel = computed(() => {
   if (normalizedStatus.value === 'GRAND_PRIZE_DRAWN') return '大獎已抽完';
   if (isTerminalSoldOut.value) return '已售完';
-  if (['OFF_SHELF', 'FORCED_OFF', 'DELETED', 'INACTIVE'].includes(normalizedStatus.value)) {
+  if (
+    ['OFF_SHELF', 'FORCED_OFF', 'DELETED', 'INACTIVE'].includes(
+      normalizedStatus.value,
+    )
+  ) {
     return '已下架';
   }
   return '';
 });
-
 
 const resolvedTagText = computed(() => {
   return props.item?.storeName || 'KUJI';

@@ -6,19 +6,16 @@ const props = defineProps<{
   isOpen: boolean;
   remaining: number;
 
-  /**  UUID list：送後端用 */
+  /** UUID list：送後端用 */
   activeCards: string[];
 
-  /**  票號 list：顯示用（由父層換好 UUID -> ticketNumber） */
+  /** 票號 list：顯示用（由父層換好 UUID -> ticketNumber） */
   activeCardNumbers: number[];
 }>();
 
 const emit = defineEmits<{
   (e: 'close'): void;
   (e: 'randomSelect', value: number): void;
-  /**
-   *  兌換：只丟 tickets(UUID)，count 由父層 = tickets.length
-   */
   (
     e: 'exchange',
     payload: { type: 'gold' | 'silver'; tickets: string[] },
@@ -26,14 +23,9 @@ const emit = defineEmits<{
 }>();
 
 const showRandom = ref(false);
-const customQuantity = ref(1);
 
 const toggleRandom = () => {
   showRandom.value = !showRandom.value;
-};
-
-const submitCustomRandom = () => {
-  emit('randomSelect', Math.max(1, Number(customQuantity.value || 1)));
 };
 
 const submitQuickRandom = (n: number) => {
@@ -51,93 +43,130 @@ const selectedCount = computed(() =>
   Array.isArray(props.activeCards) ? props.activeCards.length : 0,
 );
 
-/**  顯示用文字（票號） */
 const selectedNumbersText = computed(() => {
   const arr = Array.isArray(props.activeCardNumbers)
     ? props.activeCardNumbers
     : [];
-  return arr.length ? arr.join(', ') : '尚未選擇';
+
+  return arr.length ? arr.join('、') : '尚未選擇';
 });
 </script>
 
 <template>
-  <div class="ichibanDrawPanel" v-if="isOpen">
-    <button class="ichibanDrawPanel__close" @click="emit('close')">✕</button>
+  <transition name="ichibanDrawPanel">
+    <div v-if="isOpen" class="ichibanDrawPanel">
+      <section class="ichibanDrawPanel__sheet">
+        <button
+          type="button"
+          class="ichibanDrawPanel__close"
+          aria-label="關閉"
+          @click="emit('close')"
+        >
+          <font-awesome-icon icon="fa-xmark" />
+        </button>
 
-    <div class="ichibanDrawPanel__inner">
-      <div class="ichibanDrawPanel__random" v-if="showRandom">
-        <div class="ichibanDrawPanel__random-card">
-          <div class="ichibanDrawPanel__random-inputRow">
-            <input
-              type="number"
-              min="1"
-              v-model.number="customQuantity"
-              class="ichibanDrawPanel__random-input"
-            />
+        <div class="ichibanDrawPanel__inner">
+          <header class="ichibanDrawPanel__header">
+            <div>
+              <p class="ichibanDrawPanel__eyebrow">DRAW PANEL</p>
+              <h2 class="ichibanDrawPanel__title">選擇抽獎方式</h2>
+            </div>
+
+            <div class="ichibanDrawPanel__remain">
+              <span>剩餘</span>
+              <strong>{{ remaining }}</strong>
+              <span>抽</span>
+            </div>
+          </header>
+
+          <div v-if="showRandom" class="ichibanDrawPanel__random">
+            <div class="ichibanDrawPanel__randomHead">
+              <span class="ichibanDrawPanel__randomTitle">
+                <font-awesome-icon icon="fa-shuffle" />
+                隨機選擇
+              </span>
+
+              <span class="ichibanDrawPanel__randomHint"> 快速選擇抽數 </span>
+            </div>
+
+            <div class="ichibanDrawPanel__randomList">
+              <button
+                v-for="n in [1, 3, 5, 10]"
+                :key="n"
+                type="button"
+                class="ichibanDrawPanel__randomItem"
+                @click="submitQuickRandom(n)"
+              >
+                {{ n }} 抽
+              </button>
+            </div>
+          </div>
+
+          <div class="ichibanDrawPanel__actions">
             <button
-              class="ichibanDrawPanel__random-label"
-              @click="submitCustomRandom"
+              type="button"
+              class="ichibanDrawPanel__btn ichibanDrawPanel__btn--random"
+              @click="toggleRandom"
             >
-              自選隨機
+              <font-awesome-icon icon="fa-shuffle" />
+              <span>隨機選擇</span>
+            </button>
+
+            <button
+              type="button"
+              class="ichibanDrawPanel__btn ichibanDrawPanel__btn--gold"
+              @click="submitExchange('gold')"
+            >
+              <font-awesome-icon icon="fa-coins" />
+              <span>金幣兌換</span>
+            </button>
+
+            <button
+              type="button"
+              class="ichibanDrawPanel__btn ichibanDrawPanel__btn--silver"
+              @click="submitExchange('silver')"
+            >
+              <font-awesome-icon icon="fa-ticket" />
+              <span>銀幣兌換</span>
             </button>
           </div>
 
-          <div class="ichibanDrawPanel__random-list">
-            <button
-              v-for="n in [1, 3, 5, 10]"
-              :key="n"
-              class="ichibanDrawPanel__random-item"
-              @click="submitQuickRandom(n)"
-            >
-              {{ n }}
-            </button>
+          <div class="ichibanDrawPanel__summary">
+            <div class="ichibanDrawPanel__summaryItem">
+              <span>目前剩餘</span>
+              <strong>{{ remaining }}</strong>
+              <span>抽</span>
+            </div>
+
+            <div class="ichibanDrawPanel__summaryItem">
+              <span>已選擇</span>
+              <strong>{{ selectedCount }}</strong>
+              <span>抽</span>
+            </div>
+
+            <div class="ichibanDrawPanel__summaryItem">
+              <span>金幣花費</span>
+              <strong>0</strong>
+            </div>
+
+            <div class="ichibanDrawPanel__summaryItem">
+              <span>銀幣花費</span>
+              <strong>0</strong>
+            </div>
+          </div>
+
+          <div class="ichibanDrawPanel__selected">
+            <div class="ichibanDrawPanel__selectedBox">
+              <font-awesome-icon icon="fa-check" />
+
+              <span>
+                選中 {{ selectedCount }} 個獎籤：
+                {{ selectedNumbersText }}
+              </span>
+            </div>
           </div>
         </div>
-      </div>
-
-      <div class="ichibanDrawPanel__btns">
-        <button
-          class="ichibanDrawPanel__btn ichibanDrawPanel__btn--yellow"
-          @click="toggleRandom"
-        >
-          隨機選擇
-        </button>
-
-        <button
-          class="ichibanDrawPanel__btn ichibanDrawPanel__btn--gold"
-          @click="submitExchange('gold')"
-        >
-          金幣兌換
-        </button>
-
-        <button
-          class="ichibanDrawPanel__btn ichibanDrawPanel__btn--silver"
-          @click="submitExchange('silver')"
-        >
-          銀幣兌換
-        </button>
-      </div>
-
-      <div class="ichibanDrawPanel__info">
-        <span>
-          目前剩餘 <span class="number">{{ remaining }}</span> 抽
-        </span>
-        <span>
-          連續次數 <span class="number">{{ selectedCount }}</span> 抽
-        </span>
-        <span> 共花費 <span class="number">0</span> 金幣 </span>
-        <span> 共花費 <span class="number">0</span> 銀幣 </span>
-      </div>
-
-      <div class="ichibanDrawPanel__selected">
-        <div class="ichibanDrawPanel__selected-box">
-          <i class="fa-solid fa-check"></i>
-          <span>
-            選中 {{ selectedCount }} 個獎籤：
-            {{ selectedNumbersText }}
-          </span>
-        </div>
-      </div>
+      </section>
     </div>
-  </div>
+  </transition>
 </template>
