@@ -175,6 +175,7 @@
       </div>
     </transition>
   </header>
+
   <MobileHeaderMenu
     v-model="isMobileOpen"
     :is-login="isLogin"
@@ -211,7 +212,6 @@ import MobileHeaderMenu from '@/components/header/MobileHeaderMenu.vue';
 
 const isMobileOpen = ref(false);
 
-// 讓 mobile 點連結時也順便關 mega
 const onMobileNav = () => {
   closeMega();
   isMobileOpen.value = false;
@@ -227,16 +227,8 @@ const primaryMenu: MenuItem[] = [
   { key: 'card', label: '卡牌' },
   { key: 'store', label: '店家' },
 ];
+
 const secondaryMenu: MenuItem[] = [];
-// const secondaryMenu: MenuItem[] = [
-//   { key: 'theme', label: '主題', mega: true },
-//   { key: 'brand', label: '品牌', mega: true },
-//   { key: 'model', label: '模型', mega: true },
-//   { key: 'kuji2', label: '一番賞' },
-//   { key: 'gacha2', label: '扭蛋' },
-//   { key: 'figure', label: '可動人偶' },
-//   { key: 'pvc', label: '美少PVC' },
-// ];
 
 /** ===== Auth / Router ===== */
 const router = useRouter();
@@ -262,7 +254,7 @@ const goMemberCenter = () => {
 };
 
 const handleLogout = async () => {
-  await logoutApi(); // server-side token revoke (內部已衜含低降處理，失敗不阻塞)
+  await logoutApi();
   authStore.logout();
   router.push({ name: 'Home' });
 };
@@ -273,7 +265,6 @@ const openMega = (key: string) => (activeMega.value = key);
 const closeMega = () => (activeMega.value = '');
 
 const primaryTo = (item: MenuItem): RouteLocationRaw => {
-  //  主選單全部先導到 IchibanList，用 query 區分分類
   const map: Record<string, RouteLocationRaw> = {
     kuji: { name: 'IchibanList', query: { type: 'kuji' } },
     gacha: { name: 'IchibanList', query: { type: 'gacha' } },
@@ -282,16 +273,15 @@ const primaryTo = (item: MenuItem): RouteLocationRaw => {
     card: { name: 'IchibanList', query: { type: 'card' } },
     store: { name: 'StoreList' },
   };
+
   return map[item.key] ?? { name: 'IchibanList' };
 };
 
 const secondaryTo = (item: MenuItem): RouteLocationRaw => {
-  //  mega 類別：導去 IchibanList 並帶 tab（讓你在列表頁可以知道用哪種篩選）
   if (item.mega) {
     return { name: 'IchibanList', query: { tab: item.key } };
   }
 
-  //  非 mega 的：一樣導到 IchibanList，用 type 區分
   const map: Record<string, RouteLocationRaw> = {
     kuji2: { name: 'IchibanList', query: { type: 'kuji' } },
     gacha2: { name: 'IchibanList', query: { type: 'gacha' } },
@@ -305,10 +295,6 @@ const secondaryTo = (item: MenuItem): RouteLocationRaw => {
 type MegaItem = { name: string; hot?: boolean };
 
 const megaTo = (b: MegaItem): RouteLocationRaw => {
-  //  mega 子項目：依 activeMega 帶不同 query key
-  // theme → theme=xxx
-  // brand → brand=xxx
-  // model → model=xxx
   const filterKey =
     activeMega.value === 'theme'
       ? 'theme'
@@ -331,7 +317,9 @@ const megaTo = (b: MegaItem): RouteLocationRaw => {
 const headerRef = ref<HTMLElement | null>(null);
 const logoRef = ref<HTMLElement | ComponentPublicInstance | null>(null);
 const primaryBarInnerRef = ref<HTMLElement | null>(null);
-const firstPrimaryLinkRef = ref<HTMLElement | ComponentPublicInstance | null>(null);
+const firstPrimaryLinkRef = ref<HTMLElement | ComponentPublicInstance | null>(
+  null,
+);
 
 const setPrimaryLinkRef = (idx: number) => (el: HTMLElement | null) => {
   if (idx !== 0) return;
@@ -357,17 +345,21 @@ const setSecondaryItemRef = (key: string) => (el: HTMLElement | null) => {
     secondaryItemMap.delete(key);
     return;
   }
+
   secondaryItemMap.set(key, el);
 };
 
 const updateNotch = () => {
   if (!activeMega.value) return;
+
   const barEl = secondaryNavRef.value;
   const itemEl = secondaryItemMap.get(activeMega.value);
+
   if (!barEl || !itemEl) return;
 
   const barRect = barEl.getBoundingClientRect();
   const itemRect = itemEl.getBoundingClientRect();
+
   notchLeft.value = itemRect.left - barRect.left + itemRect.width / 2;
 };
 
@@ -458,6 +450,7 @@ const megaData = computed<MegaSection[]>(() => {
 const getCssPx = (el: HTMLElement, name: string, fallback: number) => {
   const v = getComputedStyle(el).getPropertyValue(name).trim();
   const n = Number.parseFloat(v);
+
   return Number.isFinite(n) ? n : fallback;
 };
 
@@ -465,6 +458,7 @@ const updateLogoLeft = () => {
   const headerEl = headerRef.value;
   const logoEl = getObservedElement(logoRef.value);
   const barEl = primaryBarInnerRef.value;
+
   if (!headerEl || !logoEl || !barEl) return;
 
   const headerRect = headerEl.getBoundingClientRect();
@@ -472,7 +466,6 @@ const updateLogoLeft = () => {
 
   const gutter = getCssPx(headerEl, '--gutter', 18);
   const gap = getCssPx(headerEl, '--logo-gap', 10);
-
   const logoW = logoEl.offsetWidth || getCssPx(headerEl, '--logo-w', 280);
 
   const barContentStartX = barRect.left + gutter;
@@ -507,6 +500,7 @@ onMounted(async () => {
   document.fonts?.ready?.then(rafUpdate).catch(() => {});
 
   ro = new ResizeObserver(() => rafUpdate());
+
   const headerEl = headerRef.value;
   const logoEl = getObservedElement(logoRef.value);
   const firstPrimaryLinkEl = getObservedElement(firstPrimaryLinkRef.value);
@@ -521,8 +515,11 @@ onMounted(async () => {
 
 watch(firstPrimaryLinkRef, async (el) => {
   await nextTick();
+
   const observedEl = getObservedElement(el);
+
   if (observedEl && ro) ro.observe(observedEl);
+
   rafUpdate();
 });
 
@@ -530,13 +527,13 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', rafUpdate);
   window.removeEventListener('orientationchange', rafUpdate);
   window.visualViewport?.removeEventListener('resize', rafUpdate);
+
   ro?.disconnect();
   ro = null;
 });
 </script>
 
 <style lang="scss" scoped>
-/*  你的 style 原封不動貼過來即可（不用改） */
 .app-header {
   position: relative;
   width: 100%;
@@ -554,9 +551,19 @@ onBeforeUnmount(() => {
 
   --logo-left: 18px;
   --logo-space-w: 0px;
+
+  /* header 色系 */
+  --header-primary: #b43325;
+  --header-primary-dark: #3f2412;
+  --header-primary-deep: #7f241a;
+  --header-primary-soft: #fff8ef;
+  --header-gold: #e4aa43;
+  --header-cream: #f7e6d1;
+  --header-text: #2b170f;
+  --header-white: #fff;
 }
 
-/* base inner（共用） */
+/* base inner */
 .app-header__inner {
   max-width: 1200px;
   margin: 0 auto;
@@ -567,18 +574,30 @@ onBeforeUnmount(() => {
 .app-header__hero {
   position: relative;
   height: var(--hero-h);
-  background-color: #efe2d3;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(255, 248, 239, 0.94) 0%,
+      rgba(247, 230, 209, 0.78) 100%
+    ),
+    #efe2d3;
 
   &::after {
     content: '';
     position: absolute;
     inset: 0;
     z-index: 1;
-    background-image: linear-gradient(
-      180deg,
-      rgba(255, 255, 255, 0.65) 0%,
-      rgba(255, 255, 255, 0) 100%
-    );
+    background:
+      radial-gradient(
+        circle at 78% 12%,
+        rgba(228, 170, 67, 0.22),
+        transparent 30%
+      ),
+      linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.62) 0%,
+        rgba(255, 255, 255, 0.02) 100%
+      );
     pointer-events: none;
   }
 }
@@ -593,6 +612,7 @@ onBeforeUnmount(() => {
   object-position: center top;
   pointer-events: none;
   user-select: none;
+  opacity: 0.82;
 }
 
 .app-header__heroRow {
@@ -627,8 +647,8 @@ onBeforeUnmount(() => {
   width: 100%;
   height: var(--logo-img-h);
   object-fit: contain;
-  filter: drop-shadow(0 14px 18px rgba(0, 0, 0, 0.3))
-    drop-shadow(0 6px 0 rgba(0, 0, 0, 0.08));
+  filter: drop-shadow(0 16px 20px rgba(63, 36, 18, 0.34))
+    drop-shadow(0 6px 0 rgba(63, 36, 18, 0.08));
 }
 
 /* actions */
@@ -641,21 +661,45 @@ onBeforeUnmount(() => {
 .app-header__btn {
   height: 40px;
   padding: 0 24px;
-  border-radius: 10px;
-  font-weight: 800;
+  border-radius: 999px;
+  font-weight: 900;
   cursor: pointer;
+  letter-spacing: 0.6px;
+
+  transition:
+    transform 0.16s ease,
+    box-shadow 0.16s ease,
+    background-color 0.16s ease,
+    color 0.16s ease,
+    border-color 0.16s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+  }
 }
 
 .app-header__btn--solid {
   border: 0;
-  background: #b43325;
+  background: linear-gradient(135deg, var(--header-primary) 0%, #d66b42 100%);
   color: #fff;
+  box-shadow: 0 12px 26px rgba(180, 51, 37, 0.24);
+
+  &:hover {
+    box-shadow: 0 16px 34px rgba(180, 51, 37, 0.32);
+  }
 }
 
 .app-header__btn--ghost {
-  background: transparent;
-  border: 2px solid #b43325;
-  color: #b43325;
+  background: rgba(255, 255, 255, 0.82);
+  border: 2px solid rgba(180, 51, 37, 0.72);
+  color: var(--header-primary);
+  box-shadow: 0 10px 22px rgba(63, 36, 18, 0.08);
+
+  &:hover {
+    background: #fff8ef;
+    border-color: var(--header-primary);
+    color: var(--header-primary-deep);
+  }
 }
 
 /* bar shared */
@@ -671,9 +715,15 @@ onBeforeUnmount(() => {
 
 /* Primary */
 .app-header__primary {
-  background: #b43325;
   position: relative;
   z-index: 10;
+  background: linear-gradient(
+    90deg,
+    #3f2412 0%,
+    var(--header-primary) 42%,
+    #d66b42 100%
+  );
+  box-shadow: 0 10px 24px rgba(63, 36, 18, 0.18);
 }
 
 .app-header__primary .app-header__barInner {
@@ -690,25 +740,45 @@ onBeforeUnmount(() => {
 }
 
 .app-header__primary-link {
-  color: #fff;
+  position: relative;
+  color: #fffaf4;
   text-decoration: none;
-  font-weight: 900;
+  font-weight: 950;
   letter-spacing: 1px;
   padding: 10px 0;
   white-space: nowrap;
+  text-shadow: 0 1px 0 rgba(63, 36, 18, 0.2);
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 2px;
+    width: 0;
+    height: 3px;
+    border-radius: 999px;
+    background: var(--header-gold);
+    transform: translateX(-50%);
+    transition: width 0.16s ease;
+  }
 }
 
 .app-header__primary-link:hover {
-  opacity: 0.9;
-  text-decoration: underline;
+  color: #fff;
+  text-decoration: none;
+
+  &::after {
+    width: 100%;
+  }
 }
 
 /* Secondary */
 .app-header__secondary {
   position: relative;
-  background: #e0bc94;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.08);
   z-index: 12;
+  background: linear-gradient(90deg, #fff3e2 0%, #f4d8b7 50%, #e8bd8a 100%);
+  border-bottom: 1px solid rgba(63, 36, 18, 0.12);
+  box-shadow: 0 6px 18px rgba(63, 36, 18, 0.08);
 }
 
 .app-header__secondary .app-header__barInner {
@@ -725,18 +795,36 @@ onBeforeUnmount(() => {
 }
 
 .app-header__secondary-link {
-  color: #1b1b1b;
+  position: relative;
+  color: var(--header-text);
   text-decoration: none;
   font-weight: 900;
   letter-spacing: 1px;
   padding: 10px 0;
   white-space: nowrap;
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 2px;
+    width: 0;
+    height: 3px;
+    border-radius: 999px;
+    background: var(--header-primary);
+    transform: translateX(-50%);
+    transition: width 0.16s ease;
+  }
 }
 
 .app-header__secondary-item.is-active .app-header__secondary-link,
 .app-header__secondary-link:hover {
-  color: #000;
-  text-decoration: underline;
+  color: var(--header-primary-deep);
+  text-decoration: none;
+
+  &::after {
+    width: 100%;
+  }
 }
 
 .app-header__caret {
@@ -754,7 +842,7 @@ onBeforeUnmount(() => {
   height: 0;
   border-left: 9px solid transparent;
   border-right: 9px solid transparent;
-  border-top: 9px solid #e0bc94;
+  border-top: 9px solid #f4d8b7;
 }
 
 /* Mega */
@@ -768,22 +856,28 @@ onBeforeUnmount(() => {
 }
 
 .mega__inner {
-  background: #1b1b1b;
-  border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.35);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background:
+    radial-gradient(
+      circle at 95% 0%,
+      rgba(228, 170, 67, 0.18),
+      transparent 34%
+    ),
+    linear-gradient(145deg, #2a160f 0%, #3f2412 48%, #1f120c 100%);
+  box-shadow: 0 18px 46px rgba(63, 36, 18, 0.32);
+  border: 1px solid rgba(255, 248, 239, 0.12);
 }
 
 .mega__title {
   padding: 14px 18px;
-  background: rgba(255, 255, 255, 0.04);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 248, 239, 0.06);
+  border-bottom: 1px solid rgba(255, 248, 239, 0.1);
 }
 
 .mega__title-text {
-  color: #eb9838;
-  font-weight: 900;
+  color: var(--header-gold);
+  font-weight: 950;
   letter-spacing: 2px;
 }
 
@@ -796,8 +890,8 @@ onBeforeUnmount(() => {
 
 .mega__section-title {
   margin: 0 0 10px 0;
-  font-weight: 900;
-  color: #eb9838;
+  font-weight: 950;
+  color: var(--header-gold);
   letter-spacing: 2px;
 }
 
@@ -822,8 +916,8 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 10px;
   text-decoration: none;
-  color: rgba(255, 255, 255, 0.88);
-  font-weight: 700;
+  color: rgba(255, 248, 239, 0.86);
+  font-weight: 750;
   font-size: 13px;
 }
 
@@ -834,8 +928,8 @@ onBeforeUnmount(() => {
 
 .mega__hot {
   font-size: 11px;
-  font-weight: 900;
-  color: #eb9838;
+  font-weight: 950;
+  color: var(--header-gold);
   letter-spacing: 1px;
 }
 
@@ -846,6 +940,7 @@ onBeforeUnmount(() => {
     opacity 0.12s ease,
     transform 0.12s ease;
 }
+
 .fade-enter-from,
 .fade-leave-to {
   opacity: 0;
@@ -860,12 +955,15 @@ onBeforeUnmount(() => {
     --logo-img-h: 150px;
     --logo-gap: 8px;
   }
+
   .app-header__primary-list {
     gap: 22px;
   }
+
   .app-header__secondary-list {
     gap: 18px;
   }
+
   .mega__section-cols {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -899,6 +997,7 @@ onBeforeUnmount(() => {
 
   .app-header__heroBg {
     height: 220px;
+    opacity: 0.78;
   }
 
   .app-header__heroRow {
