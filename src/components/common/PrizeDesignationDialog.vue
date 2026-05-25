@@ -17,7 +17,9 @@
           />
           <div class="prize-details">
             <div class="prize-name">{{ currentPrize.prizeName }}</div>
-            <span class="prize-level">{{ formatPrizeLevel(currentPrize.prizeLevel) }}</span>
+            <span class="prize-level">{{
+              formatPrizeLevel(currentPrize.prizeLevel)
+            }}</span>
           </div>
         </div>
 
@@ -183,7 +185,7 @@ $brand-weak-2: rgba(180, 51, 37, 0.2);
 .prize-designation-dialog {
   position: fixed;
   inset: 0;
-  z-index: 10000;
+  z-index: 100000000000;
   display: flex;
   align-items: center;
   justify-content: center;

@@ -1248,8 +1248,6 @@ const handleDesignatePrize = async (
 ) => {
   if (!availableNumbers.length) return;
 
-  overlay.open();
-
   try {
     // grandPrizes 直接來自 draw 回應，不再從本地 prizesData 取
     if (!grandPrizes.length) {
@@ -1324,7 +1322,6 @@ const handleDesignatePrize = async (
 
     await refreshSession();
   } finally {
-    overlay.close();
   }
 };
 
