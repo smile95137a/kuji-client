@@ -1,8 +1,10 @@
 // src/utils/timeUtils.ts
 
+import { normalizeApiDateString } from './DateUtils';
+
 export const parseDateSafe = (s?: string | null) => {
   if (!s) return null;
-  const d = new Date(s);
+  const d = new Date(normalizeApiDateString(s));
   return Number.isNaN(d.getTime()) ? null : d;
 };
 

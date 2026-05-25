@@ -270,7 +270,10 @@
           <div class="deposit__dialogBody">
             <div class="deposit__notice">
               <font-awesome-icon :icon="['fas', 'circle-info']" />
-              <span>送出後將跳轉至 GoMyPay 測試環境完成付款</span>
+              <span v-if="selectedPaymentMethod === 'BANK_TRANSFER'">
+                系統將為你產生虛擬帳號，請於期限內完成轉帳。
+              </span>
+              <span v-else>送出後將跳轉至 GoMyPay 完成信用卡付款。</span>
             </div>
 
             <div v-if="selectedPlan" class="deposit__summaryCard">
@@ -341,6 +344,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
+import { useRouter } from 'vue-router';
 
 import { useRechargePlans } from '@/composables/useRechargePlans';
 import { useWallet } from '@/composables/useWallet';
@@ -353,6 +357,7 @@ import type { PaymentMethodCode } from '@/services/rechargeService';
 import type { RechargePlan } from '@/composables/useRechargePlans';
 
 const overlay = useOverlayStore();
+const router = useRouter();
 const { refresh } = useWallet();
 
 const memberWallet = useMemberWalletStore();
@@ -408,7 +413,24 @@ async function onConfirm() {
   );
 
   if (result.success) {
-    if (gatewayPayload.value && submitGatewayForm(gatewayPayload.value)) {
+    const payload = gatewayPayload.value;
+
+    if (payload?.virtualAccount || (payload?.paymentMethod === 'BANK_TRANSFER' && !payload?.actionUrl && !payload?.payUrl)) {
+      const isFailed = payload?.status === 'FAILED';
+      router.push({
+        name: 'DepositPaymentResult',
+        query: {
+          rechargeOrderId: payload!.rechargeOrderId,
+          result: payload!.gatewayResult ?? (isFailed ? '0' : '1'),
+          ...(payload!.virtualAccount ? { e_payaccount: payload!.virtualAccount } : {}),
+          ...(payload!.limitDate ? { LimitDate: payload!.limitDate } : {}),
+          ...(payload!.payInfo ? { payInfo: payload!.payInfo } : {}),
+        },
+      });
+      return;
+    }
+
+    if (payload && submitGatewayForm(payload)) {
       return;
     }
 

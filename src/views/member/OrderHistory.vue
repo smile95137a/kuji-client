@@ -119,6 +119,7 @@
               <th>訂單號</th>
               <th>金額</th>
               <th>付款方式</th>
+              <th>轉帳帳號</th>
               <th>狀態</th>
               <th class="orderHistory__thAction">操作</th>
             </tr>
@@ -141,6 +142,13 @@
               <td>{{ row.payMethodName || '-' }}</td>
 
               <td>
+                <span v-if="row.virtualAccount" class="orderHistory__mono">
+                  {{ row.virtualAccount }}
+                </span>
+                <span v-else>-</span>
+              </td>
+
+              <td>
                 <span
                   class="orderHistory__statusBadge"
                   :class="badgeClass(row.shippingStatus)"
@@ -161,7 +169,7 @@
             </tr>
 
             <tr v-if="pageRows.length === 0">
-              <td class="orderHistory__empty" colspan="6">查無資料</td>
+              <td class="orderHistory__empty" colspan="7">查無資料</td>
             </tr>
           </tbody>
         </table>
@@ -204,6 +212,13 @@
               <span class="orderHistory__k">付款方式</span>
               <span class="orderHistory__v">
                 {{ row.payMethodName || '-' }}
+              </span>
+            </p>
+
+            <p v-if="row.virtualAccount" class="orderHistory__row">
+              <span class="orderHistory__k">轉帳帳號</span>
+              <span class="orderHistory__v orderHistory__mono">
+                {{ row.virtualAccount }}
               </span>
             </p>
           </div>
@@ -249,6 +264,7 @@ import BasePagination from '@/components/common/BasePagination.vue';
 import { getMyOrders, type OrderListRow } from '@/services/orderService';
 import { executeApi } from '@/utils/executeApiUtils';
 import { useServerPagination } from '@/composables/useServerPagination';
+import { formatDateTime as formatDateTimeUtil } from '@/utils/DateUtils';
 
 const router = useRouter();
 
@@ -270,17 +286,7 @@ watch([createdAtStart, createdAtEnd, shippingStatus, orderNo], () => {
 const fmtDateTime = (v: any) => {
   const s = String(v || '');
   if (!s) return '-';
-
-  const d = new Date(s);
-  if (Number.isNaN(d.getTime())) return s;
-
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mm = String(d.getMinutes()).padStart(2, '0');
-
-  return `${y}-${m}-${dd} ${hh}:${mm}`;
+  return formatDateTimeUtil(s, 'YYYY-MM-DD HH:mm') || s;
 };
 
 const normalizeOrders = (list: any[]): OrderListRow[] =>
@@ -292,6 +298,9 @@ const normalizeOrders = (list: any[]): OrderListRow[] =>
     shippingStatus: String(o?.shippingStatus ?? ''),
     shippingStatusName: String(o?.shippingStatusName ?? ''),
     payMethodName: String(o?.payMethodName ?? o?.paymentMethodName ?? ''),
+    virtualAccount: o?.virtualAccount ?? null,
+    paymentInfo: o?.paymentInfo ?? null,
+    limitDate: o?.limitDate ?? null,
   }));
 
 const buildReq = (): any => {

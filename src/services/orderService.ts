@@ -17,6 +17,11 @@ export interface OrderListRow {
   shippingStatus: string;
   shippingStatusName?: string;
   payMethodName?: string;
+  paymentStatus?: string;
+  paymentMethod?: string;
+  virtualAccount?: string | null;
+  paymentInfo?: string | null;
+  limitDate?: string | null;
 }
 
 export interface OrderPaymentInitRes {
@@ -30,6 +35,11 @@ export interface OrderPaymentInitRes {
   actionUrl?: string | null;
   formFields?: Record<string, string> | null;
   gatewayTradeNo: string | null;
+  gatewayResult?: string | null;
+  retMsg?: string | null;
+  virtualAccount?: string | null;
+  payInfo?: string | null;
+  limitDate?: string | null;
 }
 
 /** 前台 - 查詢我的訂單列表 POST /api/order/list */
@@ -104,6 +114,18 @@ export const getPaymentGroupOrders = async (
     return res.data;
   } catch (e) {
     console.error('Order - getPaymentGroupOrders error:', e);
+    throw e;
+  }
+};
+
+export const syncShippingPaymentResult = async (
+  params: Record<string, string>,
+): Promise<string> => {
+  try {
+    const res = await api.post('/payment/shipping/callback', null, { params });
+    return res.data;
+  } catch (e) {
+    console.error('Order - syncShippingPaymentResult error:', e);
     throw e;
   }
 };

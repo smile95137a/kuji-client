@@ -177,6 +177,7 @@
 <script setup lang="ts">
 import { getPublishedNews } from '@/services/newsService';
 import { executeApi } from '@/utils/executeApiUtils';
+import { formatDate as formatDateUtil, normalizeApiDateString } from '@/utils/DateUtils';
 import { computed, onMounted, ref } from 'vue';
 import { useRouter } from 'vue-router';
 
@@ -225,12 +226,7 @@ const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 /** ===== UI helpers ===== */
 const formatDate = (iso?: string | null) => {
   if (!iso) return '-';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return String(iso);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}/${m}/${day}`;
+  return formatDateUtil(iso, 'YYYY/MM/DD') || String(iso);
 };
 
 const typeText = (t: NewsType) =>
@@ -313,7 +309,8 @@ const fetchNewsList = async () => {
       //  最新在前：用 publishedAt（scheduledAt/createdAt）
       mapped.sort(
         (a, b) =>
-          new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime(),
+          new Date(normalizeApiDateString(b.publishedAt)).getTime() -
+          new Date(normalizeApiDateString(a.publishedAt)).getTime(),
       );
 
       newsList.value = mapped;

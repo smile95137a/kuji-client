@@ -104,6 +104,7 @@ import { computed, onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import { executeApi } from '@/utils/executeApiUtils';
 import { getNewsDetail } from '@/services/newsService';
+import { formatDate as formatDateUtil, toDate } from '@/utils/DateUtils';
 
 const route = useRoute();
 const router = useRouter();
@@ -126,7 +127,8 @@ const hasPeriod = computed(() =>
 const isEnded = computed(() => {
   const e = detail.value?.endTime;
   if (!e) return false;
-  return Date.now() > new Date(e).getTime();
+  const endAt = toDate(e);
+  return endAt ? Date.now() > endAt.getTime() : false;
 });
 const periodText = computed(() => {
   const s = detail.value?.scheduledAt;
@@ -134,9 +136,7 @@ const periodText = computed(() => {
   if (!s && !e) return '-';
   const fmt = (iso?: string | null) => {
     if (!iso) return '-';
-    const d = new Date(iso);
-    if (Number.isNaN(d.getTime())) return String(iso);
-    return `${d.getFullYear()}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`;
+    return formatDateUtil(iso, 'YYYY/MM/DD') || String(iso);
   };
   if (s && e) return `${fmt(s)} ～ ${fmt(e)}`;
   if (s) return `${fmt(s)} 起`;
@@ -162,12 +162,7 @@ const goBack = () => router.push({ name: 'News' });
 /** ===== helpers ===== */
 const formatDate = (iso?: string | null) => {
   if (!iso) return '-';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return String(iso);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}/${m}/${day}`;
+  return formatDateUtil(iso, 'YYYY/MM/DD') || String(iso);
 };
 
 const sanitizeHtml = (html: string) => {

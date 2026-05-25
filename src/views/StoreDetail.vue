@@ -111,10 +111,9 @@
 
             <aside class="storeDetail__sideStack">
               <article class="storeDetail__miniCard">
-                <p class="storeDetail__miniLabel">營業時間</p>
-                <p class="storeDetail__miniValue">
-                  {{ store.businessHours || '尚未提供' }}
-                </p>
+                <BusinessHoursDisplay
+                  :businessHours="store.businessHoursStructured ?? store.businessHours ?? undefined"
+                />
               </article>
 
               <article class="storeDetail__miniCard">
@@ -306,7 +305,9 @@
 
 <script setup lang="ts">
 import BasePagination from '@/components/common/BasePagination.vue';
+import BusinessHoursDisplay from '@/components/store/BusinessHoursDisplay.vue';
 import { getStoreDetail, getStoreProducts } from '@/services/storeService';
+import type { StoreBusinessHoursStructured } from '@/services/storeService';
 import { executeApi } from '@/utils/executeApiUtils';
 import { computed, onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
@@ -322,6 +323,7 @@ type StoreDetailData = {
   phone?: string | null;
   address?: string | null;
   businessHours?: string | null;
+  businessHoursStructured?: StoreBusinessHoursStructured | null;
   lineId?: string | null;
   products?: ProductItem[];
 };

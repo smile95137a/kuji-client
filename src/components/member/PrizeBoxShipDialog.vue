@@ -179,6 +179,24 @@
             </template>
 
             <template v-else-if="isConvenienceStorePickup">
+              <div class="ship-dialog__storePicker">
+                <div>
+                  <p class="ship-dialog__storePickerTitle">
+                    {{ form.storeName || '尚未選擇門市' }}
+                  </p>
+                  <p class="ship-dialog__storePickerMeta">
+                    {{ form.storeCode ? `店號 ${form.storeCode}` : '請透過門市地圖選擇取貨門市' }}
+                  </p>
+                </div>
+                <button
+                  class="ship-dialog__btn ship-dialog__btn--store"
+                  type="button"
+                  :disabled="isSelectingStore"
+                  @click="onSelectStore"
+                >
+                  {{ isSelectingStore ? '開啟中...' : form.storeCode ? '變更門市' : '選擇門市' }}
+                </button>
+              </div>
               <div class="ship-dialog__row">
                 <div class="ship-dialog__field ship-dialog__field--sm">
                   <label class="ship-dialog__label" for="ship-store-code">門市代碼 <span class="req">*</span></label>
@@ -186,6 +204,7 @@
                     id="ship-store-code"
                     class="ship-dialog__input"
                     type="text"
+                    readonly
                     v-model.trim="form.storeCode"
                     placeholder="例如 131415"
                   />
@@ -196,6 +215,7 @@
                     id="ship-store-name"
                     class="ship-dialog__input"
                     type="text"
+                    readonly
                     v-model.trim="form.storeName"
                     placeholder="例如 7-11 台北門市"
                   />
@@ -207,6 +227,7 @@
                   id="ship-store-address"
                   class="ship-dialog__input"
                   type="text"
+                  readonly
                   v-model.trim="form.storeAddress"
                   placeholder="請輸入門市地址"
                 />
@@ -300,13 +321,44 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
 import { usePrizeBoxShip, type PrizeBoxItem } from '@/composables/usePrizeBoxShip';
 import { formatPrizeLevel } from '@/utils/prizeLevel';
 import { submitGatewayForm } from '@/utils/payment/submitGatewayForm';
+import { createStoreMapUrl } from '@/services/logisticsService';
+import { saveState } from '@/utils/Localstorage';
+
+const PRIZE_BOX_SHIP_DRAFT_KEY = 'prizeBoxShipDraft';
+
+interface StoreSelection {
+  storeCode: string;
+  storeName: string;
+  storeAddress: string;
+}
+
+interface PrizeBoxShipDraft {
+  prizeBoxIds: string[];
+  selectedShippingId?: string;
+  selectedPaymentMethod?: string;
+  form?: Partial<{
+    recipientName: string;
+    recipientPhone: string;
+    zipCode: string;
+    city: string;
+    district: string;
+    address: string;
+    storeCode: string;
+    storeName: string;
+    storeAddress: string;
+    remark: string;
+  }>;
+}
 
 const props = defineProps<{
   visible: boolean;
   items: PrizeBoxItem[];
+  draft?: PrizeBoxShipDraft | null;
+  storeSelection?: StoreSelection | null;
 }>();
 
 const emit = defineEmits<{
@@ -315,6 +367,8 @@ const emit = defineEmits<{
 }>();
 
 const modalRef = ref<HTMLElement | null>(null);
+const isSelectingStore = ref(false);
+const router = useRouter();
 
 // composable
 const itemsRef = computed(() => props.items);
@@ -359,6 +413,8 @@ watch(
 
     window.addEventListener('keydown', handleKeydown);
     await init();
+    restoreDraft();
+    applyStoreSelection();
     await nextTick();
     modalRef.value?.focus();
 
@@ -395,9 +451,75 @@ function tryClose() {
   emit('close');
 }
 
+function restoreDraft() {
+  const draft = props.draft;
+  if (!draft) return;
+
+  if (draft.form) {
+    Object.assign(form, draft.form);
+  }
+  if (draft.selectedShippingId) {
+    selectedShippingId.value = draft.selectedShippingId;
+  }
+  if (draft.selectedPaymentMethod === 'CREDIT_CARD' || draft.selectedPaymentMethod === 'BANK_TRANSFER') {
+    selectedPaymentMethod.value = draft.selectedPaymentMethod;
+  }
+}
+
+function applyStoreSelection() {
+  const selection = props.storeSelection;
+  if (!selection) return;
+
+  form.storeCode = selection.storeCode;
+  form.storeName = selection.storeName;
+  form.storeAddress = selection.storeAddress || selection.storeName;
+}
+
+async function onSelectStore() {
+  if (!selectedShipping.value || isSelectingStore.value) return;
+
+  isSelectingStore.value = true;
+  error.value = '';
+
+  saveState(PRIZE_BOX_SHIP_DRAFT_KEY, {
+    prizeBoxIds: props.items.map((item) => item.id),
+    selectedShippingId: selectedShippingId.value,
+    selectedPaymentMethod: selectedPaymentMethod.value,
+    form: { ...form },
+  } satisfies PrizeBoxShipDraft);
+
+  try {
+    const returnUrl = `${window.location.origin}${window.location.pathname}`;
+    const result = await createStoreMapUrl({
+      shippingMethod: String(selectedShipping.value.code ?? '').toUpperCase(),
+      returnUrl,
+    });
+    window.location.href = result.mapUrl;
+  } catch (e: any) {
+    error.value = e?.response?.data?.error?.message || e?.response?.data?.message || '無法開啟門市地圖，請稍後再試';
+    isSelectingStore.value = false;
+  }
+}
+
 async function onSubmit() {
   const ok = await submit();
   if (ok) {
+    if (
+      gatewayPayload.value?.virtualAccount ||
+      (gatewayPayload.value?.paymentMethod === 'BANK_TRANSFER' &&
+        !gatewayPayload.value?.actionUrl &&
+        !gatewayPayload.value?.paymentUrl)
+    ) {
+      router.push({
+        name: 'OrderPaymentResult',
+        query: {
+          e_orderno: gatewayPayload.value.gatewayTradeNo || gatewayPayload.value.orderNumber,
+          result: gatewayPayload.value.gatewayResult || '1',
+        },
+      });
+      return;
+    }
+
     if (gatewayPayload.value && submitGatewayForm({
         ...gatewayPayload.value,
         payUrl: paymentUrl.value,
@@ -587,9 +709,44 @@ async function onSubmit() {
   outline: none;
 }
 .ship-dialog__input:focus { border-color: #2c71e0; }
+.ship-dialog__input[readonly] {
+  background: #f8fafc;
+  color: #374151;
+}
 
 .ship-dialog__textarea {
   resize: vertical;
+}
+
+.ship-dialog__storePicker {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  margin-bottom: 12px;
+  border: 1px solid #d9e2ef;
+  border-radius: 8px;
+  background: #f8fbff;
+}
+
+.ship-dialog__storePickerTitle {
+  margin: 0 0 3px;
+  font-size: 14px;
+  font-weight: 700;
+  color: #172033;
+}
+
+.ship-dialog__storePickerMeta {
+  margin: 0;
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.ship-dialog__btn--store {
+  background: #111827;
+  color: #fff;
+  white-space: nowrap;
 }
 
 /* 配送方式 */

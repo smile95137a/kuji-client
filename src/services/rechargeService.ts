@@ -33,6 +33,12 @@ export interface RechargeOrderRes {
   submitMethod?: string | null;
   actionUrl?: string | null;
   formFields?: Record<string, string> | null;
+  paymentMethod?: PaymentMethodCode | string | null;
+  gatewayResult?: string | null;
+  retMsg?: string | null;
+  virtualAccount?: string | null;
+  payInfo?: string | null;
+  limitDate?: string | null;
   goldAmount: number;
   bonusAmount: number;
   priceTwd: number;
@@ -50,6 +56,7 @@ export interface RechargeHistoryRow {
   paymentMethod: string;
   paymentStatus: RechargeStatus;
   transactionId: string;
+  paymentInfo?: string | null;
   createdAt: string;
   paidAt?: string | null;
 }
@@ -78,11 +85,21 @@ export const createRechargeRequest = async (
 export const getMyRechargeHistory = async (req?: {
   page?: number;
   size?: number;
+  condition?: {
+    paymentStatus?: string;
+    transactionId?: string;
+    createdAtStart?: string;
+    createdAtEnd?: string;
+  };
 }): Promise<PaginatedApiResponse<RechargeHistoryRow>> => {
   try {
     const params = {
       page: req?.page ?? 1,
       size: req?.size ?? 10,
+      paymentStatus: req?.condition?.paymentStatus || undefined,
+      transactionId: req?.condition?.transactionId || undefined,
+      createdAtStart: req?.condition?.createdAtStart || undefined,
+      createdAtEnd: req?.condition?.createdAtEnd || undefined,
     };
     const res = await api.get(`${basePath}/history`, { params });
     return res.data;

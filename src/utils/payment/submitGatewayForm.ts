@@ -10,6 +10,11 @@ export function submitGatewayForm(payload: GatewayFormPayload): boolean {
   const actionUrl = (payload.actionUrl ?? payload.payUrl ?? '').trim();
   const formFields = payload.formFields ?? null;
 
+  if (method === 'GET' && actionUrl) {
+    window.location.href = actionUrl;
+    return true;
+  }
+
   if (method !== 'POST' || !actionUrl || !formFields || Object.keys(formFields).length === 0) {
     return false;
   }

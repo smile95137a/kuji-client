@@ -8,6 +8,7 @@ export type WalletTransactionType =
   | 'DRAW_BONUS'     // 紅利幣抽獎扣款
   | 'RECYCLE_BONUS'  // 回收紅利
   | 'REFERRAL_BONUS' // 推薦獎勵
+  | 'BONUS_GRANT'    // 多抽贈送紅利
   | 'ADMIN_ADJUST'   // 後台調整
   | 'EXPIRE';        // 點數到期
 

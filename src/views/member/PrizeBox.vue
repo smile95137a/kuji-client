@@ -33,11 +33,11 @@
           <div class="prizeBox__field">
             <label class="prizeBox__label">狀態</label>
             <select class="prizeBox__input" v-model="status">
-              <option value="">全部</option>
+              <option value="">目前賞品</option>
               <option value="IN_BOX">在賞品盒</option>
               <option value="SHIPPING">配送中</option>
-              <option value="DELIVERED">已送達</option>
-              <option value="REDEEMED">已回收</option>
+              <option value="SHIPPED">已出貨</option>
+              <option value="RECYCLED">已回收</option>
             </select>
           </div>
 
@@ -436,7 +436,9 @@
     <PrizeBoxShipDialog
       :visible="shipDialogOpen"
       :items="shipDialogItems"
-      @close="shipDialogOpen = false"
+      :draft="pendingShipDraft"
+      :store-selection="pendingStoreSelection"
+      @close="onShipDialogClose"
       @success="onShipSuccess"
     />
   </section>
@@ -444,6 +446,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import BasePagination from '@/components/common/BasePagination.vue';
 import PrizeBoxShipDialog from '@/components/member/PrizeBoxShipDialog.vue';
 
@@ -455,10 +458,27 @@ import {
 import { executeApi } from '@/utils/executeApiUtils';
 import { formatPrizeLevel } from '@/utils/prizeLevel';
 import { useMemberWalletStore } from '@/stores/memberWallet';
+import { loadState, removeState } from '@/utils/Localstorage';
 
 const walletStore = useMemberWalletStore();
+const route = useRoute();
+const router = useRouter();
+const PRIZE_BOX_SHIP_DRAFT_KEY = 'prizeBoxShipDraft';
 
-type PrizeStatus = 'IN_BOX' | 'SHIPPING' | 'DELIVERED' | 'REDEEMED';
+type PrizeStatus = 'IN_BOX' | 'SHIPPING' | 'SHIPPED' | 'RECYCLED';
+
+interface StoreSelection {
+  storeCode: string;
+  storeName: string;
+  storeAddress: string;
+}
+
+interface PrizeBoxShipDraft {
+  prizeBoxIds: string[];
+  selectedShippingId?: string;
+  selectedPaymentMethod?: string;
+  form?: Record<string, string>;
+}
 
 const pageSize = 10;
 const page = ref(1);
@@ -587,21 +607,21 @@ const extractPageItems = (raw: any) => {
 };
 
 const extractPageTotal = (raw: any, fallback: number) => {
-  const payload = raw?.data ?? raw;
-
   return (
     Number(
-      payload?.totalItems ?? payload?.total ?? payload?.count ?? fallback,
+      raw?.total ?? raw?.totalItems ?? raw?.count ??
+      raw?.data?.total ?? raw?.data?.totalItems ?? raw?.data?.count ??
+      fallback,
     ) || fallback
   );
 };
 
 const extractPageTotalPages = (raw: any, fallbackTotal: number) => {
-  const payload = raw?.data ?? raw;
-
   return (
     Number(
-      payload?.totalPages ?? Math.max(1, Math.ceil(fallbackTotal / pageSize)),
+      raw?.totalPages ??
+      raw?.data?.totalPages ??
+      Math.max(1, Math.ceil(fallbackTotal / pageSize)),
     ) || 1
   );
 };
@@ -642,6 +662,8 @@ const loadPrizeBox = async () => {
 
 const shipDialogOpen = ref(false);
 const shipDialogItems = ref<any[]>([]);
+const pendingShipDraft = ref<PrizeBoxShipDraft | null>(null);
+const pendingStoreSelection = ref<StoreSelection | null>(null);
 
 const openShipDialog = (ids: string[]) => {
   if (!ids.length) return;
@@ -650,8 +672,16 @@ const openShipDialog = (ids: string[]) => {
   shipDialogOpen.value = true;
 };
 
+const onShipDialogClose = () => {
+  shipDialogOpen.value = false;
+  pendingShipDraft.value = null;
+  pendingStoreSelection.value = null;
+};
+
 const onShipSuccess = () => {
   shipDialogOpen.value = false;
+  pendingShipDraft.value = null;
+  pendingStoreSelection.value = null;
   checkedIds.value = new Set();
   detailOpen.value = false;
 
@@ -720,7 +750,7 @@ const formatDate = (iso: string) => {
 const statusLabel = (s: PrizeStatus) => {
   if (s === 'IN_BOX') return '在賞品盒';
   if (s === 'SHIPPING') return '配送中';
-  if (s === 'DELIVERED') return '已送達';
+  if (s === 'SHIPPED') return '已出貨';
 
   return '已回收';
 };
@@ -728,8 +758,8 @@ const statusLabel = (s: PrizeStatus) => {
 const badgeClass = (s: PrizeStatus) => ({
   'is-inbox': s === 'IN_BOX',
   'is-shipping': s === 'SHIPPING',
-  'is-delivered': s === 'DELIVERED',
-  'is-redeemed': s === 'REDEEMED',
+  'is-delivered': s === 'SHIPPED',
+  'is-redeemed': s === 'RECYCLED',
 });
 
 const checkedIds = ref<Set<string>>(new Set());
@@ -803,9 +833,71 @@ const batchRecycle = async () => {
   await recycleByIds(ids);
 };
 
+function getQueryText(keys: string[]) {
+  for (const key of keys) {
+    const value = route.query[key];
+    if (Array.isArray(value)) {
+      const first = value.find(Boolean);
+      if (first) return String(first);
+    } else if (value) {
+      return String(value);
+    }
+  }
+  return '';
+}
+
+function readStoreSelectionFromQuery(): StoreSelection | null {
+  const storeCode = getQueryText(['storeid', 'storeId', 'storeCode', 'StoreID', 'CVSStoreID']);
+  const storeName = getQueryText(['storename', 'storeName', 'CVSStoreName']);
+  const storeAddress = getQueryText(['storeaddress', 'storeAddress', 'CVSAddress', 'address']);
+
+  if (!storeCode || !storeName) return null;
+
+  return {
+    storeCode,
+    storeName,
+    storeAddress,
+  };
+}
+
+async function restoreShipDialogFromStoreMap() {
+  const selection = readStoreSelectionFromQuery();
+  const draft = loadState<PrizeBoxShipDraft>(PRIZE_BOX_SHIP_DRAFT_KEY);
+  if (!selection || !draft?.prizeBoxIds?.length) return;
+
+  removeState(PRIZE_BOX_SHIP_DRAFT_KEY);
+
+  const raw = await getPrizeBoxHistory({
+    status: 'IN_BOX',
+    page: 1,
+    size: 500,
+  });
+  const activeRows = extractPageItems(raw).map(mapRow);
+  const idSet = new Set(draft.prizeBoxIds);
+  const selectedRows = activeRows.filter((row: any) => idSet.has(row.id));
+
+  if (selectedRows.length > 0) {
+    rows.value = activeRows;
+    serverTotal.value = activeRows.length;
+    serverTotalPages.value = Math.max(1, Math.ceil(activeRows.length / pageSize));
+    checkedIds.value = new Set(selectedRows.map((row: any) => row.id));
+    shipDialogItems.value = selectedRows;
+    pendingShipDraft.value = draft;
+    pendingStoreSelection.value = selection;
+    shipDialogOpen.value = true;
+  }
+
+  const cleanQuery = { ...route.query };
+  ['storeid', 'storeId', 'storeCode', 'StoreID', 'CVSStoreID', 'storename', 'storeName', 'CVSStoreName', 'storeaddress', 'storeAddress', 'CVSAddress', 'address'].forEach((key) => {
+    delete cleanQuery[key];
+  });
+  router.replace({ name: 'PrizeBox', query: cleanQuery });
+}
+
 onMounted(async () => {
   await walletStore.loadMe();
   await loadPrizeBox();
+  await restoreShipDialogFromStoreMap();
 });
 </script>
 

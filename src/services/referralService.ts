@@ -2,6 +2,7 @@
 import { api } from './FrontAPI';
 
 const basePath = '/referral';
+const authBasePath = '/auth';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -54,11 +55,18 @@ export const validateCode = async (
   code: string,
   signal?: AbortSignal,
 ): Promise<ReferralValidateRes> => {
-  const res = await api.get(`${basePath}/validate`, {
-    params: { code },
+  const res = await api.post(`${authBasePath}/validate-referral`, {
+    code,
+  }, {
     signal,
   });
-  return res.data?.data;
+  const data = res.data?.data ?? res.data;
+  return {
+    valid: Boolean(data?.valid),
+    code: data?.code ?? code,
+    reason: data?.valid ? null : 'CODE_NOT_FOUND',
+    referrerNickname: data?.storeName,
+  };
 };
 
 /** 套用推薦碼（終生一次）POST /referral/apply */

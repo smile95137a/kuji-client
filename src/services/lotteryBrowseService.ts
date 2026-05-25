@@ -76,8 +76,22 @@ export interface LotteryDetailRes extends Partial<LotteryRes> {
   prizes: LotteryPrizeRes[];
   tickets: LotteryTicketRes[] | null;
   session: SessionRes | null;
+  noticeConfig?: LotteryNoticeConfig | null;
   designatedNumbers?: { revealedNumber: number }[];
   designatedWinningNumbers?: { revealedNumber: number }[];
+}
+
+export interface LotteryNoticeConfig {
+  bonusTitle: string;
+  bonusDescription: string;
+  protectionTitle: string;
+  protectionDescription: string;
+  bonusTiers: LotteryBonusTier[];
+}
+
+export interface LotteryBonusTier {
+  drawCount: number;
+  bonus: number;
 }
 
 export interface SessionRes {

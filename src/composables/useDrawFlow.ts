@@ -1,5 +1,6 @@
 // src/composables/useDrawFlow.ts
 import { ref } from 'vue';
+import type { AxiosError } from 'axios';
 import { drawLottery, type DrawResult } from '@/services/lotteryDrawService';
 import { useMemberWalletStore } from '@/stores/memberWallet';
 
@@ -57,7 +58,19 @@ export function useDrawFlow(lotteryId: string | { value: string }) {
 
     isDrawing.value = true;
     try {
-      const res = await drawLottery(resolveId(), payload);
+      let res: Awaited<ReturnType<typeof drawLottery>>;
+      try {
+        res = await drawLottery(resolveId(), payload);
+      } catch (err) {
+        const axiosErr = err as AxiosError<any>;
+        const serverMsg =
+          axiosErr.response?.data?.message ??
+          axiosErr.response?.data?.error?.message;
+        return {
+          type: 'error',
+          message: serverMsg ?? '抽獎失敗，請稍後再試',
+        };
+      }
 
       if (!res?.success) {
         return {

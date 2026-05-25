@@ -223,8 +223,7 @@ export function usePrizeBoxShip(items: Ref<PrizeBoxItem[]>) {
     if (isConvenienceStorePickup.value) {
       return (
         form.storeCode.trim() !== '' &&
-        form.storeName.trim() !== '' &&
-        form.storeAddress.trim() !== ''
+        form.storeName.trim() !== ''
       );
     }
 

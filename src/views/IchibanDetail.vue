@@ -300,7 +300,7 @@
         />
       </section>
 
-      <IchibanNoticeSection />
+      <IchibanNoticeSection :notice-config="detail?.noticeConfig ?? null" />
     </main>
 
     <IchibanDrawPanel
@@ -392,6 +392,11 @@ import { ichibanResultCardDialog } from '@/utils/dialog/ichibanResultCardDialog'
 import { gotchaDialog } from '@/utils/dialog/gotchaDialog';
 import { getLotterySession } from '@/services/lotteryDrawService';
 import { formatPrizeLevel } from '@/utils/prizeLevel';
+import {
+  formatDate as formatDateUtil,
+  formatDateTime as formatDateTimeUtil,
+  toDate,
+} from '@/utils/DateUtils';
 
 const overlay = useOverlayStore();
 const authStore = useAuthStore();
@@ -546,12 +551,7 @@ const showOpenerBanner = computed(
  * ----------------------------- */
 const formatDate = (iso?: string | null) => {
   if (!iso) return '';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}/${m}/${day}`;
+  return formatDateUtil(iso, 'YYYY/MM/DD');
 };
 
 const periodText = computed(() => {
@@ -613,12 +613,47 @@ const tags = computed<string[]>(() => {
     : [];
 });
 
+const unavailableNoticeKey = ref('');
+
+const unavailableLotteryStatuses = new Set([
+  'OFF_SHELF',
+  'FORCED_OFF',
+  'DELETED',
+]);
+
+const lotteryStatus = computed(() =>
+  String(detail.value?.status ?? '').toUpperCase(),
+);
+
+const isLotteryUnavailable = computed(() =>
+  unavailableLotteryStatuses.has(lotteryStatus.value),
+);
+
+const showUnavailableLotteryDialog = async () => {
+  if (!detail.value || !isLotteryUnavailable.value) return;
+
+  const key = `${detail.value.id ?? kujiId.value}:${lotteryStatus.value}`;
+  if (unavailableNoticeKey.value === key) return;
+  unavailableNoticeKey.value = key;
+
+  await ichibanInfoDialog({
+    title: '此商品已下架',
+    content: '此商品目前已下架，無法再進行抽選。',
+    confirmText: '我知道了',
+  });
+};
+
 /* -----------------------------
  * session.canDraw
  * ----------------------------- */
-const canDraw = computed(() => session.value?.canDraw !== false);
+const canDraw = computed(
+  () => !isLotteryUnavailable.value && session.value?.canDraw !== false,
+);
 const cannotDrawReason = computed(
-  () => session.value?.cannotDrawReason || '目前無法抽選',
+  () =>
+    isLotteryUnavailable.value
+      ? '此商品已下架'
+      : session.value?.cannotDrawReason || '目前無法抽選',
 );
 
 const protectionEndTime = ref<string | null>(null);
@@ -634,7 +669,8 @@ const stopProtectionTimer = () => {
 
 const calcProtectionSeconds = (endTime?: string | null) => {
   if (!endTime) return 0;
-  const endMs = new Date(endTime).getTime();
+  const endAt = toDate(endTime);
+  const endMs = endAt?.getTime() ?? Number.NaN;
   if (Number.isNaN(endMs)) return 0;
   return Math.max(0, Math.floor((endMs - Date.now()) / 1000));
 };
@@ -673,15 +709,7 @@ const protectionCountdownText = computed(() => {
 
 const formatDateTime = (iso?: string | null) => {
   if (!iso) return '';
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return '';
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  const h = String(d.getHours()).padStart(2, '0');
-  const min = String(d.getMinutes()).padStart(2, '0');
-  const sec = String(d.getSeconds()).padStart(2, '0');
-  return `${y}/${m}/${day} ${h}:${min}:${sec}`;
+  return formatDateTimeUtil(iso, 'YYYY/MM/DD HH:mm:ss');
 };
 
 const protectionDeadlineText = computed(() =>
@@ -750,16 +778,11 @@ const goLogin = () => {
 };
 
 /* -----------------------------
- *  設計圖特價顯示：discounted 優先，沒有就用 per draw
+ *  顯示當前實際售價：折扣觸發後 currentPrice 已更新為折扣價
  * ----------------------------- */
 const displayPrice = computed(() => {
   const d = detail.value;
   if (!d) return 0;
-
-  const discounted =
-    d.discountedPrice != null ? Number(d.discountedPrice) : NaN;
-  if (Number.isFinite(discounted) && discounted > 0) return discounted;
-
   return Number(d.currentPrice ?? d.pricePerDraw ?? 0) || 0;
 });
 
@@ -1029,6 +1052,8 @@ const ensureCanDraw = async () => {
     return false;
   }
 
+  await refreshSession();
+
   if (!canDraw.value) {
     try {
       overlay.open('ichiban-info', false);
@@ -1297,10 +1322,7 @@ const handleDesignatePrize = async (
       content: `已成功指定 ${designations.length} 個大獎位置，開始抽獎吧！`,
     });
 
-    await refreshSession(); // 🔥 指定後刷新
-
-    // 🔥 再抽一次
-    await handleScratch();
+    await refreshSession();
   } finally {
     overlay.close();
   }
@@ -1550,8 +1572,85 @@ const handleExchange = async (payload: {
   }
 
   if (isScratchMode.value) {
-    // 刮刮樂：直接用 safeTickets[0] UUID 執行抽取
-    await handleScratch(safeTickets[0]);
+    await executeApi({
+      fn: () =>
+        drawLottery(kujiId.value, {
+          count: safeCount,
+          tickets: safeTickets,
+        }),
+      onSuccess: async (data: any) => {
+        const drawResults: DrawResult[] = Array.isArray(data?.results)
+          ? data.results
+          : Array.isArray(data)
+            ? data
+            : [];
+
+        syncProtectionEndTime(data?.protectionEndTime);
+
+        if (drawResults.length > 0 && drawResults[0]?.success === false) {
+          if (isProtectionBlockedState(drawResults[0].message)) {
+            await showBlockedByProtectionDialog();
+          } else {
+            await ichibanInfoDialog({
+              title: '抽獎失敗',
+              content: drawResults[0].message || '請稍後再試',
+            });
+          }
+          return;
+        }
+
+        const sortedResults = [...drawResults].sort(
+          (a, b) => Number(a.ticketNumber ?? 0) - Number(b.ticketNumber ?? 0),
+        );
+        const cards = sortedResults.map((item) => ({
+          imageSrc: item.prizeImageUrl || '',
+          imageAlt: item.prizeName || 'scratch prize',
+          idleText: '刮開看看，抽到什麼賞？',
+          revealText: item.prizeName ?? '銘謝惠顧',
+          threshold: 45,
+          grade: item.prizeLevel,
+          revealedNumber: item.revealedNumber ?? null,
+        }));
+
+        closeDrawPanel();
+        overlay.open();
+        activeCards.value = [];
+
+        try {
+          await scratchCardDialog({
+            title: 'STARDO・刮刮樂',
+            cards,
+          });
+          const paymentType = resolvePaymentTypeFromResults(sortedResults);
+          await ichibanResultDialog({
+            remain: Math.max(
+              0,
+              Number(detail.value?.remainingDraws ?? 0) - sortedResults.length,
+            ),
+            count: sortedResults.length,
+            totalPrice: calcTotalSpend(
+              sortedResults,
+              sortedResults.length,
+              paymentType,
+            ),
+            costTypeLabel: getPaymentLabel(paymentType),
+            items: sortedResults,
+          });
+
+          await showFreeDrawModal(sortedResults);
+        } finally {
+          overlay.close();
+        }
+
+        await reload();
+      },
+      onFail: async () => {
+        await ichibanInfoDialog({
+          title: '抽獎失敗',
+          content: '請稍後再試',
+        });
+      },
+    });
     return;
   } else {
     await executeApi({
@@ -1648,12 +1747,21 @@ const refreshSession = async () => {
     showFailDialog: false,
     onSuccess: (data: any) => {
       if (data) {
+        const nextProtectionEnd = data.protectionEndTime ?? null;
+        const fallbackCanDraw =
+          data.isOpener === true ||
+          !nextProtectionEnd ||
+          new Date(nextProtectionEnd).getTime() <= Date.now();
         session.value = {
           ...(session.value ?? {}),
           ...data,
+          canDraw: data.canDraw ?? fallbackCanDraw,
+          cannotDrawReason:
+            data.cannotDrawReason ??
+            (fallbackCanDraw ? null : 'Draw is blocked until protection ends'),
         };
-        syncProtectionEndTime(data.protectionEndTime ?? null, {
-          forceClear: data.protectionEndTime == null,
+        syncProtectionEndTime(nextProtectionEnd, {
+          forceClear: nextProtectionEnd == null,
         });
         return;
       }
@@ -1678,7 +1786,14 @@ const reload = async () => {
         const payload = (data ?? {}) as any;
         const lottery = payload.lottery ?? payload;
 
-        detail.value = lottery ?? null;
+        detail.value = lottery
+          ? {
+              ...lottery,
+              noticeConfig: payload.noticeConfig ?? lottery.noticeConfig ?? null,
+            }
+          : null;
+        await showUnavailableLotteryDialog();
+
         prizesData.value = Array.isArray(payload.prizes)
           ? payload.prizes
           : Array.isArray(lottery?.prizes)
@@ -1734,7 +1849,10 @@ const reload = async () => {
       if (
         !designationDoneLocal &&
         deadline &&
-        new Date(deadline) > new Date()
+        (() => {
+          const deadlineAt = toDate(deadline);
+          return deadlineAt ? deadlineAt.getTime() > Date.now() : false;
+        })()
       ) {
         if (!isOpenerLocal && !showWaitingOverlay.value) {
           // Non-opener: proactively show waiting overlay
@@ -1845,6 +1963,7 @@ watch(
     if (!id) return;
 
     didHot.value = false;
+    unavailableNoticeKey.value = '';
 
     await hitHotCount();
 
@@ -1968,66 +2087,100 @@ const handleScratchBatch = async (ticketIds: string[]) => {
     return;
   }
 
-  const results: DrawResult[] = [];
-
-  for (const ticketId of normalizedTicketIds) {
-    if (showWaitingOverlay.value) return;
-
-    const { result, blocked } = await drawScratchTicket(ticketId);
-
-    // 被指定流程 / 等待流程攔截，整批先中止
-    if (blocked) return;
-
-    if (result) {
-      results.push(result);
-      if (result.isGrandPrize) {
-        break;
+  await executeApi({
+    fn: () =>
+      drawLottery(kujiId.value, {
+        count: normalizedTicketIds.length,
+        tickets: normalizedTicketIds,
+      }),
+    onSuccess: async (data: any) => {
+      if (data?.designationRequired === true) {
+        await handleDesignatePrize(data.availableNumbers || [], data.grandPrizes || []);
+        await handleScratchBatch(normalizedTicketIds);
+        return;
       }
-    }
-  }
 
-  if (!results.length) return;
+      if ((data as any)?.awaitingDesignation === true) {
+        showDesignationWaitingOverlay(
+          (data as any).openerDeadline,
+          (data as any).message || '開套者正在指定大獎位置，請稍候',
+        );
+        return;
+      }
 
-  // 依 ticketNumber 排序，讓對話框順序與格子位置一致（spec 要求）
-  const sortedResults = [...results].sort(
-    (a, b) => Number(a.ticketNumber ?? 0) - Number(b.ticketNumber ?? 0),
-  );
+      const results: DrawResult[] = Array.isArray(data?.results)
+        ? data.results
+        : Array.isArray(data)
+          ? data
+          : [];
 
-  const cards = sortedResults.map((item) => ({
-    imageSrc: item.prizeImageUrl || '',
-    imageAlt: item.prizeName || 'scratch prize',
-    idleText: '刮開看看，抽到什麼賞？',
-    revealText: item.prizeName ?? '銘謝惠顧',
-    threshold: 45,
-    grade: item.prizeLevel,
-    revealedNumber: item.revealedNumber ?? null,
-  }));
-  overlay.open();
-  activeCards.value = [];
+      syncProtectionEndTime(data?.protectionEndTime);
 
-  try {
-    await scratchCardDialog({
-      title: 'STARDO・刮刮樂',
-      cards,
-    });
-    const paymentType = resolvePaymentTypeFromResults(results);
-    await ichibanResultDialog({
-      remain: Math.max(
-        0,
-        Number(detail.value?.remainingDraws ?? 0) - results.length,
-      ),
-      count: results.length,
-      totalPrice: calcTotalSpend(results, results.length, paymentType),
-      costTypeLabel: getPaymentLabel(paymentType),
-      items: results,
-    });
+      if (results.length > 0 && results[0]?.success === false) {
+        if (isProtectionBlockedState(results[0].message)) {
+          await showBlockedByProtectionDialog();
+        } else {
+          await ichibanInfoDialog({
+            title: '刮刮樂失敗',
+            content: results[0].message || '請稍後再試',
+          });
+        }
+        return;
+      }
 
-    await showFreeDrawModal(results);
-  } finally {
-    overlay.close();
-  }
+      if (!results.length) return;
 
-  await reload();
+      const sortedResults = [...results].sort(
+        (a, b) => Number(a.ticketNumber ?? 0) - Number(b.ticketNumber ?? 0),
+      );
+
+      const cards = sortedResults.map((item) => ({
+        imageSrc: item.prizeImageUrl || '',
+        imageAlt: item.prizeName || 'scratch prize',
+        idleText: '刮開看看，抽到什麼賞？',
+        revealText: item.prizeName ?? '銘謝惠顧',
+        threshold: 45,
+        grade: item.prizeLevel,
+        revealedNumber: item.revealedNumber ?? null,
+      }));
+      overlay.open();
+      activeCards.value = [];
+
+      try {
+        await scratchCardDialog({
+          title: 'STARDO・刮刮樂',
+          cards,
+        });
+        const paymentType = resolvePaymentTypeFromResults(sortedResults);
+        await ichibanResultDialog({
+          remain: Math.max(
+            0,
+            Number(detail.value?.remainingDraws ?? 0) - sortedResults.length,
+          ),
+          count: sortedResults.length,
+          totalPrice: calcTotalSpend(
+            sortedResults,
+            sortedResults.length,
+            paymentType,
+          ),
+          costTypeLabel: getPaymentLabel(paymentType),
+          items: sortedResults,
+        });
+
+        await showFreeDrawModal(sortedResults);
+      } finally {
+        overlay.close();
+      }
+
+      await reload();
+    },
+    onFail: async () => {
+      await ichibanInfoDialog({
+        title: '刮刮樂失敗',
+        content: '請稍後再試',
+      });
+    },
+  });
 };
 /**
  * 單張刮刮樂

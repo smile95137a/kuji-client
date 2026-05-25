@@ -2,6 +2,7 @@ import { ref } from 'vue';
 import { getWalletTransactions } from '@/services/consumptionRecordService';
 import { useServerPagination } from '@/composables/useServerPagination';
 import type { PageResult } from '@/types/api';
+import { formatDateTime as formatDateTimeUtil } from '@/utils/DateUtils';
 
 export type WalletTransactionType =
   | 'RECHARGE'
@@ -11,6 +12,7 @@ export type WalletTransactionType =
   | 'FREE_DRAW_REFUND'
   | 'RECYCLE_BONUS'
   | 'REFERRAL_BONUS'
+  | 'BONUS_GRANT'
   | 'ADMIN_ADJUST'
   | 'EXPIRE';
 
@@ -22,6 +24,7 @@ export const TYPE_LABELS: Record<string, string> = {
   FREE_DRAW_REFUND: '免單退款',
   RECYCLE_BONUS: '回收紅利',
   REFERRAL_BONUS: '推薦獎勵',
+  BONUS_GRANT: '多抽贈送紅利',
   ADMIN_ADJUST: '管理員調整',
   EXPIRE: '點數過期',
 };
@@ -49,13 +52,9 @@ export interface WalletTransactionRow {
   signedAmount: number;
 }
 
-const pad2 = (n: number) => String(n).padStart(2, '0');
-
 function formatDateTime(value: unknown): string {
   if (!value) return '';
-  const d = new Date(value as string);
-  if (Number.isNaN(d.getTime())) return String(value);
-  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  return formatDateTimeUtil(value as string, 'YYYY-MM-DD HH:mm') || String(value);
 }
 
 function normalizeDirection(value: unknown): 'INCOME' | 'EXPENSE' {

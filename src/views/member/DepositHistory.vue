@@ -55,7 +55,7 @@
               <option value="COMPLETED">已完成</option>
               <option value="PENDING">待付款</option>
               <option value="FAILED">失敗</option>
-              <option value="CANCELED">已取消</option>
+              <option value="CANCELLED">已取消</option>
             </select>
           </div>
 
@@ -109,6 +109,7 @@
               <th>金幣</th>
               <th>紅利</th>
               <th>付款方式</th>
+              <th>轉帳資訊</th>
               <th>狀態</th>
               <th>付款時間</th>
             </tr>
@@ -131,6 +132,12 @@
               <td>{{ row.goldCoins.toLocaleString() }}</td>
               <td>{{ row.bonusCoins.toLocaleString() }}</td>
               <td>{{ payLabel(row.paymentMethod) }}</td>
+              <td>
+                <span v-if="row.paymentInfo" class="depositHistory__mono">
+                  {{ row.paymentInfo }}
+                </span>
+                <span v-else>-</span>
+              </td>
 
               <td>
                 <span
@@ -145,7 +152,7 @@
             </tr>
 
             <tr v-if="pageRows.length === 0">
-              <td class="depositHistory__empty" colspan="8">查無資料</td>
+              <td class="depositHistory__empty" colspan="9">查無資料</td>
             </tr>
           </tbody>
         </table>
@@ -206,6 +213,13 @@
               </span>
             </p>
 
+            <p v-if="row.paymentInfo" class="depositHistory__row">
+              <span class="depositHistory__k">轉帳資訊</span>
+              <span class="depositHistory__v depositHistory__mono">
+                {{ row.paymentInfo }}
+              </span>
+            </p>
+
             <p class="depositHistory__row">
               <span class="depositHistory__k">付款時間</span>
               <span class="depositHistory__v">
@@ -247,9 +261,10 @@ import {
 } from '@/services/rechargeService';
 import { executeApi } from '@/utils/executeApiUtils';
 import { useServerPagination } from '@/composables/useServerPagination';
+import { formatDateTime as formatDateTimeUtil } from '@/utils/DateUtils';
 
-type PayMethod = 'CREDIT_CARD' | 'ATM' | 'CVS';
-type PaymentStatus = 'COMPLETED' | 'PENDING' | 'FAILED' | 'CANCELED';
+type PayMethod = 'CREDIT_CARD' | 'BANK_TRANSFER' | 'ATM' | 'CVS';
+type PaymentStatus = 'COMPLETED' | 'PENDING' | 'FAILED' | 'CANCELLED';
 
 type DepositHistoryRow = {
   id: string;
@@ -260,6 +275,7 @@ type DepositHistoryRow = {
   paymentMethod: PayMethod;
   paymentStatus: PaymentStatus;
   transactionId: string;
+  paymentInfo?: string;
   createdAt: string;
   paidAt?: string;
 };
@@ -291,6 +307,7 @@ const normalizeRechargeHistory = (
     paymentMethod: (o.paymentMethod ?? 'CREDIT_CARD') as PayMethod,
     paymentStatus: (o.paymentStatus ?? o.status ?? 'PENDING') as PaymentStatus,
     transactionId: String(o.transactionId ?? ''),
+    paymentInfo: o.paymentInfo ? String(o.paymentInfo) : undefined,
     createdAt: String(o.createdAt ?? ''),
     paidAt: o.paidAt ? String(o.paidAt) : undefined,
   }));
@@ -340,6 +357,7 @@ const onReset = async () => {
 };
 
 const payLabel = (m: PayMethod) => {
+  if (m === 'BANK_TRANSFER') return '銀行轉帳';
   if (m === 'CREDIT_CARD') return '信用卡';
   if (m === 'ATM') return 'ATM 轉帳';
 
@@ -358,23 +376,12 @@ const badgeClass = (s: PaymentStatus) => ({
   'is-paid': s === 'COMPLETED',
   'is-pending': s === 'PENDING',
   'is-failed': s === 'FAILED',
-  'is-canceled': s === 'CANCELED',
+  'is-canceled': s === 'CANCELLED',
 });
 
 const formatDateTime = (iso: string) => {
   if (!iso) return '-';
-
-  const d = new Date(iso);
-
-  if (Number.isNaN(d.getTime())) return iso;
-
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  const hh = String(d.getHours()).padStart(2, '0');
-  const mm = String(d.getMinutes()).padStart(2, '0');
-
-  return `${y}-${m}-${day} ${hh}:${mm}`;
+  return formatDateTimeUtil(iso, 'YYYY-MM-DD HH:mm') || iso;
 };
 
 onMounted(loadHistory);

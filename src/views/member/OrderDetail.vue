@@ -408,6 +408,22 @@ async function onRepay() {
   const gatewayPayload = await repay(selectedPaymentMethod.value);
 
   if (gatewayPayload) {
+    if (
+      gatewayPayload.virtualAccount ||
+      (gatewayPayload.paymentMethod === 'BANK_TRANSFER' &&
+        !gatewayPayload.actionUrl &&
+        !gatewayPayload.paymentUrl)
+    ) {
+      router.push({
+        name: 'OrderPaymentResult',
+        query: {
+          e_orderno: gatewayPayload.gatewayTradeNo || gatewayPayload.orderNumber,
+          result: gatewayPayload.gatewayResult || '1',
+        },
+      });
+      return;
+    }
+
     const submitted = submitGatewayForm({
       ...gatewayPayload,
       payUrl: gatewayPayload.paymentUrl,

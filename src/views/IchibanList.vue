@@ -185,12 +185,11 @@ const loadThemeOptions = async () => {
     showFailDialog: false,
     onSuccess: (res: any) => {
       const list: CategoryRes[] = Array.isArray(res) ? res : (res?.data ?? []);
-      const chips = Array.from(
-        new Set(
-          list.map((item) => String(item?.name ?? '').trim()).filter(Boolean),
-        ),
-      )
-        .sort((a, b) => a.localeCompare(b, 'zh-Hant'))
+      const sorted = [...list].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
+      const seen = new Set<string>();
+      const chips = sorted
+        .map((item) => String(item?.name ?? '').trim())
+        .filter((name) => name && !seen.has(name) && seen.add(name) as unknown as boolean)
         .map((value) => ({ label: value, value }));
 
       themeOptions.value = [{ label: '全部', value: 'all' }, ...chips];

@@ -58,6 +58,7 @@
               <option value="FREE_DRAW_REFUND">開套免單退款</option>
               <option value="RECYCLE_BONUS">回收回饋</option>
               <option value="REFERRAL_BONUS">推薦獎勵</option>
+              <option value="BONUS_GRANT">多抽贈送紅利</option>
               <option value="ADMIN_ADJUST">後台調整</option>
               <option value="EXPIRE">到期失效</option>
             </select>
@@ -292,7 +293,7 @@ const typeBadgeClass = (type: string) => {
     'is-draw': type === 'DRAW_GOLD' || type === 'DRAW_BONUS',
     'is-refund': type === 'FREE_DRAW_REFUND',
     'is-recycle': type === 'RECYCLE_BONUS',
-    'is-bonus': type === 'REFERRAL_BONUS',
+    'is-bonus': type === 'REFERRAL_BONUS' || type === 'BONUS_GRANT',
     'is-adjust': type === 'ADMIN_ADJUST',
     'is-expire': type === 'EXPIRE',
   };

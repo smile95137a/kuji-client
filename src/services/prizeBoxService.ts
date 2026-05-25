@@ -36,6 +36,11 @@ export interface ShipOrderResult {
   actionUrl?: string | null;
   formFields?: Record<string, string> | null;
   gatewayTradeNo: string | null;
+  gatewayResult?: string | null;
+  retMsg?: string | null;
+  virtualAccount?: string | null;
+  payInfo?: string | null;
+  limitDate?: string | null;
 }
 
 /** 鞈??蝑???*/
@@ -50,7 +55,7 @@ export interface PrizeBoxItemRes {
   prizeImageUrl: string;
   storeId: string;
   storeName: string;
-  status: 'IN_BOX' | 'SHIPPING' | 'DELIVERED' | 'REDEEMED';
+  status: 'IN_BOX' | 'SHIPPING' | 'SHIPPED' | 'RECYCLED';
   statusName: string;
   isRecyclable: boolean;
   recycleBonus: number;

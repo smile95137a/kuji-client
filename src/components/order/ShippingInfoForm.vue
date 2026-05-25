@@ -143,8 +143,8 @@ function onSubmit() {
 
 <style scoped>
 .shippingForm {
-  background: rgba(255, 152, 0, 0.05);
-  border: 1px solid rgba(255, 152, 0, 0.25);
+  background: #fff8ef;
+  border: 1px solid rgba(180, 51, 37, 0.15);
   border-radius: 12px;
   padding: 20px;
   display: flex;
@@ -155,19 +155,19 @@ function onSubmit() {
 .shippingForm__title {
   font-size: 1rem;
   font-weight: 700;
-  color: #ffb74d;
+  color: #b43325;
   margin: 0;
 }
 
 .shippingForm__subtitle {
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: rgba(32, 23, 19, 0.55);
   margin: -8px 0 0;
 }
 
 .shippingForm__divider {
   height: 1px;
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(63, 36, 18, 0.1);
 }
 
 .shippingForm__field {
@@ -186,26 +186,26 @@ function onSubmit() {
 .shippingForm__label {
   font-size: 0.813rem;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.65);
+  color: rgba(32, 23, 19, 0.7);
 }
 
 .shippingForm__input {
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #ffffff;
+  border: 1px solid rgba(63, 36, 18, 0.18);
   border-radius: 8px;
   padding: 10px 12px;
-  color: #fff;
+  color: #201713;
   font-size: 0.9rem;
   outline: none;
   transition: border-color 0.2s;
 }
 
 .shippingForm__input::placeholder {
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(32, 23, 19, 0.35);
 }
 
 .shippingForm__input:focus {
-  border-color: rgba(255, 152, 0, 0.5);
+  border-color: rgba(180, 51, 37, 0.45);
 }
 
 .shippingForm__error {

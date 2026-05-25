@@ -139,7 +139,7 @@ const loadThemes = async () => {
     showFailDialog: false,
     onSuccess: (res: any) => {
       const list: CategoryRes[] = Array.isArray(res) ? res : (res?.data ?? []);
-      themes.value = list;
+      themes.value = [...list].sort((a, b) => (a.displayOrder ?? 0) - (b.displayOrder ?? 0));
     },
     onFail: async () => {
       console.error('載入主題失敗');

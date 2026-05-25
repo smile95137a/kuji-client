@@ -3,9 +3,13 @@ import moment, { Moment } from 'moment';
 
 const DEFAULT_FORMAT = 'YYYY-MM-DD';
 const DEFAULT_DATETIME_FORMAT = 'YYYY-MM-DD HH:mm:ss';
+const DEFAULT_PICKER_DATETIME_FORMAT = 'YYYY-MM-DDTHH:mm:ss';
 const PARSE_FORMATS = [
   DEFAULT_FORMAT,
   DEFAULT_DATETIME_FORMAT,
+  DEFAULT_PICKER_DATETIME_FORMAT,
+  'YYYY-MM-DDTHH:mm',
+  'YYYY-MM-DD HH:mm',
   'YYYY/MM/DD',
   'YYYY/MM/DD HH:mm:ss',
   'MM/DD/YYYY',
@@ -18,6 +22,18 @@ type DateInput = string | Date | number | Moment;
 export type DateRange = { start: string; end: string };
 export type DateRangeMoment = { start: Moment; end: Moment };
 
+export const normalizeApiDateString = (input?: string | null): string => {
+  if (!input) return '';
+  const value = String(input).trim();
+  if (!value) return '';
+
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}(:\d{2})?/.test(value)) {
+    return value.replace(' ', 'T');
+  }
+
+  return value;
+};
+
 /* ===================== 基礎格式化 / 解析 ===================== */
 export const toMoment = (
   input?: DateInput,
@@ -27,10 +43,12 @@ export const toMoment = (
   if (moment.isMoment(input)) return input.clone();
   if (input instanceof Date) return moment(input);
   if (typeof input === 'number') return moment(input); // ms/unix(秒)都可；秒需用 fromUnix
-  if (typeof input === 'string')
-    return moment(input, PARSE_FORMATS, true).isValid()
-      ? moment(input, PARSE_FORMATS, true)
-      : moment(input, format, true);
+  if (typeof input === 'string') {
+    const normalized = normalizeApiDateString(input);
+    return moment(normalized, PARSE_FORMATS, true).isValid()
+      ? moment(normalized, PARSE_FORMATS, true)
+      : moment(normalized, format, true);
+  }
   return moment.invalid();
 };
 
@@ -51,6 +69,12 @@ export const formatDateTime = (
 
 export const toDate = (input?: DateInput): Date | null =>
   toMoment(input).isValid() ? toMoment(input).toDate() : null;
+
+export const toDatetimeLocalValue = (input?: DateInput): string =>
+  toMoment(input).isValid() ? toMoment(input).format('YYYY-MM-DDTHH:mm') : '';
+
+export const toBackendLocalDateTime = (input?: DateInput): string =>
+  toMoment(input).isValid() ? toMoment(input).format('YYYY-MM-DDTHH:mm:ss') : '';
 
 export const toISO = (input?: DateInput): string =>
   toMoment(input).isValid() ? toMoment(input).toISOString() : '';
