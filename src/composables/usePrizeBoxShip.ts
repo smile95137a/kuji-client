@@ -3,6 +3,8 @@ import { computed, reactive, ref, watch, type Ref } from 'vue';
 import { useAddressBook, type AddressItem } from './useAddressBook';
 import { shipPrizeBoxItems, type PrizeBoxShipReq, type ShipOrderResult } from '@/services/prizeBoxService';
 import { getShippingMethods, type ShippingMethod } from '@/services/shippingMethodService';
+import { getDistrictsByCity } from '@/services/districtService';
+import { getMe } from '@/services/userService';
 import type { PaymentMethodCode } from '@/services/rechargeService';
 
 export type { ShippingMethod };
@@ -41,6 +43,12 @@ export interface ShipForm {
   remark: string;
 }
 
+interface DistrictInfo {
+  city: string;
+  districtName: string;
+  zipCode: string;
+}
+
 export function usePrizeBoxShip(items: Ref<PrizeBoxItem[]>) {
   const { addresses, fetchAll: fetchAddresses } = useAddressBook();
 
@@ -59,6 +67,8 @@ export function usePrizeBoxShip(items: Ref<PrizeBoxItem[]>) {
   const selectedPaymentMethod = ref<PaymentMethodCode>('CREDIT_CARD');
   const paymentUrl = ref<string | null>(null);
   const gatewayPayload = ref<ShipOrderResult | null>(null);
+  const districtList = ref<DistrictInfo[]>([]);
+  let cityReqToken = 0;
 
   const selectedShipping = computed<ShippingMethod | null>(
     () => shippingMethods.value.find((m) => m.id === selectedShippingId.value) ?? null,
@@ -105,7 +115,7 @@ export function usePrizeBoxShip(items: Ref<PrizeBoxItem[]>) {
   /** 套用地址本到表單 */
   function applyAddress(addr: AddressItem) {
     form.recipientName = addr.recipientName ?? '';
-    form.recipientPhone = addr.phone ?? '';
+    form.recipientPhone = addr.recipientPhone ?? addr.phone ?? '';
     form.zipCode = addr.zipCode ?? '';
     form.city = addr.city ?? '';
     form.district = addr.district ?? '';
@@ -119,6 +129,40 @@ export function usePrizeBoxShip(items: Ref<PrizeBoxItem[]>) {
       district: form.district,
       address: form.address,
     };
+  }
+
+  function normalizeProfileResponse(res: any) {
+    return res?.data ?? res;
+  }
+
+  function applyProfileSnapshot(profile: any) {
+    if (!profile) return;
+
+    form.recipientName = profile.recipientName ?? profile.name ?? '';
+    form.recipientPhone = profile.recipientPhone ?? profile.phoneNumber ?? profile.phone ?? '';
+    form.zipCode = profile.zipCode ?? profile.postalCode ?? '';
+    form.city = profile.city ?? '';
+    form.district = profile.district ?? '';
+    form.address = profile.addressDetail ?? profile.address ?? '';
+
+    if (
+      form.recipientName ||
+      form.recipientPhone ||
+      form.zipCode ||
+      form.city ||
+      form.district ||
+      form.address
+    ) {
+      selectedAddressId.value = '';
+      selectedAddressSnapshot.value = {
+        recipientName: form.recipientName,
+        recipientPhone: form.recipientPhone,
+        zipCode: form.zipCode,
+        city: form.city,
+        district: form.district,
+        address: form.address,
+      };
+    }
   }
 
   function clearSelectedAddress() {
@@ -152,9 +196,10 @@ export function usePrizeBoxShip(items: Ref<PrizeBoxItem[]>) {
     resetForm();
 
     shippingMethodsLoading.value = true;
-    const [, methods] = await Promise.allSettled([
+    const [addressResult, methods, profileResult] = await Promise.allSettled([
       fetchAddresses(),
       getShippingMethods(),
+      getMe(),
     ]);
 
     shippingMethodsLoading.value = false;
@@ -171,6 +216,9 @@ export function usePrizeBoxShip(items: Ref<PrizeBoxItem[]>) {
     const def = addresses.value.find((a) => a.isDefault);
     if (def) applyAddress(def);
     else if (addresses.value.length > 0) applyAddress(addresses.value[0]);
+    else if (addressResult.status === 'fulfilled' && profileResult.status === 'fulfilled') {
+      applyProfileSnapshot(normalizeProfileResponse(profileResult.value));
+    }
   }
 
   // 當地址清單在外部更新時，若尚未選擇，自動帶入預設
@@ -179,6 +227,55 @@ export function usePrizeBoxShip(items: Ref<PrizeBoxItem[]>) {
     const def = list.find((a) => a.isDefault) ?? list[0];
     if (def) applyAddress(def);
   });
+
+  watch(
+    () => form.city,
+    async (newCity) => {
+      const token = ++cityReqToken;
+      districtList.value = [];
+
+      if (!newCity?.trim()) return;
+
+      try {
+        const res = await getDistrictsByCity(newCity.trim());
+        if (token !== cityReqToken) return;
+
+        districtList.value = ((res as any)?.data ?? []) as DistrictInfo[];
+
+        // 已有行政區時，自動回填郵遞區號
+        if (form.district.trim()) {
+          const hit = districtList.value.find(
+            (d) =>
+              d.city === newCity.trim() &&
+              d.districtName === form.district.trim(),
+          );
+          if (hit?.zipCode) {
+            form.zipCode = hit.zipCode;
+          }
+        }
+      } catch {
+        if (token !== cityReqToken) return;
+        districtList.value = [];
+      }
+    },
+  );
+
+  watch(
+    () => form.district,
+    (newDistrict) => {
+      if (!form.city.trim() || !newDistrict?.trim()) return;
+
+      const hit = districtList.value.find(
+        (d) =>
+          d.city === form.city.trim() &&
+          d.districtName === newDistrict.trim(),
+      );
+
+      if (hit?.zipCode) {
+        form.zipCode = hit.zipCode;
+      }
+    },
+  );
 
   watch(
     () => [

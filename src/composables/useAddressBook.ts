@@ -12,7 +12,8 @@ export interface AddressItem {
   id: string;
   addressName: string;
   recipientName: string;
-  phone: string;
+  recipientPhone?: string;
+  phone?: string;
   city: string;
   district: string;
   address: string;

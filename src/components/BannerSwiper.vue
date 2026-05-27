@@ -211,7 +211,10 @@ const loadBanners = async () => {
 onMounted(async () => {
   await loadBanners();
   nextTick(() => {
-    if (!swiperEl.value) return;
+    if (!swiperEl.value || banners.value.length === 0) return;
+
+    const shouldLoop = banners.value.length >= 4;
+    const shouldRewind = banners.value.length > 1 && !shouldLoop;
 
     swiperInstance = new Swiper(swiperEl.value, {
       modules: [EffectCoverflow, Keyboard, Mousewheel, Pagination, Navigation],
@@ -253,7 +256,8 @@ onMounted(async () => {
         enabled: true,
       },
 
-      loop: true,
+      loop: shouldLoop,
+      rewind: shouldRewind,
       watchSlidesProgress: true,
 
       pagination: {
@@ -263,7 +267,11 @@ onMounted(async () => {
 
       on: {
         init(swiper) {
-          swiper.slideToLoop(0, 0, false);
+          if (shouldLoop) {
+            swiper.slideToLoop(0, 0, false);
+          } else {
+            swiper.slideTo(0, 0, false);
+          }
           requestAnimationFrame(updateNavPosition);
         },
         slideChangeTransitionEnd() {

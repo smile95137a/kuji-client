@@ -17,6 +17,7 @@ import {
   getActiveEmergencyAnnouncements,
   type EmergencyAnnouncementRes,
 } from '@/services/emergencyAnnouncementService';
+import { infoDialog } from '@/utils/dialog/infoDialog';
 
 // initAuth() is now called in main.ts before the router is mounted,
 // ensuring the silent refresh completes before any route guard runs.
@@ -26,6 +27,8 @@ const route = useRoute();
 
 const MAINTENANCE_MODE_KEY = 'isMaintenanceMode';
 const MAINTENANCE_ANNOUNCEMENT_KEY = 'maintenanceAnnouncement';
+const NOTICE_SEEN_PREFIX = 'emergencyNoticeSeen:';
+const BLOCKING_ANNOUNCEMENT_TYPES = new Set(['MAINTENANCE', 'UPDATE']);
 
 const normalizeList = (res: any): EmergencyAnnouncementRes[] => {
   if (Array.isArray(res)) return res;
@@ -82,62 +85,79 @@ const leaveMaintenanceIfNeeded = async () => {
   });
 };
 
+const getAnnouncementType = (announcement?: EmergencyAnnouncementRes | null) => {
+  return String(announcement?.announcementType ?? '').trim().toUpperCase();
+};
+
+const isActiveAnnouncement = (announcement: EmergencyAnnouncementRes) => {
+  return announcement.status === 'ACTIVE';
+};
+
+const hasSeenNotice = (announcement: EmergencyAnnouncementRes) => {
+  return sessionStorage.getItem(`${NOTICE_SEEN_PREFIX}${announcement.id}`) === 'Y';
+};
+
+const markNoticeSeen = (announcement: EmergencyAnnouncementRes) => {
+  sessionStorage.setItem(`${NOTICE_SEEN_PREFIX}${announcement.id}`, 'Y');
+};
+
+const showNoticeAnnouncements = async (list: EmergencyAnnouncementRes[]) => {
+  const notices = list
+    .filter(isActiveAnnouncement)
+    .filter((item) => getAnnouncementType(item) === 'NOTICE')
+    .filter((item) => !hasSeenNotice(item))
+    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+
+  for (const notice of notices) {
+    markNoticeSeen(notice);
+    await infoDialog({
+      title: notice.title || '重要公告',
+      message: notice.content || '請留意最新公告內容。',
+    });
+  }
+};
+
 const checkEmergencyAnnouncement = async () => {
   try {
     const res = await getActiveEmergencyAnnouncements();
 
-    /**
-     * API 明確回失敗，代表服務可能異常，進維修頁。
-     */
     if (res?.success === false) {
-      setMaintenanceMode(true, null);
-      await redirectToMaintenance();
+      setMaintenanceMode(false, null);
+      await leaveMaintenanceIfNeeded();
       return;
     }
 
     const list = normalizeList(res);
 
-    /**
-     * 沒有有效公告，代表正常開站。
-     */
     if (list.length === 0) {
       setMaintenanceMode(false, null);
       await leaveMaintenanceIfNeeded();
       return;
     }
 
-    /**
-     * 只要有 ACTIVE 公告，不管 UPDATE / MAINTENANCE / NOTICE，
-     * 都導去維修頁。
-     */
-    const activeAnnouncement = list.find((item) => item.status === 'ACTIVE');
+    const blockingAnnouncement = list.find((item) => {
+      return (
+        isActiveAnnouncement(item) &&
+        BLOCKING_ANNOUNCEMENT_TYPES.has(getAnnouncementType(item))
+      );
+    });
 
-    if (activeAnnouncement) {
-      setMaintenanceMode(true, activeAnnouncement);
+    if (blockingAnnouncement) {
+      setMaintenanceMode(true, blockingAnnouncement);
       await redirectToMaintenance();
       return;
     }
 
-    /**
-     * 有資料但沒有 ACTIVE，正常進網站。
-     */
     setMaintenanceMode(false, null);
     await leaveMaintenanceIfNeeded();
+    await showNoticeAnnouncements(list);
   } catch (error) {
     console.error('[App] checkEmergencyAnnouncement failed:', error);
-
-    /**
-     * API 打不到、後端掛掉、401、500，直接進維修頁。
-     */
-    setMaintenanceMode(true, null);
-    await redirectToMaintenance();
+    setMaintenanceMode(false, null);
+    await leaveMaintenanceIfNeeded();
   }
 };
 
-/**
- * 維修模式下，任何路由都不能進。
- * 除了 Maintenance 頁。
- */
 watch(
   () => route.fullPath,
   async () => {
