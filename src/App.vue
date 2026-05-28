@@ -17,11 +17,10 @@ import {
   getActiveEmergencyAnnouncements,
   type EmergencyAnnouncementRes,
 } from '@/services/emergencyAnnouncementService';
-import { infoDialog } from '@/utils/dialog/infoDialog';
+import { ichibanInfoDialog } from './utils/dialog/ichibanInfoDialog';
+import { useOverlayStore } from './stores/overlay';
 
-// initAuth() is now called in main.ts before the router is mounted,
-// ensuring the silent refresh completes before any route guard runs.
-
+const overlay = useOverlayStore();
 const router = useRouter();
 const route = useRoute();
 
@@ -85,8 +84,12 @@ const leaveMaintenanceIfNeeded = async () => {
   });
 };
 
-const getAnnouncementType = (announcement?: EmergencyAnnouncementRes | null) => {
-  return String(announcement?.announcementType ?? '').trim().toUpperCase();
+const getAnnouncementType = (
+  announcement?: EmergencyAnnouncementRes | null,
+) => {
+  return String(announcement?.announcementType ?? '')
+    .trim()
+    .toUpperCase();
 };
 
 const isActiveAnnouncement = (announcement: EmergencyAnnouncementRes) => {
@@ -94,7 +97,9 @@ const isActiveAnnouncement = (announcement: EmergencyAnnouncementRes) => {
 };
 
 const hasSeenNotice = (announcement: EmergencyAnnouncementRes) => {
-  return sessionStorage.getItem(`${NOTICE_SEEN_PREFIX}${announcement.id}`) === 'Y';
+  return (
+    sessionStorage.getItem(`${NOTICE_SEEN_PREFIX}${announcement.id}`) === 'Y'
+  );
 };
 
 const markNoticeSeen = (announcement: EmergencyAnnouncementRes) => {
@@ -108,12 +113,17 @@ const showNoticeAnnouncements = async (list: EmergencyAnnouncementRes[]) => {
     .filter((item) => !hasSeenNotice(item))
     .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
 
-  for (const notice of notices) {
-    markNoticeSeen(notice);
-    await infoDialog({
-      title: notice.title || '重要公告',
-      message: notice.content || '請留意最新公告內容。',
-    });
+  try {
+    overlay.open('ichiban-info', false);
+    for (const notice of notices) {
+      markNoticeSeen(notice);
+      await ichibanInfoDialog({
+        title: notice.title || '重要公告',
+        content: notice.content || '請留意最新公告內容。',
+      });
+    }
+  } finally {
+    overlay.close();
   }
 };
 
