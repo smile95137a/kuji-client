@@ -21,6 +21,7 @@ env:
   AWS_REGION: ap-northeast-1
   S3_BUCKET: stardofront
   CLOUDFRONT_DISTRIBUTION_ID: E1MXQQ5RZV3JJN
+  VITE_BASE_API_URL: https://stardo.tw
 
 jobs:
   build:
@@ -40,11 +41,18 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      - name: Build
-        run: npm run build
+      - name: Build production
+        run: npm run build:prod
 
       - name: Verify dist exists
         run: test -d dist
+
+      - name: Verify production bundle config
+        run: |
+          if grep -R "localhost:8180\|localhost:8080\|http://18.179.187.129" dist; then
+            echo "Production bundle contains a non-production API URL."
+            exit 1
+          fi
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
@@ -76,7 +84,11 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Sync dist to S3
-        run: aws s3 sync dist "s3://${S3_BUCKET}" --delete
+        run: |
+          aws s3 sync dist "s3://${S3_BUCKET}" \
+            --delete \
+            --exclude "images/*" \
+            --exclude "uploads/*"
 
       - name: Invalidate CloudFront cache
         run: |
